@@ -4,6 +4,8 @@
 
 ## Фаза 1. Reframing
 
+**Model:** `opus` / `high` (см. `model_routing.md`). Качество reframing'а определяет весь ресёрч — не экономить.
+
 Цель: убедиться, что ищем правильное. Большая часть плохих ресёрчей — плохие вопросы, не плохой поиск.
 
 **Шаги:**
@@ -16,6 +18,8 @@
 См. `question_reframing.md` для шаблонов и push-back сценариев.
 
 ## Фаза 2. Genre & block selection
+
+**Model:** `sonnet` / `medium`.
 
 После reframing, до plan'а — определяем какой тип отчёта собираем.
 
@@ -54,6 +58,8 @@
 **Не загружай все категорийные файлы `blocks/*.md` сразу.** Только те что нужны для выбранных блоков — после фазы plan.
 
 ## Фаза 3. Plan
+
+**Model:** `opus` / `medium`. Архитектурное решение, документирует все будущие выборы.
 
 Записывай в файл `<root>/<slug>/plan.md`. План — документ, не разговор. Если в чате — потом потеряется.
 
@@ -321,6 +327,8 @@ time_box_hard: <Y hours>
 
 ## Фаза 3.5. Capability Discovery
 
+**Model:** `sonnet` / `low`. Механический проход по env vars и таблицам.
+
 **Опциональна** для shallow. **Рекомендуется** для medium. **Обязательна** для deep.
 
 Между планированием и запуском поиска — sanity check: что у нас реально доступно?
@@ -376,6 +384,8 @@ User confirms continue.
 
 ## Фаза 4. Поиск
 
+**Model:** главный поток `sonnet` / `medium`. Sub-agents — **разные модели** по типу подзадачи (см. `model_routing.md` секция «Routing для sub-agents»): web/news/api-direct → `haiku`, academic/long-source → `sonnet`, heavy reasoning subtask → `opus`.
+
 **Phase 4 = 4 шага в строгом порядке:** Dispatch → Launch → Fetch → Save. Не пропускай Dispatch — без него Launch будет хаотичным.
 
 ### 4.0 Source Dispatch (НОВЫЙ обязательный шаг)
@@ -422,6 +432,8 @@ User confirms continue.
 
 ## Фаза 5. Скоринг и триангуляция
 
+**Model:** scoring per source — `haiku` / `low` (простой rubric). Triangulation check — `sonnet` / `medium` (требует понимания содержания).
+
 Каждый источник в `sources/NN.md` имеет frontmatter со scoring (см. `source_scoring.md`).
 
 **Triangulation rule:** каждое утверждение в финальных выводах подтверждено ≥3 независимыми источниками **разного типа**. Не три статьи одного автора, не три новости одного издания.
@@ -435,11 +447,13 @@ User confirms continue.
 
 ```csv
 №,URL,Title,Type,Author,Date,Credibility,Recency,Bias,Total,Used,File,Note
-1,https://...,V&A Open Storage,Primary,V&A Curator,2023-11,5,4,4,13,Y,sources/01_vam-open-storage.md,Прямой источник
-2,https://...,Industry article,Industry-media,J. Smith,2024-02,4,5,4,13,Y,sources/02_industry.md,Поддержка H1
+1,https://...,Postgres logical replication docs,Primary,Postgres team,2024-09,5,4,4,13,Y,sources/01_pg-docs-logical.md,Primary source
+2,https://...,Industry benchmark,Industry-media,J. Smith,2026-02,4,5,4,13,Y,sources/02_industry.md,Supports H1
 ```
 
 ## Фаза 6. Синтез + adversarial pass
+
+**Model:** adversarial pass — `opus` / `high` **(обязательно)**. Synthesis assembly — `sonnet` / `high` (длинный контекст). Не экономить на adversarial — это где Haiku/Sonnet делают soft-pushback без реальной атаки на гипотезы.
 
 **Порядок:**
 1. Перечитай ВСЕ `sources/NN.md` с `used: Y`. Не делай синтез из памяти.

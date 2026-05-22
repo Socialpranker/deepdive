@@ -29,6 +29,36 @@
 - **`general-purpose`** — только если подтема требует одновременно веб-поиска И чтения локальных файлов проекта (например, ресёрч под фичу с учётом существующего кода в репо). Имеет полный доступ.
 - **`Plan`** — НЕ для поиска. В deep-research не использовать.
 
+## Какую модель выбрать (model routing)
+
+**Обязательно читай `model_routing.md`** перед launch sub-agents — там matrix фаза × подзадача → модель.
+
+Краткая выдержка для Phase 4.1 (launch sub-agents):
+
+| Тип подзадачи sub-agent'а | Модель | Effort |
+|---|---|---|
+| Web search + metadata (web-general/news/forum) | `haiku` | low |
+| Read long source + extract quotes | `sonnet` | low |
+| Academic / preprint-servers | `sonnet` | low |
+| API-direct (curl + jq) | `haiku` | low |
+| Code analysis (clone + grep) | `sonnet` | medium |
+| Heavy reasoning subtask | `opus` | medium |
+
+**Default если не уверен** → `sonnet` / `low`. Это safe middle ground.
+
+**Параметр `model`** передаётся прямо в `Agent` tool:
+
+```
+Agent({
+  subagent_type: "Explore",
+  model: "haiku",    // ← важно: явный выбор
+  description: "...",
+  prompt: "..."
+})
+```
+
+Если `model:` не передан — sub-agent наследует модель родителя (обычно Sonnet) — для дешёвых задач это переплата.
+
 ## Параллелизм
 
 В одном сообщении ассистента — ВСЕ Agent calls одновременно.
