@@ -392,3 +392,122 @@ status: active | superseded
 - Дельта-исследование: проверить только что изменилось
 - Не повторять scoping и methodology — только обновить evidence
 ```
+
+## Z11 — `refresh-targets` (отдельный файл)
+
+**Когда:** все medium/deep ресёрчи. Z10 говорит **когда** обновлять, Z11 — **что конкретно проверять** при update. Без Z11 update теряет много времени на re-discovery.
+
+**Где живёт:** не внутри финального отчёта, а **отдельным файлом** `research/<slug>/refresh_targets.md`. Это позволяет `update` mode сразу прочитать его и пойти проверять.
+
+**Что внутри:** список конкретных entities, метрик, тематических маркеров, гипотез — всё что update будет реверифицировать.
+
+**Композиция:** генерируется в Phase 7 (synthesis), после написания финального отчёта. Шаблон ниже — заполняй на основе того что реально использовалось в M-, N-, V-блоках.
+
+**См. также:** `references/refresh_protocol.md` — как именно `update` использует этот файл.
+
+**Шаблон `refresh_targets.md`:**
+
+```markdown
+---
+slug: <slug>
+generated_at: <YYYY-MM-DD>
+parent_research: <YYYY-MM-DD_genre.md>
+update_cadence: <"monthly" | "quarterly" | "event-driven" | "yearly">
+---
+
+# Refresh targets — <topic>
+
+## 1. Entities to track
+
+Companies/projects/products that the original research profiled in landscape blocks (M2, M5) or analyzed in compare blocks (C1-C5). Update will re-check these.
+
+### <Company / Project Name>
+- **Type:** <company | open-source project | research group | regulator>
+- **Why in scope:** <e.g. «leader in segment X», «active competitor to focus company Y»>
+- **Pages to monitor:**
+  - Pricing: `<url>` (last hash: `<sha256 from sources/SN.md if available>`)
+  - Careers: `<url>`
+  - Blog/changelog: `<url>` (RSS if available: `<rss-url>`)
+  - Crunchbase: `<crunchbase-permalink>` (if funded company)
+- **Specific fields to watch:**
+  - Pricing tier changes (especially «X added new tier» events)
+  - CEO/CTO changes
+  - Total funding raised
+  - <other entity-specific>
+
+### <Company 2>
+(same template)
+
+## 2. Numbers to refresh
+
+Specific metrics anchored in original report's N-blocks. Update will re-fetch these and compare.
+
+### <Metric name>
+- **Source:** <FRED CPIAUCSL | World Bank SP.POP.TOTL | Statista 2026 industry report «...» | etc.>
+- **API access:** <FRED API / World Bank API / manual fetch>
+- **Last value:** <X.Y on YYYY-MM-DD>
+- **What change matters:**
+  - Direction reversal (e.g., growth → decline)
+  - Magnitude > <X%> change from current
+  - New methodology revision (Statista often revises previous-year estimates)
+- **Anchored in:** <which blocks/claims in the report depend on this number>
+
+### <Metric 2>
+(same template)
+
+## 3. Topic markers (for discovering NEW things)
+
+Patterns that update will use to find new entrants, new publications, new datasets.
+
+### GitHub topics
+- `topic:<keyword-1>` — for finding new repos in domain
+- `topic:<keyword-2>`
+- Filter: `stars:>50 created:>last_research_date` (адаптировать дату при update)
+
+### Academic concepts
+- **OpenAlex concept ID:** `<C-XXXXXXX>` («<concept name>»)
+- **Semantic Scholar paper IDs to cite-trace:** `<S2-paper-id>` («<paper title>»)
+- **arXiv categories:** `<cs.LG, q-fin.TR, etc>`
+
+### News keywords
+- Primary: `<keyword combination>`
+- Opposition / failure mode keywords: `<«X doesn't work», «X bankruptcy», etc>`
+
+### Industry-specific
+- Newsletter/feed: `<URL>` (manual check or RSS)
+- Conference proceedings: `<conference name>` (annual; check post-event for new papers)
+
+## 4. Hypotheses to re-test
+
+Original report's H1-H4 (from plan.md section 9). Update will search for new opposing evidence to each.
+
+### H1: «<verbatim hypothesis>»
+- **Status at last research:** <supported | contradicted | inconclusive> (confidence: <H/M/L>)
+- **Supporting sources (count):** <N> sources of types <Academic, Industry-media, ...>
+- **Watch for:**
+  - Replication failures: `«<H1 phrase> failed replication»`, `«<H1 phrase> doesn't generalize»`
+  - Retractions: search RetractionWatch for cited papers
+  - Counter-RCTs / new datasets that test the same claim
+
+### H2: «<verbatim hypothesis>»
+(same template)
+
+## 5. Sources requiring re-verification (high-stakes only)
+
+If specific sources are critical to the report's conclusions, they get extra re-check on update.
+
+### sources/SN_<critical-source>.md
+- **Why critical:** <«primary source for H1», «only source on regulatory status», etc.>
+- **Re-check action:**
+  - Verify URL still accessible (not 404)
+  - If author/venue: check if retracted
+  - If gov data: check for revised version
+  - If company page: refetch and diff
+```
+
+**Anti-patterns:**
+
+- ❌ Заполнять Z11 «from memory» — каждое поле должно ссылаться на блок из финального отчёта где оно использовалось
+- ❌ Перечислять «все возможные источники» — это refresh_targets, а не bibliographic database. Только critical-path
+- ❌ Без update_cadence — пользователь не поймёт когда возвращаться
+- ❌ Без сохранённых hash/snapshot для entity pages — fingerprinting не работает

@@ -463,9 +463,27 @@ User confirms continue.
 5. Собери черновик `<date>_<genre>.md` из выбранных блоков по порядку из `plan.md`. Каждый блок — по шаблону из своего категорийного файла.
 6. **Adversarial pass** (см. `adversarial_pass.md`) — 4 вопроса. Counter-arguments — блок `Z1` в отчёте. Не маскируй несогласие.
 7. Если в системе есть `anthropic-skills:humanizer-ru` — прогони финальный отчёт через него.
-8. Сохрани.
+8. Сохрани финальный отчёт.
 
-## Чек-лист после Фазы 6
+## Фаза 7. Refresh targets generation (medium/deep — обязательно)
+
+**Model:** `sonnet` / `medium`. Механический проход по финальному отчёту с экстракцией entities, numbers, hypotheses.
+
+**Зачем:** этот файл — **точка входа для будущих `update <slug>`**. Без него каждый update тратит время на повторное discovery «что вообще отслеживать в этой теме».
+
+**Шаги:**
+1. Прочитай финальный `<date>_<genre>.md` + `plan.md`.
+2. Извлеки **entities** из блоков M2 (profile-cards), M5 (white-spaces), C1-C5 (compare matrices): конкретные компании/проекты с URL.
+3. Извлеки **numbers** из блоков N1-N8: конкретные FRED series IDs, World Bank indicators, industry estimate refs.
+4. Извлеки **topic markers** из плана: GitHub topics из awesome_lists_registry discovery, OpenAlex concept IDs.
+5. Извлеки **гипотезы H1-H4** из plan.md с финальным статусом из A4 (hypotheses-outcome).
+6. Запиши в `<root>/<slug>/refresh_targets.md` по шаблону **Z11** из `blocks/close.md`.
+
+**Output:** файл `refresh_targets.md` рядом с `plan.md`. Используется при последующих `update <slug>` — см. `refresh_protocol.md`.
+
+**Anti-patterns:** см. блок Z11 в `blocks/close.md`.
+
+## Чек-лист после Фазы 7
 
 - [ ] **Acceptance criteria из plan.md (секция 4) ВСЕ выполнены** — перепроверь каждый чек-бокс
 - [ ] Все `sources/NN.md` имеют корректный frontmatter (scoring, channel, access заполнены)
@@ -483,4 +501,5 @@ User confirms continue.
 - [ ] Next research suggestions — 2–3 штуки (Z3)
 - [ ] Если update-режим: changelog (plan.md секция 16) финализирован
 - [ ] Если есть `memory/` — предложены memory candidates
+- [ ] **`refresh_targets.md` сгенерирован** (Phase 7, для medium/deep) — entities/numbers/hypotheses/topic markers заполнены по шаблону Z11
 - [ ] Файлы сохранены, путь показан пользователю markdown-ссылкой

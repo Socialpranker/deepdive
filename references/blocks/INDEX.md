@@ -1,6 +1,6 @@
 # Block Library — INDEX
 
-75 блоков в 10 категориях. Композируемые секции для финального отчёта.
+76 блоков в 10 категориях. Композируемые секции для финального отчёта.
 
 ## Как использовать
 
@@ -19,12 +19,12 @@
 | MAP | [map.md](map.md) | M1-M12 | Картография: profiles, positioning, trends |
 | VALIDATE | [validate.md](validate.md) | V1-V10 | Проверка истинности: falsification, evidence grades |
 | ANALYZE | [analyze.md](analyze.md) | A1-A13 | Структурированный анализ: SWOT, timeline, root cause |
-| CLOSE | [close.md](close.md) | Z1-Z10 | Закрытие: counter-args, open Q, next research |
+| CLOSE | [close.md](close.md) | Z1-Z11 | Закрытие: counter-args, open Q, next research |
 | PEOPLE | [people.md](people.md) | P1-P7 | Люди, команды, поведение: persona, journey, incentives |
 | NUMBERS | [numbers.md](numbers.md) | N1-N8 | Количественные: метрики, market sizing, forecasts |
 | CONTEXT | [context.md](context.md) | X1-X7 | Внешний контекст: регуляторика, гео, культура |
 
-## Полная таблица всех 75 блоков
+## Полная таблица всех 76 блоков
 
 ### FRAME
 
@@ -140,6 +140,7 @@
 | Z8 | `assumptions-log` | Список допущений | Любой ресёрч с допущениями |
 | Z9 | `glossary-final` | Финальный глоссарий из отчёта | Длинные с обильной терминологией |
 | Z10 | `update-triggers` | Что должно произойти для update | Все ресёрчи (life cycle) |
+| Z11 | `refresh-targets` (отдельный файл) | Что конкретно проверять при update — entities, numbers, hypotheses | Medium/deep — обязательно |
 
 ### PEOPLE
 
@@ -180,7 +181,7 @@
 
 ## Progressive loading discipline
 
-При 75 блоках критично не загружать всё в контекст.
+При 76 блоках критично не загружать всё в контекст.
 
 ```
 Главный поток:
