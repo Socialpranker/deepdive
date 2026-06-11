@@ -12,6 +12,7 @@ Thumbs.db
 __pycache__/
 *.py[cod]
 *.egg-info/
+.ruff_cache/
 
 # Node (если будет упаковщик)
 node_modules/

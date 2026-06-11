@@ -142,7 +142,9 @@ The skill runs **7 phases** in order:
 | **5** | **Score & Triangulate** | Every source rated Credibility/Recency/Bias; every claim backed by ≥3 independent sources of different types |
 | **6** | **Synthesize + Adversarial** | Assembles report from blocks; runs 4 self-critique questions; documents counter-arguments with steel-man |
 
-Every phase is **transparent**: you see what's happening, you confirm key decisions, and you get a folder you can return to.
+Each phase runs on a model matched to its task — Opus where reasoning multiplies (1/3/6), Haiku for the parallel fan-out (4). The skill announces the routing and an estimated cost up front, once.
+
+Every phase is **transparent**: you see what's happening, you confirm key decisions, and you get a folder you can return to. Want to compare models head-to-head? The [eval harness](eval/README.md) scores any run on 6 axes.
 
 ---
 
@@ -226,6 +228,48 @@ GitHub Actions cron validates all endpoints + discovers upstream additions:
 - Reports committed to `reports/` branch
 
 [Workflow →](.github/workflows/catalog-sync.yml)
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### Model Routing
+
+Per-phase model selection — quality where it multiplies, cheap where it parallelizes:
+
+- Reframing / plan / adversarial → **Opus**
+- Sub-agent fan-out (search) → **Haiku** (cheap × N)
+- Synthesis → **Sonnet/high**
+
+~$2 instead of ~$8 on a deep run, *and* higher quality on critical phases. Override with `with all on opus` / `with cheap mode`.
+
+[Routing →](references/model_routing.md)
+
+</td>
+<td valign="top">
+
+### Eval Harness
+
+Compare research quality across models. Same question, different configs, scored on 6 axes:
+
+- Deterministic (script): citation integrity, source diversity, cost
+- Semantic (LLM-judge): accuracy, coverage, adversarial honesty
+
+Weighted sum with a **citation floor** — hallucinated sources can't win on depth. Verdict = quality per dollar.
+
+[Eval →](eval/README.md)
+
+</td>
+<td valign="top">
+
+### Citation Check
+
+`check_citations.py` resolves every source URL — dead `OPEN` links flagged as likely hallucinations; transport flaps marked `UNKNOWN`, not penalized.
+
+Ignores env proxies (`trust_env=False`). `--strict` for CI.
+
+[Check →](eval/check_citations.py)
 
 </td>
 </tr>
