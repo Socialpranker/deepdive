@@ -18,6 +18,8 @@ from typing import Callable, Protocol, runtime_checkable
 
 TIERS = ("strong", "mid", "cheap")
 
+MAX_TOKENS = 4096
+
 
 def run_parallel(thunks: list[Callable[[], str]], *, limit: int = 5) -> list[str]:
     """Run N thunks concurrently. Result order == input order.
@@ -61,20 +63,36 @@ class DryRunProvider:
 
 
 class ClaudeProvider:
-    """Adapter for Claude. fanout() should use real Explore sub-agents; complete()
-    maps tiers to Opus/Sonnet/Haiku per references/model_routing.md."""
+    """Adapter for Claude via the anthropic SDK. fanout = N parallel complete()
+    calls (ThreadPoolExecutor); complete() maps tiers to Opus/Sonnet/Haiku."""
 
     name = "claude"
-    TIER_MODEL = {"strong": "opus", "mid": "sonnet", "cheap": "haiku"}
+    TIER_MODEL = {"strong": "claude-opus-4-8", "mid": "claude-sonnet-4-6", "cheap": "claude-haiku-4-5"}
 
-    def __init__(self, client=None):
-        self.client = client  # anthropic client injected by caller
+    def __init__(self, client=None, *, model_override: str | None = None, max_concurrency: int = 5):
+        if client is None:
+            import anthropic
+            client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY
+        self.client = client
+        self.model_override = model_override
+        self.max_concurrency = max_concurrency
+
+    def _model_for(self, tier: str) -> str:
+        assert tier in TIERS, f"unknown tier {tier}"
+        return self.model_override or self.TIER_MODEL[tier]
 
     def complete(self, prompt: str, *, system: str = "", model_tier: str = "mid") -> str:
-        raise NotImplementedError("TODO: call Anthropic API with TIER_MODEL[model_tier]")
+        import anthropic
+        msg = self.client.messages.create(
+            model=self._model_for(model_tier),
+            max_tokens=MAX_TOKENS,
+            system=system or anthropic.NOT_GIVEN,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return "".join(b.text for b in msg.content if b.type == "text")
 
     def fanout(self, tasks: list[str], *, model_tier: str = "cheap") -> list[str]:
-        raise NotImplementedError("TODO: dispatch parallel Explore sub-agents")
+        raise NotImplementedError("TODO Task 3")
 
 
 class OpenAIProvider:
