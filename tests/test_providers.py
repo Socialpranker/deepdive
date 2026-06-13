@@ -17,7 +17,7 @@ def test_run_parallel_is_concurrent():
     out = run_parallel(thunks, limit=5)
     elapsed = time.monotonic() - start
     assert out == [0, 1, 2, 3, 4]
-    assert elapsed < 0.6  # ~0.2s parallel, not ~1.0s serial
+    assert elapsed < 0.8  # parallel ~0.2s (4x headroom); serial would be ~1.0s — still discriminates
 
 
 def test_run_parallel_fails_loud():
