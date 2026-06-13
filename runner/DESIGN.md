@@ -9,7 +9,7 @@ two genuinely Claude-specific pieces are:
 1. **Sub-agent fan-out** — Phase 4 launches parallel `Explore` sub-agents.
 2. **Source-file management** — the skill relies on the agent writing `sources/NN.md`.
 
-Everything else (the <!--gen:count:phases-->7<!--/gen-->-phase methodology, <!--gen:count:blocks-->75<!--/gen--> blocks, <!--gen:count:channels-->29<!--/gen--> channels, <!--gen:count:stat_sources-->280<!--/gen-->+ sources, the
+Everything else (the <!--gen:count:phases-->9<!--/gen-->-phase methodology, <!--gen:count:blocks-->103<!--/gen--> blocks, <!--gen:count:channels-->29<!--/gen--> channels, <!--gen:count:stat_sources-->461<!--/gen-->+ sources, the
 scoring rubric) is model-agnostic markdown. If a thin runner owns the fan-out and the
 file I/O and talks to *any* model through one interface, the skill becomes
 infrastructure instead of a Claude add-on. That is the difference between "a skill"
@@ -20,7 +20,7 @@ about.
 
 ```
 runner/
-  orchestrator.py   # drives the 7 phases; owns source-file I/O and fan-out
+  orchestrator.py   # drives the 9 phases; owns source-file I/O and fan-out
   providers.py      # LLMProvider protocol + adapters (Claude, OpenAI, local/Ollama)
   phases.py         # one function per phase; pure-ish, takes provider + state  (TODO)
   state.py          # RunState: paths, plan, sources, findings                  (TODO)

@@ -3,7 +3,7 @@
 # or by GitHub Pages for the docs/ folder.
 
 title: Deep Research
-description: A structured <!--gen:count:phases-->7<!--/gen-->-phase meta-research skill for Claude Code. <!--gen:count:channels-->29<!--/gen--> channels, <!--gen:count:stat_sources-->280<!--/gen-->+ stat sources, <!--gen:count:blocks-->75<!--/gen--> report blocks.
+description: A structured <!--gen:count:phases-->9<!--/gen-->-phase meta-research skill for Claude Code. <!--gen:count:channels-->29<!--/gen--> channels, <!--gen:count:stat_sources-->461<!--/gen-->+ stat sources, <!--gen:count:blocks-->103<!--/gen--> report blocks.
 url: https://socialpranker.github.io
 baseurl: /claude-deep-research
 

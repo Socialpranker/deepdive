@@ -1,6 +1,6 @@
 # Contributing to Deep Research
 
-Thank you for considering a contribution. This skill is most valuable when its **catalog of sources and channels grows** — the world has thousands more sources than the current <!--gen:count:stat_sources-->280<!--/gen-->+, and you might know exactly the right one for a specific industry or methodology.
+Thank you for considering a contribution. This skill is most valuable when its **catalog of sources and channels grows** — the world has thousands more sources than the current <!--gen:count:stat_sources-->461<!--/gen-->+, and you might know exactly the right one for a specific industry or methodology.
 
 Contributions are organized by **difficulty** so you can pick what fits.
 
@@ -39,7 +39,7 @@ Need a stat sources file for an industry not covered (e.g., aerospace, mining, f
 
 ### 2-4 hours — Add a new report block
 
-The block library has <!--gen:count:blocks-->75<!--/gen--> blocks but specific use cases might need more.
+The block library has <!--gen:count:blocks-->103<!--/gen--> blocks but specific use cases might need more.
 
 **Example:** You want a `decision-tree` block in `compare.md`.
 

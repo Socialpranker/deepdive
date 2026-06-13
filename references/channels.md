@@ -1,4 +1,4 @@
-# Search channels — каталог <!--gen:count:channels-->28<!--/gen--> каналов поиска
+# Search channels — каталог <!--gen:count:channels-->29<!--/gen--> каналов поиска
 
 Каналы — это **именованные search strategies** под разные типы источников. Каждый канал имеет известные query patterns, ожидаемый формат результатов, и known limitations.
 
@@ -9,7 +9,7 @@
 3. В промпт суб-агента передаётся `channels: [список]` — агент знает где искать.
 4. В `sources/NN.md` фиксируется `channel:` поле — какой канал дал источник.
 
-## Каталог <!--gen:count:channels-->28<!--/gen--> каналов
+## Каталог <!--gen:count:channels-->29<!--/gen--> каналов
 
 ### Часть A — Web и discovery
 

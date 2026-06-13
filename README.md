@@ -38,7 +38,7 @@ Claude:  ✓ Reframed your question (3 hypotheses)
 
 ## What this is
 
-A [Claude Code skill](https://docs.anthropic.com/claude/docs/skills) that turns **"research this topic"** into a **<!--gen:count:phases-->7<!--/gen-->-phase pipeline** with hypothesis testing, parallel sub-agent search, source triangulation, and adversarial review.
+A [Claude Code skill](https://docs.anthropic.com/claude/docs/skills) that turns **"research this topic"** into a **<!--gen:count:phases-->9<!--/gen-->-phase pipeline** with hypothesis testing, parallel sub-agent search, source triangulation, and adversarial review.
 
 The output is a folder you can return to in a month. Every claim traces to a specific source file. The plan documents *why* you made every choice. No re-research needed.
 
@@ -73,7 +73,7 @@ Mandatory adversarial pass + opposition queries
 
 Atomic theses in `findings/FN.md` reusable
 
-<!--gen:count:channels-->29<!--/gen--> named channels + <!--gen:count:stat_sources-->280<!--/gen-->+ stat sources
+<!--gen:count:channels-->29<!--/gen--> named channels + <!--gen:count:stat_sources-->461<!--/gen-->+ stat sources
 
 Every claim → `[s12]` link → specific quote
 
@@ -120,7 +120,7 @@ zip -r ../deep-research.skill . -x ".*" -x "*.zip"
 <details>
 <summary><b>For other LLMs (Codex, Gemini, local)</b></summary>
 
-The 6-phase methodology is portable. Load `SKILL.md` + `references/*.md` into the LLM's context manually. Skip the sub-agent parts and use separate chat sessions per subtopic.
+The <!--gen:count:phases-->9<!--/gen-->-phase methodology is portable. Load `SKILL.md` + `references/*.md` into the LLM's context manually. Skip the sub-agent parts and use separate chat sessions per subtopic.
 
 [Full instructions →](#use-with-other-llms-codex-gemini-etc)
 
@@ -130,17 +130,19 @@ The 6-phase methodology is portable. Load `SKILL.md` + `references/*.md` into th
 
 ## How it works
 
-The skill runs **<!--gen:count:phases-->7<!--/gen--> phases** in order:
+The skill runs **<!--gen:count:phases-->9<!--/gen--> phases** in order:
 
 | Phase | Name | What happens |
 |:---:|:---|:---|
-<!--gen:phases:table:en-->| **1** | **Reframing** | Restates your question; identifies the decision it supports; formulates 2-4 falsifiable hypotheses |
-| **2** | **Genre** | Picks report type (`qa` / `explainer` / `decision` / `landscape` / `validation` / `custom`) + block composition |
-| **3** | **Plan** | Writes `plan.md` with 17 sections: acceptance criteria, risk register, glossary, sourcing strategy per subtopic |
-| **3.5** | **Capability Discovery** | Audits available API keys, maps subtopics to data sources, discovers gaps via upstream awesome-lists |
-| **4** | **Search** | Launches 2-5 parallel `Explore` sub-agents across <!--gen:count:channels-->29<!--/gen--> channels and <!--gen:count:stat_sources-->280<!--/gen-->+ stat sources |
-| **5** | **Score & Triangulate** | Every source rated Credibility/Recency/Bias; every claim backed by ≥3 independent sources of different types |
-| **6** | **Synthesize + Adversarial** | Assembles report from blocks; runs 4 self-critique questions; documents counter-arguments with steel-man |<!--/gen-->
+<!--gen:phases:table:en-->| **1** | **Reframing** | opus / high |
+| **2** | **Genre & block selection** | sonnet / medium |
+| **3** | **Plan** | opus / medium |
+| **3.5** | **Capability Discovery** | sonnet / low |
+| **4** | **Search** | sonnet / medium |
+| **5** | **Scoring + triangulation** | sonnet / medium |
+| **6** | **Synthesis + adversarial pass** | opus / high |
+| **6.5** | **Verify** | haiku / low |
+| **7** | **Refresh targets** | sonnet / medium |<!--/gen-->
 
 Each phase runs on a model matched to its task — Opus where reasoning multiplies (1/3/6), Haiku for the parallel fan-out (4). The skill announces the routing and an estimated cost up front, once.
 
@@ -154,7 +156,7 @@ Every phase is **transparent**: you see what's happening, you confirm key decisi
 <tr>
 <td width="33%" valign="top">
 
-### <!--gen:count:blocks-->75<!--/gen--> Report Blocks
+### <!--gen:count:blocks-->103<!--/gen--> Report Blocks
 
 10 categories: **FRAME** · **EXPLAIN** · **COMPARE** · **MAP** · **VALIDATE** · **ANALYZE** · **CLOSE** · **PEOPLE** · **NUMBERS** · **CONTEXT**
 
@@ -176,7 +178,7 @@ Named strategies with query patterns + paywall fallbacks:
 </td>
 <td width="33%" valign="top">
 
-### <!--gen:count:stat_sources-->280<!--/gen-->+ Stat Sources
+### <!--gen:count:stat_sources-->461<!--/gen-->+ Stat Sources
 
 14 cross-industry + 19 industry categories. Each entry: URL · Type · Access · Quality · Limitations · Combine-with · Fallback.
 
@@ -205,7 +207,7 @@ Categories: `gov_macro` · `companies_public` · `crypto` · `health` · `educat
 </td>
 <td valign="top">
 
-### <!--gen:count:api-->30<!--/gen-->+ API Endpoints
+### <!--gen:count:api-->39<!--/gen-->+ API Endpoints
 
 Free no-auth APIs prioritized:
 
@@ -222,7 +224,7 @@ Auth via env vars only — skill never asks for keys inline.
 
 GitHub Actions cron validates all endpoints + discovers upstream additions:
 
-- HEAD-check <!--gen:count:api-->30<!--/gen-->+ APIs weekly
+- HEAD-check <!--gen:count:api-->39<!--/gen-->+ APIs weekly
 - Scan public-apis & awesome-public-datasets
 - Auto-PR for dead endpoints
 - Reports committed to `reports/` branch
@@ -385,9 +387,9 @@ The file-per-source structure is the key **reuse** mechanism. A single research 
 
 It's **structured methodology + curated catalog + reusable templates + automation**.
 
-- The <!--gen:count:phases-->7<!--/gen-->-phase workflow forces discipline
-- <!--gen:count:stat_sources-->280<!--/gen-->+ stat sources catalog is curated knowledge
-- <!--gen:count:blocks-->75<!--/gen--> reusable blocks compose any report shape
+- The <!--gen:count:phases-->9<!--/gen-->-phase workflow forces discipline
+- <!--gen:count:stat_sources-->461<!--/gen-->+ stat sources catalog is curated knowledge
+- <!--gen:count:blocks-->103<!--/gen--> reusable blocks compose any report shape
 - Weekly auto-validation keeps the catalog alive
 - 25+ upstream awesome-lists give infinite discovery layer
 
@@ -412,10 +414,10 @@ The methodology is portable. ~70% of content is LLM-agnostic markdown templates.
 |:---|:---:|:---:|
 | `SKILL.md` frontmatter | ✓ | — |
 | Sub-agent `Explore` type | ✓ | — |
-| <!--gen:count:phases-->7<!--/gen-->-phase workflow | — | ✓ |
-| <!--gen:count:blocks-->75<!--/gen--> report blocks | — | ✓ |
+| <!--gen:count:phases-->9<!--/gen-->-phase workflow | — | ✓ |
+| <!--gen:count:blocks-->103<!--/gen--> report blocks | — | ✓ |
 | <!--gen:count:channels-->29<!--/gen--> search channels | — | ✓ |
-| <!--gen:count:stat_sources-->280<!--/gen-->+ stat sources | — | ✓ |
+| <!--gen:count:stat_sources-->461<!--/gen-->+ stat sources | — | ✓ |
 
 **To adapt:**
 1. Load `SKILL.md` + relevant `references/*.md` into the LLM's context
@@ -438,16 +440,16 @@ The methodology is portable. ~70% of content is LLM-agnostic markdown templates.
 <details>
 <summary><h2>На русском</h2></summary>
 
-**Deep Research** — скилл для [Claude Code](https://claude.com/claude-code), превращающий «загугли это» в дисциплинированный <!--gen:count:phases-->7<!--/gen-->-фазный процесс.
+**Deep Research** — скилл для [Claude Code](https://claude.com/claude-code), превращающий «загугли это» в дисциплинированный <!--gen:count:phases-->9<!--/gen-->-фазный процесс.
 
 ### Что внутри
 
-- **<!--gen:count:phases-->7<!--/gen--> фаз workflow**: <!--gen:phases:list:ru-->Reframing → Genre → Plan → Capability Discovery → Search → Score → Synthesis<!--/gen-->
+- **<!--gen:count:phases-->9<!--/gen--> фаз workflow**: <!--gen:phases:list:ru-->Reframing → Genre & block selection → Plan → Capability Discovery → Поиск → Скоринг + триангуляция → Синтез + adversarial pass → Verify → Refresh targets<!--/gen-->
 - **<!--gen:count:genres-->6<!--/gen--> жанров отчёта**: qa / explainer / decision / landscape / validation / custom
-- **<!--gen:count:blocks-->75<!--/gen--> блоков** в 10 категориях — переиспользуемые секции с шаблонами и анти-паттернами
+- **<!--gen:count:blocks-->103<!--/gen--> блоков** в 10 категориях — переиспользуемые секции с шаблонами и анти-паттернами
 - **<!--gen:count:channels-->29<!--/gen--> каналов поиска** с paywall fallback протоколом (включая api-direct)
-- **<!--gen:count:stat_sources-->280<!--/gen-->+ статистических источников** в 14 cross-industry + 19 отраслевых категориях
-- **<!--gen:count:api-->30<!--/gen-->+ API endpoints** для programmatic доступа (free no-auth приоритетны)
+- **<!--gen:count:stat_sources-->461<!--/gen-->+ статистических источников** в 14 cross-industry + 19 отраслевых категориях
+- **<!--gen:count:api-->39<!--/gen-->+ API endpoints** для programmatic доступа (free no-auth приоритетны)
 - **plan.md** с 17 секциями для прозрачности
 - **Adversarial pass** с 4 вопросами самокритики (обязателен для medium/deep)
 - **Weekly auto-validation** через GitHub Actions

@@ -71,16 +71,26 @@ def render_values(repo: Path) -> dict[str, str]:
 def stamp_text(text: str, values: dict[str, str], *, path: str) -> str:
     out = []
     pos = 0
-    for m in OPEN_RE.finditer(text):
+    while True:
+        m = OPEN_RE.search(text, pos)
+        if not m:
+            break
         key = m.group(1)
         if key not in values:
             raise ValueError(f"{path}: unknown key 'gen:{key}'")
         close_at = text.find(CLOSE, m.end())
         if close_at == -1:
             raise ValueError(f"{path}: unbalanced marker 'gen:{key}' (no {CLOSE})")
+        # Markers must not nest: another open before this one's close = malformed.
+        inner = OPEN_RE.search(text, m.end())
+        if inner and inner.start() < close_at:
+            raise ValueError(
+                f"{path}: nested marker 'gen:{inner.group(1)}' inside 'gen:{key}' "
+                f"(markers cannot overlap)")
         out.append(text[pos:m.end()])
         out.append(values[key])
-        pos = close_at  # CLOSE itself re-emitted on next slice
+        out.append(CLOSE)
+        pos = close_at + len(CLOSE)
     out.append(text[pos:])
     return "".join(out)
 

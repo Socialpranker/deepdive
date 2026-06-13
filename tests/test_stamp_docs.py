@@ -37,6 +37,14 @@ def test_unbalanced_marker_raises():
         stamp_docs.stamp_text(src, VALUES, path="x")
 
 
+def test_nested_markers_raise():
+    # an open before the previous open's close = overlapping markers → must raise,
+    # never silently mis-stamp (regression: README phase-table wrapped count markers)
+    src = "<!--gen:count:blocks-->x <!--gen:count:phases-->y<!--/gen--> z<!--/gen-->"
+    with pytest.raises(ValueError, match="nested|overlap"):
+        stamp_docs.stamp_text(src, VALUES, path="x")
+
+
 def test_unknown_key_raises():
     src = "<!--gen:count:bogus-->x<!--/gen-->"
     with pytest.raises(ValueError, match="unknown key"):
