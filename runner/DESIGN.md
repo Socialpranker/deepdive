@@ -6,7 +6,9 @@ Today the skill is Claude-only in practice. "Works with other LLMs" means *paste
 markdown into the context yourself* — which is not adoption, it's a disclaimer. The
 two genuinely Claude-specific pieces are:
 
-1. **Sub-agent fan-out** — Phase 4 launches parallel `Explore` sub-agents.
+1. **Sub-agent fan-out** — in the skill, Phase 4 launches parallel `Explore`
+   sub-agents. The runner replaces this with a provider-owned `fanout` (N parallel
+   `complete()` calls), so the methodology no longer depends on the harness.
 2. **Source-file management** — the skill relies on the agent writing `sources/NN.md`.
 
 Everything else (the <!--gen:count:phases-->9<!--/gen-->-phase methodology, <!--gen:count:blocks-->103<!--/gen--> blocks, <!--gen:count:channels-->29<!--/gen--> channels, <!--gen:count:stat_sources-->460<!--/gen-->+ sources, the
