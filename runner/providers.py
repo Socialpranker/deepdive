@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import hashlib
+import os
 from typing import Callable, Protocol, runtime_checkable
 
 TIERS = ("strong", "mid", "cheap")
@@ -138,3 +139,22 @@ class OpenAICompatProvider:
 
 def get_provider(name: str) -> LLMProvider:
     return {"dryrun": DryRunProvider, "claude": ClaudeProvider, "openai": OpenAICompatProvider}[name]()
+
+
+def _require_env(name: str) -> None:
+    if not os.environ.get(name):
+        raise RuntimeError(f"{name} is not set — required for this provider. "
+                           f"Export it or use --provider dryrun.")
+
+
+def build_provider(name: str, *, model: str | None = None, base_url: str | None = None) -> LLMProvider:
+    if name == "dryrun":
+        return DryRunProvider()
+    if name == "claude":
+        _require_env("ANTHROPIC_API_KEY")
+        return ClaudeProvider(model_override=model)
+    if name == "openai":
+        _require_env("OPENAI_API_KEY")
+        return OpenAICompatProvider(base_url=base_url or os.environ.get("OPENAI_BASE_URL"),
+                                    model_override=model)
+    raise ValueError(f"unknown provider {name!r} (expected: dryrun|claude|openai)")

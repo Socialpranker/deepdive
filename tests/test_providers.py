@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from runner.providers import ClaudeProvider, OpenAICompatProvider, run_parallel
+from runner.providers import ClaudeProvider, DryRunProvider, OpenAICompatProvider, build_provider, run_parallel
 
 
 def test_run_parallel_preserves_order():
@@ -196,3 +196,38 @@ def test_openai_complete_empty_choices_raises():
     p = OpenAICompatProvider(client=client)
     with pytest.raises(ValueError, match="no choices"):
         p.complete("q")
+
+
+def test_build_provider_dryrun_needs_no_key(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert isinstance(build_provider("dryrun"), DryRunProvider)
+
+
+def test_build_provider_claude_fails_fast_without_key(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY"):
+        build_provider("claude")
+
+
+def test_build_provider_openai_fails_fast_without_key(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
+        build_provider("openai")
+
+
+def test_build_provider_unknown_raises(monkeypatch):
+    with pytest.raises(ValueError, match="unknown provider"):
+        build_provider("gpt9000")
+
+
+def test_build_provider_claude_with_key(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    p = build_provider("claude", model="claude-opus-4-8")
+    assert isinstance(p, ClaudeProvider)
+    assert p.model_override == "claude-opus-4-8"
+
+
+def test_build_provider_openai_passes_base_url(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    p = build_provider("openai", base_url="http://localhost:11434/v1")
+    assert isinstance(p, OpenAICompatProvider)
