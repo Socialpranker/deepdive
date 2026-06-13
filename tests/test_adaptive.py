@@ -345,3 +345,26 @@ def test_loop_cross_agent_contradiction_becomes_deviation():
     assert len(cross) == 1
     assert cross[0].trigger == "contradiction"
     assert cross[0].status == "pursued"
+
+
+def test_loop_budget_exhausted_midround_is_not_pursued():
+    # medium: expensive budget = 1, depth_limit = 1. Two expensive candidates in ONE
+    # round: the first spends the single expensive unit (pursued); the second hits
+    # can_spend("expensive") == False while depth still allows a spawn -> it must be
+    # recorded not_pursued with reason budget_exhausted (NOT depth_limit).
+    two_expensive = [
+        {"subquestion_id": "Q1", "sources": [],
+         "signals": {"unexpected_finding": {"fired": True, "detail": "a"}}},
+        {"subquestion_id": "Q2", "sources": [],
+         "signals": {"unexpected_finding": {"fired": True, "detail": "b"}}},
+    ]
+    # round 2 must be calm so the loop stops: single agent, no signals.
+    run_round = _round_factory([two_expensive,
+                                [{"subquestion_id": "Q1", "sources": [], "signals": {}}]])
+    devs, rounds = run_search_loop(_LoopProvider(), "medium", run_round)
+    pursued = [d for d in devs if d.status == "pursued"]
+    not_pursued = [d for d in devs if d.status == "not_pursued"]
+    assert len(pursued) == 1
+    assert len(not_pursued) == 1
+    assert "budget_exhausted" in not_pursued[0].rationale
+    assert not_pursued[0].budget_after["expensive"] == 0

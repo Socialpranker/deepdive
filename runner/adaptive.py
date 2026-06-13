@@ -259,6 +259,7 @@ def run_search_loop(provider, depth: str, run_round) -> tuple[list[Deviation], i
                 budget.spend(klass)
                 ba = {"cheap": budget.cheap, "expensive": budget.expensive}
                 next_round = round_index + 1
+                # TODO(Phase 5): backfill outcome/new_source_ids after scoring lands.
                 deviations.append(Deviation(
                     subquestion=c.subquestion, round_from=round_index, round_to=next_round,
                     trigger=c.trigger, klass=klass, status="pursued", rationale=c.rationale,
