@@ -24,6 +24,12 @@ jobs:
       - name: Context budget (fail if SKILL.md / always-floor over budget)
         run: python scripts/context_budget.py --ci
 
+      - name: Run unit tests
+        run: python -m pytest tests/ -q
+
+      - name: Check docs are in sync with sources (fail if a count/phase drifted)
+        run: python scripts/stamp_docs.py --check
+
       - name: Validate fixture run structure
         run: python eval/validate_structure.py --research-dir eval/questions/_fixture --strict || true
         # _fixture has only sources.csv (control URLs) — structure check is informational here;
