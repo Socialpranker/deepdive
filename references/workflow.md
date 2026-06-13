@@ -536,11 +536,6 @@ silent skip**). Phase 6 audits it; Phase 7 reads `not_pursued`/`carry_forward`.
 4. Для каждой гипотезы — собери поддерживающие/опровергающие цитаты. Опционально вынеси крупные в `findings/FN.md` (см. `blocks/close.md` блок Z6).
 5. Собери черновик `<date>_<genre>.md` из выбранных блоков по порядку из `plan.md`. Каждый блок — по шаблону из своего категорийного файла.
 6. **Adversarial pass** (см. `adversarial_pass.md`) — 5 вопросов. Counter-arguments — блок `Z1` в отчёте. Не маскируй несогласие.
-
-   5. **Deviation audit.** Review `deviations.md`. For each `pursued` deviation: was it
-      justified, and did it pull the research away from the approved plan (over-adaptation)?
-      For each `not_pursued`: is the skipped angle critical to the final answer — is this a
-      hole in coverage (under-coverage)? Flag both failure modes explicitly.
 7. Если в системе есть `anthropic-skills:humanizer-ru` — прогони финальный отчёт через него.
 8. Сохрани финальный отчёт.
 
