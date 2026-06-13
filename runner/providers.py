@@ -6,8 +6,8 @@ One interface, swappable backends. The methodology never references a model name
 it asks for a `model_tier` (strong/mid/cheap) and the provider maps it. That mapping
 is the only thing that changes between Claude, OpenAI, and a local model.
 
-Only DryRunProvider is implemented (no network) so the pipeline is testable today.
-The real adapters are stubs with the integration point marked TODO.
+DryRunProvider needs no network (deterministic, for CI). ClaudeProvider and
+OpenAICompatProvider call their real SDKs; build_provider resolves provider + keys.
 """
 
 from __future__ import annotations
