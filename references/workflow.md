@@ -535,7 +535,12 @@ silent skip**). Phase 6 audits it; Phase 7 reads `not_pursued`/`carry_forward`.
 3. Загрузи нужные категорийные файлы `blocks/*.md` (только те что нужны для выбранных blocks). Прогрессивно — не сразу все.
 4. Для каждой гипотезы — собери поддерживающие/опровергающие цитаты. Опционально вынеси крупные в `findings/FN.md` (см. `blocks/close.md` блок Z6).
 5. Собери черновик `<date>_<genre>.md` из выбранных блоков по порядку из `plan.md`. Каждый блок — по шаблону из своего категорийного файла.
-6. **Adversarial pass** (см. `adversarial_pass.md`) — 4 вопроса. Counter-arguments — блок `Z1` в отчёте. Не маскируй несогласие.
+6. **Adversarial pass** (см. `adversarial_pass.md`) — 5 вопросов. Counter-arguments — блок `Z1` в отчёте. Не маскируй несогласие.
+
+   5. **Deviation audit.** Review `deviations.md`. For each `pursued` deviation: was it
+      justified, and did it pull the research away from the approved plan (over-adaptation)?
+      For each `not_pursued`: is the skipped angle critical to the final answer — is this a
+      hole in coverage (under-coverage)? Flag both failure modes explicitly.
 7. Если в системе есть `anthropic-skills:humanizer-ru` — прогони финальный отчёт через него.
 8. Сохрани финальный отчёт.
 
@@ -553,6 +558,12 @@ silent skip**). Phase 6 audits it; Phase 7 reads `not_pursued`/`carry_forward`.
 5. Извлеки **гипотезы H1-H4** из plan.md с финальным статусом из A4 (hypotheses-outcome).
 6. Запиши в `<root>/<slug>/refresh_targets.md` по шаблону **Z11** из `blocks/close.md`.
 
+**Refresh candidates — дополнительный источник:**
+
+- **Carry-forward deviations.** Read `deviations.md` for `not_pursued` records with a
+  `carry_forward` field; each is a first-class refresh-target candidate (an angle the
+  search loop identified but could not pursue within budget/depth).
+
 **Output:** файл `refresh_targets.md` рядом с `plan.md`. Используется при последующих `update <slug>` — см. `refresh_protocol.md`.
 
 **Anti-patterns:** см. блок Z11 в `blocks/close.md`.
@@ -568,7 +579,7 @@ silent skip**). Phase 6 audits it; Phase 7 reads `not_pursued`/`carry_forward`.
 - [ ] Все required блоки для жанра присутствуют (см. `genres.md`)
 - [ ] Каждое утверждение имеет ссылку на конкретный [sNN] или помечено `[без подтверждения]`
 - [ ] Каналы coverage ≥3 разных типов (см. plan.md секция 14)
-- [ ] Adversarial pass выполнен (4 вопроса), Z1 counter-arguments записаны
+- [ ] Adversarial pass выполнен (5 вопросов), Z1 counter-arguments записаны
 - [ ] Hypotheses outcome таблица заполнена — все H1-H4 имеют status
 - [ ] Risk register из plan.md (секция 10) проверен — risks которые реализовались отмечены, mitigation работала?
 - [ ] Open questions перечислены (Z2)
