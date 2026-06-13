@@ -1,2 +1,9 @@
-run_id,question_slug,model_config,real_cost_usd,date,notes
-real-may,llm-model-selection-by-task,unknown-may-run,1.85,2026-05-31,baseline run made before routing existed
+run_id,question_slug,config,model_notes,real_cost_usd,date,notes
+postgres-replication-vs-cdc-A,postgres-replication-vs-cdc,default,,,,
+rag-chunking-strategies-2026-A,rag-chunking-strategies-2026,default,,,,
+wasm-component-model-A,wasm-component-model,default,,,,
+vector-db-landscape-2026-A,vector-db-landscape-2026,default,,,,
+llms-plateau-claim-A,llms-plateau-claim,default,,,,
+sqlite-vs-duckdb-analytics-A,sqlite-vs-duckdb-analytics,default,,,,
+open-source-ai-licensing-A,open-source-ai-licensing,default,,,,
+edge-inference-cost-model-A,edge-inference-cost-model,default,,,,
