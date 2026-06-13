@@ -1,6 +1,6 @@
 # Adaptive Search Loop (Phase 4) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Turn Phase 4 (Search) from a single planned salvo into an orchestrator-driven loop (round → Opus evaluation → optional bounded deviation round), with a deviation budget, depth limit, and an audited `deviations.md` log.
 
@@ -55,12 +55,12 @@ BUDGET_BY_DEPTH = {
 
 **Context:** `phases_manifest.load_phases` requires exactly `REQUIRED = (id, name_ru, name_en, model, effort, depth_gate)` per phase and reads *all* `key: value` lines. Extra keys are preserved, not rejected. `stamp_docs` only consumes `id/name_en/model/effort/name_ru` + `len(phases)`. So we may add a comment and/or a non-required key to Phase 4 WITHOUT changing the phase count or breaking the gate. We must NOT add a new phase row (that would bump `count:phases` and require re-stamping every doc with a new row).
 
-- [ ] **Step 1: Verify the current gate is green (baseline)**
+- [x] **Step 1: Verify the current gate is green (baseline)**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_phases_manifest.py -v`
 Expected: PASS (establishes baseline before edits).
 
-- [ ] **Step 2: Add the loop annotation to Phase 4**
+- [x] **Step 2: Add the loop annotation to Phase 4**
 
 In `phases.yaml`, find the Phase 4 entry:
 
@@ -90,17 +90,17 @@ Replace it with (adds a clarifying comment + a non-REQUIRED `loop` marker key �
     loop: "true"
 ```
 
-- [ ] **Step 3: Verify the manifest still parses and the gate stays green**
+- [x] **Step 3: Verify the manifest still parses and the gate stays green**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_phases_manifest.py -v && python3 scripts/phases_manifest.py | python3 -c "import json,sys; p=json.load(sys.stdin); assert len(p)==9, len(p); assert p[4]['id']=='4' and p[4].get('loop')=='true'; print('OK: 9 phases, Phase 4 loop-annotated')"`
 Expected: PASS, then `OK: 9 phases, Phase 4 loop-annotated` (confirms count unchanged at 9 and the marker is readable).
 
-- [ ] **Step 4: Verify the doc-stamp gate still passes (count unchanged)**
+- [x] **Step 4: Verify the doc-stamp gate still passes (count unchanged)**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 scripts/stamp_docs.py --check`
 Expected: exit 0 (no drift — because the phase count and per-phase stamped fields are unchanged). If it reports drift, STOP: it means `loop:` leaked into a stamped field — revisit Step 2.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/ivanteresenko/Downloads/claude-deep-research
@@ -118,12 +118,12 @@ git commit -m "docs(phases): пометить фазу 4 как loop (без н�
 
 **Context:** `workflow.md` is in `stamp_docs.TARGETS`. Editing prose is safe as long as we don't touch `<!--gen:...-->` marker spans. The rewrite documents: Round 1 = the approved plan; an orchestrator evaluation after every round (cross-agent contradiction scan + Opus deviation decision); the `signals` block in the sub-agent JSON; budget/depth/`deviations.md` mechanics; termination conditions.
 
-- [ ] **Step 1: Read the current Phase 4 section to get exact surrounding anchors**
+- [x] **Step 1: Read the current Phase 4 section to get exact surrounding anchors**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && grep -n "Phase 4\|## 4\|Поиск\|4.0\|4.1\|4.2\|4.3" references/workflow.md | head -40`
 Expected: line numbers for the Phase 4 sub-sections (4.0 Source Dispatch, 4.1 Launch sub-agents, 4.2 Fetch & Dedup, 4.3 Save). Note them; the rewrite replaces the body of this section, preserving any `<!--gen-->` markers and the surrounding Phase 3 / Phase 5 headers.
 
-- [ ] **Step 2: Replace the Phase 4 body with the loop description**
+- [x] **Step 2: Replace the Phase 4 body with the loop description**
 
 Within the Phase 4 section (between the Phase 3 end and the Phase 5 header), keep the existing 4.0/4.1/4.2/4.3 step descriptions but reframe them as **Round 1** and insert the loop. Insert this block (adapt heading levels to match the file's existing style — use the same `##`/`###` depth as the neighbouring phases):
 
@@ -203,17 +203,17 @@ Written beside `plan.md` / `sources/`. One record per *considered* trigger (both
 silent skip**). Phase 6 audits it; Phase 7 reads `not_pursued`/`carry_forward`.
 ````
 
-- [ ] **Step 3: Verify the stamp gate stays green (markers untouched)**
+- [x] **Step 3: Verify the stamp gate stays green (markers untouched)**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 scripts/stamp_docs.py --check`
 Expected: exit 0. If drift is reported on `workflow.md`, you edited inside a `<!--gen-->` span — undo that part.
 
-- [ ] **Step 4: Sanity-check the prose references nothing undefined**
+- [x] **Step 4: Sanity-check the prose references nothing undefined**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && grep -n "deviations.md\|signals\|cross-agent\|not_pursued\|depth limit" references/workflow.md | head`
 Expected: the new terms appear in the Phase 4 section (confirms the block landed).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/ivanteresenko/Downloads/claude-deep-research
@@ -231,12 +231,12 @@ git commit -m "docs(workflow): фаза 4 как цикл раундов (signal
 
 **Context:** Phase 6 currently lists 4 adversarial questions. The spec adds a 5th that audits `deviations.md` on both sides. Phase 7 generates refresh targets; the spec routes `not_pursued`/`carry_forward` deviations into that candidate set.
 
-- [ ] **Step 1: Locate the Phase 6 adversarial questions and Phase 7 refresh section**
+- [x] **Step 1: Locate the Phase 6 adversarial questions and Phase 7 refresh section**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && grep -n "adversarial\|Phase 6\|Phase 7\|refresh\|steel-man\|counter-argument" references/workflow.md | head -30`
 Expected: line anchors for the 4-question adversarial list and the refresh-targets section.
 
-- [ ] **Step 2: Append the 5th adversarial question**
+- [x] **Step 2: Append the 5th adversarial question**
 
 After the existing 4th adversarial question in the Phase 6 section, add:
 
@@ -247,7 +247,7 @@ After the existing 4th adversarial question in the Phase 6 section, add:
    hole in coverage (under-coverage)? Flag both failure modes explicitly.
 ```
 
-- [ ] **Step 3: Add `carry_forward` reading to Phase 7**
+- [x] **Step 3: Add `carry_forward` reading to Phase 7**
 
 In the Phase 7 (refresh targets) section, add a bullet:
 
@@ -257,12 +257,12 @@ In the Phase 7 (refresh targets) section, add a bullet:
   search loop identified but could not pursue within budget/depth).
 ```
 
-- [ ] **Step 4: Verify the stamp gate stays green**
+- [x] **Step 4: Verify the stamp gate stays green**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 scripts/stamp_docs.py --check`
 Expected: exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/ivanteresenko/Downloads/claude-deep-research
@@ -280,22 +280,22 @@ git commit -m "docs(workflow): 5-й adversarial-вопрос (аудит deviati
 
 **Context:** Layer A added no new phase, so counts shouldn't change — but run `--write` to be certain the docs are byte-identical to what the gate expects, then confirm `--check` is clean. This guards against any stray marker drift introduced while editing prose.
 
-- [ ] **Step 1: Run the stamper in write mode**
+- [x] **Step 1: Run the stamper in write mode**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 scripts/stamp_docs.py --write`
 Expected: either "no changes" or a small rewrite. Inspect with `git diff --stat`.
 
-- [ ] **Step 2: Confirm no semantic phase-count change leaked in**
+- [x] **Step 2: Confirm no semantic phase-count change leaked in**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && git diff` 
 Expected: if anything changed, it is NOT a phase count or a new table row (those would signal Task 1 went wrong). If you see `count:phases` change from 9, STOP and fix Task 1.
 
-- [ ] **Step 3: Final gate check**
+- [x] **Step 3: Final gate check**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 scripts/stamp_docs.py --check && python3 -m pytest tests/test_stamp_docs.py tests/test_phases_manifest.py -v`
 Expected: exit 0 and PASS.
 
-- [ ] **Step 4: Commit (only if Step 1 produced changes)**
+- [x] **Step 4: Commit (only if Step 1 produced changes)**
 
 ```bash
 cd /Users/ivanteresenko/Downloads/claude-deep-research
@@ -326,7 +326,7 @@ malformed/partial `signals` block is treated as "no flag fired" (fail-safe — n
 block the run on a cheap model's bad output), with a warning. We model a parsed signal
 set as a frozenset of fired trigger names plus the raw details.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/test_adaptive.py`:
 
@@ -368,12 +368,12 @@ def test_parse_signals_malformed_is_fail_safe():
         assert fired == set(), bad
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'runner.adaptive'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `runner/adaptive.py`:
 
@@ -431,12 +431,12 @@ def parse_signals(agent_blob: dict) -> tuple[set[str], dict[str, str]]:
     return fired, details
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive.py -v`
 Expected: PASS (4 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/ivanteresenko/Downloads/claude-deep-research
@@ -457,7 +457,7 @@ counters plus a depth limit. Debit is atomic and must never go below zero. `clas
 maps a trigger to its class. `can_spend`/`spend` gate and decrement. Depth is tracked
 per round (Round 1 = depth 0).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/test_adaptive.py`:
 
@@ -510,12 +510,12 @@ def test_budget_depth_limit_gate():
     assert b.depth_ok(1) is False  # at the limit, no further spawn
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive.py -k budget -v`
 Expected: FAIL with `ImportError: cannot import name 'Budget'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Append to `runner/adaptive.py`:
 
@@ -565,12 +565,12 @@ class Budget:
         return current_depth < self.depth_limit
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive.py -v`
 Expected: PASS (all signals + budget tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/ivanteresenko/Downloads/claude-deep-research
@@ -591,7 +591,7 @@ not_pursued). `write_deviations` renders them to a markdown file beside `plan.md
 `not_pursued` path is the honesty guarantee — exhausted budget/depth still produces a
 record. Field set matches the spec's `deviations.md` example.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/test_adaptive.py`:
 
@@ -652,12 +652,12 @@ def test_write_deviations_empty_list_still_writes_header(tmp_path):
     assert "# Deviations — topic" in path.read_text(encoding="utf-8")
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive.py -k deviation -v`
 Expected: FAIL with `ImportError: cannot import name 'Deviation'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Append to `runner/adaptive.py` (add `from pathlib import Path` to the imports at the top of the file):
 
@@ -716,12 +716,12 @@ def write_deviations(run_dir: Path, topic: str, deviations: list[Deviation]) -> 
     return path
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive.py -v`
 Expected: PASS (all tests so far).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/ivanteresenko/Downloads/claude-deep-research
@@ -744,7 +744,7 @@ and returns a list of synthetic contradiction findings (subquestion pair + detai
 We test against a **mock provider** whose `complete` returns a canned verdict, so the
 logic is deterministic and model-free.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/test_adaptive.py`:
 
@@ -796,12 +796,12 @@ def test_scan_skips_when_fewer_than_two_agents():
     assert prov.calls == []     # and we didn't waste a call
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive.py -k scan -v`
 Expected: FAIL with `ImportError: cannot import name 'cross_agent_contradiction_scan'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Append to `runner/adaptive.py`:
 
@@ -836,12 +836,12 @@ def cross_agent_contradiction_scan(provider, agent_outputs: list[dict]) -> list[
     return findings
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/ivanteresenko/Downloads/claude-deep-research
@@ -865,7 +865,7 @@ function is structured so the provider returns a verdict per candidate ("JUSTIFI
 mock provider that returns canned verdicts. This is the precision half of the two-tier
 detection (sub-agents = recall).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/test_adaptive.py`:
 
@@ -917,12 +917,12 @@ def test_decide_empty_candidates_returns_empty():
     assert prov.calls == []  # no candidates -> no model calls
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive.py -k decide -v`
 Expected: FAIL with `ImportError: cannot import name 'decide_deviations'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Append to `runner/adaptive.py`:
 
@@ -960,12 +960,12 @@ def decide_deviations(provider, candidates: list[Candidate]) -> list[Candidate]:
     return kept
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive.py -v`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/ivanteresenko/Downloads/claude-deep-research
@@ -978,8 +978,13 @@ git commit -m "feat(adaptive): Opus-решение об отклонении (ф
 ### Task 10: The round loop (`run_search_loop`) with termination
 
 **Files:**
-- Modify: `runner/adaptive.py` (add `run_search_loop`, `RoundResult`)
+- Modify: `runner/adaptive.py` (add `run_search_loop`)
 - Test: `tests/test_adaptive.py` (append)
+
+> **Implementation note (post-review):** a `RoundResult` dataclass was originally listed
+> here, but code review found it was never consumed (the loop returns `(deviations, int)`),
+> so it was dropped as dead code rather than shipped unused. If a later phase needs a
+> per-round record type, reintroduce it *with a consumer*.
 
 **Context:** This is the driver. It ties together: run a round (delegated via an
 injected `run_round` callable so tests don't need real search), parse signals, run the
@@ -994,7 +999,7 @@ sub-agent output dicts (each with `subquestion_id`/`sources`/`signals`). In prod
 the orchestrator passes a closure over `provider.fanout`; in tests we pass a fake that
 returns scripted rounds.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/test_adaptive.py`:
 
@@ -1069,23 +1074,16 @@ def test_loop_terminates_when_cheap_budget_drained():
     assert rounds <= 3  # depth cap bites first; loop provably stops
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive.py -k loop -v`
 Expected: FAIL with `ImportError: cannot import name 'run_search_loop'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Append to `runner/adaptive.py`:
 
 ```python
-@dataclass
-class RoundResult:
-    index: int
-    depth: int
-    agent_outputs: list[dict]
-
-
 def run_search_loop(provider, depth: str, run_round) -> tuple[list[Deviation], int]:
     """Drive Phase 4 as a loop. Returns (deviations, total_rounds_run).
 
@@ -1154,12 +1152,12 @@ def run_search_loop(provider, depth: str, run_round) -> tuple[list[Deviation], i
     return deviations, round_index
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive.py -v`
 Expected: PASS (all adaptive unit tests, including the termination/depth tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/ivanteresenko/Downloads/claude-deep-research
@@ -1182,7 +1180,7 @@ still produces placeholder sources; the point is that the *loop machinery* runs 
 end on DryRun and the artifact appears. Keep the existing scaffold source-writing so
 `eval/validate_structure.py` stays green.
 
-- [ ] **Step 1: Write the failing integration test**
+- [x] **Step 1: Write the failing integration test**
 
 Create `tests/test_adaptive_integration.py`:
 
@@ -1223,12 +1221,12 @@ def test_live_loop_smoke(tmp_path):
     assert (run_dir / "deviations.md").exists()
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive_integration.py -v`
 Expected: FAIL on `test_orchestrator_writes_deviations_file` — `deviations.md` does not exist yet (the live test is skipped).
 
-- [ ] **Step 3: Wire the loop into `search()`**
+- [x] **Step 3: Wire the loop into `search()`**
 
 In `runner/orchestrator.py`:
 
@@ -1286,12 +1284,12 @@ with:
 (The rest of `search()` — the `for i in range(1, n + 1)` source-writing and the
 `sources.csv` block — stays exactly as is.)
 
-- [ ] **Step 4: Run the integration test + the full suite**
+- [x] **Step 4: Run the integration test + the full suite**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest tests/test_adaptive_integration.py tests/test_adaptive.py -v`
 Expected: PASS (live test shows as SKIPPED).
 
-- [ ] **Step 5: Run the entire test suite to confirm nothing regressed**
+- [x] **Step 5: Run the entire test suite to confirm nothing regressed**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest -v && python3 eval/validate_structure.py --help >/dev/null 2>&1; echo "exit: $?"`
 Expected: all PASS (live SKIPPED). Then verify a real scaffold run still validates:
@@ -1299,7 +1297,7 @@ Expected: all PASS (live SKIPPED). Then verify a real scaffold run still validat
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 runner/orchestrator.py "test question" --depth medium --provider dryrun --out /tmp/ic_run && python3 eval/validate_structure.py --research-dir /tmp/ic_run/test-question --strict; echo "validate exit: $?"`
 Expected: the run writes, validation exits 0, and `/tmp/ic_run/test-question/deviations.md` exists.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/ivanteresenko/Downloads/claude-deep-research
@@ -1313,19 +1311,19 @@ git commit -m "feat(adaptive): встроить цикл в Orchestrator.search(
 
 After all tasks, run the complete gate to confirm Layers A and B are consistent:
 
-- [ ] **Full test suite green (live skipped):**
+- [x] **Full test suite green (live skipped):**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 -m pytest -v`
 Expected: all PASS, `test_live_loop_smoke` SKIPPED.
 
-- [ ] **Doc gate green (phase count unchanged at 9):**
+- [x] **Doc gate green (phase count unchanged at 9):**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 scripts/stamp_docs.py --check`
 Expected: exit 0.
 
-- [ ] **Scaffold run still validates structurally and emits the new artifact:**
+- [x] **Scaffold run still validates structurally and emits the new artifact:**
 
 Run: `cd /Users/ivanteresenko/Downloads/claude-deep-research && python3 runner/orchestrator.py "does X cause Y?" --depth deep --provider dryrun --out /tmp/ic_final && python3 eval/validate_structure.py --research-dir /tmp/ic_final/does-x-cause-y --strict && ls /tmp/ic_final/does-x-cause-y/deviations.md`
 Expected: validation exit 0, `deviations.md` listed.
 
-- [ ] **Spec coverage confirmed:** every spec section maps to a task (see the plan's self-review notes). No open placeholders remain.
+- [x] **Spec coverage confirmed:** every spec section maps to a task (see the plan's self-review notes). No open placeholders remain.
