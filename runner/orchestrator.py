@@ -113,7 +113,7 @@ class Orchestrator:
         n = DEPTH_SOURCES[s.depth]
         k = DEPTH_FANOUT[s.depth]
 
-        def run_round(round_index, depth, directives):
+        def run_round(round_index, _round_depth, directives):
             # scaffold: fan out, return placeholder agent outputs with empty signals.
             # Real retrieval + real signals are downstream work; the loop machinery is
             # what we exercise here. Round 1 carries the planned fan-out.
