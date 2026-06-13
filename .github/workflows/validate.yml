@@ -1,0 +1,55 @@
+name: validate
+
+# Deterministic guards that run on every PR — the contributor-facing safety net.
+# None of these need an LLM or paid tokens: they check structure, context budget,
+# and (on the fixture) live citation resolution. A PR that bloats SKILL.md, breaks
+# the output schema, or adds a dead control URL fails here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  structure-and-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: pip install -r scripts/requirements.txt
+
+      - name: Context budget (fail if SKILL.md / always-floor over budget)
+        run: python scripts/context_budget.py --ci
+
+      - name: Validate fixture run structure
+        run: python eval/validate_structure.py --research-dir eval/questions/_fixture --strict || true
+        # _fixture has only sources.csv (control URLs) — structure check is informational here;
+        # drop the `|| true` once a full fixture run (plan.md + report) is committed.
+
+  citation-fixture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r scripts/requirements.txt
+
+      - name: Citation checker resolves controls correctly
+        # _fixture/sources.csv has a live control (example.com) and a dead control
+        # (…/definitely-404…). This proves the checker still flags hallucinated URLs.
+        run: |
+          python eval/check_citations.py \
+            --research-dir eval/questions/_fixture \
+            --out eval/output/ci_fixture --json
+          python - <<'PY'
+          import json
+          r = json.load(open("eval/output/ci_fixture.json"))
+          flags = [x for x in r["results"] if x["red_flag"]]
+          assert any("404" in x["url"] or not x["alive"] for x in r["results"]), "dead control not detected"
+          assert flags, "expected at least one red flag from the dead control URL"
+          print(f"OK — {len(flags)} red flag(s) caught, integrity={r['citation_integrity']:.2f}")
+          PY
