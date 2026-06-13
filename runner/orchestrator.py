@@ -27,9 +27,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 try:
-    from .providers import LLMProvider, get_provider
+    from .providers import LLMProvider, build_provider
 except ImportError:  # run as a script
-    from providers import LLMProvider, get_provider
+    from providers import LLMProvider, build_provider
 
 DEPTH_SOURCES = {"shallow": 6, "medium": 14, "deep": 28}
 DEPTH_FANOUT = {"shallow": 0, "medium": 3, "deep": 5}
@@ -155,13 +155,15 @@ def main() -> int:
     ap.add_argument("question")
     ap.add_argument("--depth", choices=DEPTH_SOURCES, default="medium")
     ap.add_argument("--provider", default="dryrun")
+    ap.add_argument("--model", default=None, help="override the tier→model mapping (all tiers use this model)")
+    ap.add_argument("--base-url", default=None, help="OpenAI-compatible endpoint base URL")
     ap.add_argument("--out", type=Path, default=Path("research"))
     args = ap.parse_args()
 
-    orch = Orchestrator(get_provider(args.provider))
+    orch = Orchestrator(build_provider(args.provider, model=args.model, base_url=args.base_url))
     run_dir = orch.run(args.question, args.depth, args.out)
     print(f"Run written to: {run_dir}")
-    print("Validate with: python eval/validate_structure.py --research-dir", run_dir, "--strict")
+    print("Validate with: python3 eval/validate_structure.py --research-dir", run_dir, "--strict")
     return 0
 
 

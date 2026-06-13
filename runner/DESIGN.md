@@ -6,7 +6,9 @@ Today the skill is Claude-only in practice. "Works with other LLMs" means *paste
 markdown into the context yourself* — which is not adoption, it's a disclaimer. The
 two genuinely Claude-specific pieces are:
 
-1. **Sub-agent fan-out** — Phase 4 launches parallel `Explore` sub-agents.
+1. **Sub-agent fan-out** — in the skill, Phase 4 launches parallel `Explore`
+   sub-agents. The runner replaces this with a provider-owned `fanout` (N parallel
+   `complete()` calls), so the methodology no longer depends on the harness.
 2. **Source-file management** — the skill relies on the agent writing `sources/NN.md`.
 
 Everything else (the <!--gen:count:phases-->9<!--/gen-->-phase methodology, <!--gen:count:blocks-->103<!--/gen--> blocks, <!--gen:count:channels-->29<!--/gen--> channels, <!--gen:count:stat_sources-->460<!--/gen-->+ sources, the
@@ -21,7 +23,7 @@ about.
 ```
 runner/
   orchestrator.py   # drives the 9 phases; owns source-file I/O and fan-out
-  providers.py      # LLMProvider protocol + adapters (Claude, OpenAI, local/Ollama)
+  providers.py      # LLMProvider protocol + adapters (Claude, OpenAI-compat, DryRun) + build_provider
   phases.py         # one function per phase; pure-ish, takes provider + state  (TODO)
   state.py          # RunState: paths, plan, sources, findings                  (TODO)
 ```
@@ -40,23 +42,28 @@ class LLMProvider(Protocol):
 
 - `complete` — single completion. `model_tier` maps to the provider's own model names
   via `references/model_routing.md` semantics (opus/sonnet/haiku → strong/mid/cheap).
-- `fanout` — run N independent search/extract tasks. The Claude adapter uses real
-  sub-agents; other adapters fall back to a thread pool of `complete` calls. The
-  methodology doesn't care which — that's the whole point.
+- `fanout` — run N independent search/extract tasks. **All** adapters run N parallel
+  `complete()` calls via a `ThreadPoolExecutor` (`run_parallel`). The runner is
+  standalone — it does NOT depend on Claude Code harness sub-agents. A uniform
+  mechanism across providers is the whole point.
 
 ### Tier mapping (from model_routing.md)
 
 | skill tier | Claude | OpenAI | local |
 |---|---|---|---|
-| strong (P1/3/6) | Opus | o-series | biggest local |
-| mid (synth) | Sonnet | 4-class | mid local |
-| cheap (fan-out) | Haiku | mini | small local |
+| strong (P1/3/6) | Opus | gpt-5 | biggest local |
+| mid (synth) | Sonnet | gpt-4o | mid local |
+| cheap (fan-out) | Haiku | gpt-4o-mini | small local |
+
+`OpenAICompatProvider` covers OpenRouter / Ollama / Groq / vLLM / LM Studio through
+`--base-url` + `--model` — no separate adapter per backend.
 
 ## Status
 
-- `providers.py` — protocol + a `DryRunProvider` (no network, deterministic) so the
-  pipeline runs end-to-end in tests today. Real `ClaudeProvider` / `OpenAIProvider`
-  are stubbed with the integration point marked `# TODO`.
+- `providers.py` — protocol + `DryRunProvider` (no network, deterministic) + the real
+  `ClaudeProvider` (anthropic SDK) and `OpenAICompatProvider` (openai SDK; any
+  OpenAI-compatible endpoint via `base_url`). `build_provider` resolves provider + keys
+  from ENV/CLI with fail-fast. The real adapters are **implemented**, not stubbed.
 - `orchestrator.py` — phase loop, source-file I/O, fan-out dispatch, all wired to the
   provider interface. Runs a full dry-run that produces a valid run directory
   (validates clean against `eval/validate_structure.py`).
@@ -69,3 +76,7 @@ Real web search, real model calls, retrieval, and the per-phase prompt assembly 
 `references/*` are TODO. This scaffold proves the *shape* — that the methodology can be
 driven by a provider interface and produce schema-valid output without Claude-specific
 calls. Filling the adapters is the next milestone, not this PR.
+
+**Update:** Real model calls are now wired (Claude + OpenAI-compat, this milestone).
+Still TODO: real web search / retrieval (source URLs remain placeholders) and the
+per-phase prompt assembly from `references/*`.
