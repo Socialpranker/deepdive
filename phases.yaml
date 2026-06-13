@@ -1,0 +1,63 @@
+# Single source of truth for the deep-research workflow phases.
+# Counts and phase lists in README/SKILL/docs are stamped FROM this file by
+# scripts/stamp_docs.py. Edit phases here, then: python scripts/stamp_docs.py --write
+#
+# depth_gate = the MINIMUM depth at which the phase is mandatory.
+#   shallow -> always mandatory.  medium -> mandatory for medium+deep.
+#   deep    -> mandatory only for deep.
+# model/effort = the MAIN-THREAD model. Phase 4/5 sub-agents use per-task routing.
+phases:
+  - id: "1"
+    name_ru: "Reframing"
+    name_en: "Reframing"
+    model: opus
+    effort: high
+    depth_gate: shallow
+  - id: "2"
+    name_ru: "Genre & block selection"
+    name_en: "Genre & block selection"
+    model: sonnet
+    effort: medium
+    depth_gate: shallow
+  - id: "3"
+    name_ru: "Plan"
+    name_en: "Plan"
+    model: opus
+    effort: medium
+    depth_gate: shallow
+  - id: "3.5"
+    name_ru: "Capability Discovery"
+    name_en: "Capability Discovery"
+    model: sonnet
+    effort: low
+    depth_gate: deep
+  - id: "4"
+    name_ru: "Поиск"
+    name_en: "Search"
+    model: sonnet
+    effort: medium
+    depth_gate: shallow
+  - id: "5"
+    name_ru: "Скоринг + триангуляция"
+    name_en: "Scoring + triangulation"
+    model: sonnet
+    effort: medium
+    depth_gate: shallow
+  - id: "6"
+    name_ru: "Синтез + adversarial pass"
+    name_en: "Synthesis + adversarial pass"
+    model: opus
+    effort: high
+    depth_gate: shallow
+  - id: "6.5"
+    name_ru: "Verify"
+    name_en: "Verify"
+    model: haiku
+    effort: low
+    depth_gate: medium
+  - id: "7"
+    name_ru: "Refresh targets"
+    name_en: "Refresh targets"
+    model: sonnet
+    effort: medium
+    depth_gate: medium
