@@ -163,7 +163,7 @@ def main() -> int:
     orch = Orchestrator(build_provider(args.provider, model=args.model, base_url=args.base_url))
     run_dir = orch.run(args.question, args.depth, args.out)
     print(f"Run written to: {run_dir}")
-    print("Validate with: python eval/validate_structure.py --research-dir", run_dir, "--strict")
+    print("Validate with: python3 eval/validate_structure.py --research-dir", run_dir, "--strict")
     return 0
 
 
