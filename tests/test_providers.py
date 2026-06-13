@@ -231,3 +231,24 @@ def test_build_provider_openai_passes_base_url(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     p = build_provider("openai", base_url="http://localhost:11434/v1")
     assert isinstance(p, OpenAICompatProvider)
+    assert p.base_url == "http://localhost:11434/v1"
+
+
+def test_orchestrator_main_uses_build_provider(monkeypatch, tmp_path):
+    import runner.orchestrator as orch
+    captured = {}
+
+    def fake_build(name, *, model=None, base_url=None):
+        captured["name"] = name
+        captured["model"] = model
+        captured["base_url"] = base_url
+        return DryRunProvider()
+
+    monkeypatch.setattr(orch, "build_provider", fake_build)
+    monkeypatch.setattr(
+        "sys.argv",
+        ["orchestrator", "test q", "--provider", "openai",
+         "--model", "gpt-4o", "--base-url", "http://x/v1", "--out", str(tmp_path)],
+    )
+    orch.main()
+    assert captured == {"name": "openai", "model": "gpt-4o", "base_url": "http://x/v1"}

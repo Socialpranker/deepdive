@@ -112,6 +112,7 @@ class OpenAICompatProvider:
             import openai
             client = openai.OpenAI(base_url=base_url)  # reads OPENAI_API_KEY
         self.client = client
+        self.base_url = base_url
         self.model_override = model_override
         self.max_concurrency = max_concurrency
 
@@ -135,10 +136,6 @@ class OpenAICompatProvider:
             [lambda t=t: self.complete(t, model_tier=model_tier) for t in tasks],
             limit=self.max_concurrency,
         )
-
-
-def get_provider(name: str) -> LLMProvider:
-    return {"dryrun": DryRunProvider, "claude": ClaudeProvider, "openai": OpenAICompatProvider}[name]()
 
 
 def _require_env(name: str) -> None:
