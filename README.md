@@ -42,6 +42,8 @@ A [Claude Code skill](https://docs.anthropic.com/claude/docs/skills) that turns 
 
 The output is a folder you can return to in a month. Every claim traces to a specific source file. The plan documents *why* you made every choice. No re-research needed.
 
+> **New here?** Start with the [Quickstart](QUICKSTART.md) — install → invoke → first result in ~5 min.
+
 <table>
 <tr>
 <th width="50%">Without this</th>
