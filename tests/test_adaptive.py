@@ -231,3 +231,16 @@ def test_decide_empty_candidates_returns_empty():
     prov = _VerdictProvider({})
     assert decide_deviations(prov, []) == []
     assert prov.calls == []  # no candidates -> no model calls
+
+
+def test_decide_unrecognized_reply_is_dropped():
+    prov = _VerdictProvider({"empty_result": "MAYBE: not sure"})
+    cands = [Candidate(subquestion="Q1", trigger="empty_result", detail="0 hits")]
+    assert decide_deviations(prov, cands) == []   # default-to-reject
+
+
+def test_decide_justified_without_reason_gets_fallback():
+    prov = _VerdictProvider({"empty_result": "JUSTIFIED"})  # no colon, no reason
+    cands = [Candidate(subquestion="Q1", trigger="empty_result", detail="0 hits")]
+    kept = decide_deviations(prov, cands)
+    assert kept[0].rationale == "justified by orchestrator"
