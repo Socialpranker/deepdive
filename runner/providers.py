@@ -14,9 +14,19 @@ from __future__ import annotations
 
 import concurrent.futures
 import hashlib
-from typing import Protocol, runtime_checkable
+from typing import Callable, Protocol, runtime_checkable
 
 TIERS = ("strong", "mid", "cheap")
+
+
+def run_parallel(thunks: list[Callable[[], str]], *, limit: int = 5) -> list[str]:
+    """Run N thunks concurrently. Result order == input order.
+    Any exception propagates (fail-loud)."""
+    if not thunks:
+        return []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(limit, len(thunks))) as ex:
+        futures = [ex.submit(fn) for fn in thunks]
+        return [f.result() for f in futures]
 
 
 @runtime_checkable
