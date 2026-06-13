@@ -92,7 +92,10 @@ class ClaudeProvider:
         return "".join(b.text for b in msg.content if b.type == "text")
 
     def fanout(self, tasks: list[str], *, model_tier: str = "cheap") -> list[str]:
-        raise NotImplementedError("TODO Task 3")
+        return run_parallel(
+            [lambda t=t: self.complete(t, model_tier=model_tier) for t in tasks],
+            limit=self.max_concurrency,
+        )
 
 
 class OpenAIProvider:

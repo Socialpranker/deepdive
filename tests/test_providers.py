@@ -103,3 +103,21 @@ def test_claude_complete_nonempty_system_is_forwarded():
     p = ClaudeProvider(client=client)
     p.complete("hi", system="Be terse.")
     assert client.messages.create.call_args.kwargs["system"] == "Be terse."
+
+
+def test_claude_fanout_runs_each_task_in_order():
+    client = MagicMock()
+    client.messages.create.side_effect = lambda **kw: _claude_response(
+        kw["messages"][0]["content"].upper()
+    )
+    p = ClaudeProvider(client=client)
+    out = p.fanout(["a", "b", "c"], model_tier="cheap")
+    assert out == ["A", "B", "C"]
+
+
+def test_claude_fanout_uses_cheap_tier_by_default():
+    client = MagicMock()
+    client.messages.create.return_value = _claude_response("x")
+    p = ClaudeProvider(client=client)
+    p.fanout(["a"])
+    assert client.messages.create.call_args.kwargs["model"] == "claude-haiku-4-5"
