@@ -32,7 +32,8 @@ DIV_RE = re.compile(r"Source diversity:\*\*\s*([\d.]+)")
 
 def parse_scorecard(path: Path) -> dict:
     t = path.read_text(encoding="utf-8")
-    g = lambda rx: (rx.search(t).group(1) if rx.search(t) else None)
+    def g(rx):
+        return rx.search(t).group(1) if rx.search(t) else None
     return {
         "citation": g(CITE_RE), "diversity": g(DIV_RE),
         "quality": g(QS_RE), "qpd": g(QPD_RE),

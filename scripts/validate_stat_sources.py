@@ -106,11 +106,14 @@ def main() -> int:
                "checkable": checkable, "files": urls[url]}
         results.append(rec)
         if not checkable:
-            unknown.append(rec); icon = "?"
+            unknown.append(rec)
+            icon = "?"
         elif is_alive:
-            alive.append(rec); icon = "OK"
+            alive.append(rec)
+            icon = "OK"
         else:
-            dead.append(rec); icon = "DEAD"
+            dead.append(rec)
+            icon = "DEAD"
         print(f"  {icon:4} [{status}] {url}")
         time.sleep(DELAY)
 

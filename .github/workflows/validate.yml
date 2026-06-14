@@ -21,6 +21,11 @@ jobs:
       - name: Install deps
         run: pip install -r scripts/requirements.txt
 
+      - name: Lint (ruff)
+        run: |
+          pip install ruff==0.15.1
+          ruff check .
+
       - name: Context budget (fail if SKILL.md / always-floor over budget)
         run: python scripts/context_budget.py --ci
 

@@ -191,7 +191,8 @@ def write_markdown_report(path: Path, results: list[dict]) -> None:
     ]
 
     # Sort: dead first (so they catch eye), then alive
-    sort_key = lambda r: (r["alive"] is True, r["alive"] is None, r["file"])
+    def sort_key(r):
+        return (r["alive"] is True, r["alive"] is None, r["file"])
     for r in sorted(results, key=sort_key):
         icon = "✅" if r["alive"] is True else ("❌" if r["alive"] is False else "⚠")
         url = r["url"] or "—"

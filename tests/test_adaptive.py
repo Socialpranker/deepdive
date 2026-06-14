@@ -1,4 +1,11 @@
-from runner.adaptive import parse_signals, TRIGGERS, CHEAP_TRIGGERS, EXPENSIVE_TRIGGERS
+from runner.adaptive import (
+    parse_signals, TRIGGERS, CHEAP_TRIGGERS, EXPENSIVE_TRIGGERS,
+    Budget, BUDGET_BY_DEPTH, class_of,
+    Deviation, write_deviations,
+    cross_agent_contradiction_scan,
+    decide_deviations, Candidate,
+    run_search_loop,
+)
 
 
 def test_trigger_taxonomy_is_fixed():
@@ -35,9 +42,6 @@ def test_parse_signals_malformed_is_fail_safe():
         assert fired == set(), bad
 
 
-from runner.adaptive import Budget, BUDGET_BY_DEPTH, class_of
-
-
 def test_budget_by_depth_matches_spec():
     assert BUDGET_BY_DEPTH["shallow"] == (2, 0, 1)
     assert BUDGET_BY_DEPTH["medium"] == (4, 1, 1)
@@ -62,7 +66,9 @@ def test_budget_spend_decrements_and_floors_at_zero():
     b.spend("cheap")
     assert b.cheap == 7
     # drain expensive to zero
-    b.spend("expensive"); b.spend("expensive"); b.spend("expensive")
+    b.spend("expensive")
+    b.spend("expensive")
+    b.spend("expensive")
     assert b.expensive == 0
     assert b.can_spend("expensive") is False
     # spending past zero is a programming error -> raises, never goes negative
@@ -81,9 +87,6 @@ def test_budget_depth_limit_gate():
     b = Budget.for_depth("medium")  # depth_limit 1
     assert b.depth_ok(0) is True   # round 1 -> spawning a depth-1 round is allowed
     assert b.depth_ok(1) is False  # at the limit, no further spawn
-
-
-from runner.adaptive import Deviation, write_deviations
 
 
 def test_deviation_pursued_record_renders_all_fields():
@@ -139,9 +142,6 @@ def test_write_deviations_empty_list_still_writes_header(tmp_path):
     assert "# Deviations — topic" in path.read_text(encoding="utf-8")
 
 
-from runner.adaptive import cross_agent_contradiction_scan
-
-
 class _ScanProvider:
     """Mock provider: complete() returns whatever verdict we seed."""
     name = "mock"
@@ -184,9 +184,6 @@ def test_scan_skips_when_fewer_than_two_agents():
     found = cross_agent_contradiction_scan(prov, [_agent("Q1", "only one")])
     assert found == []          # nothing to compare against
     assert prov.calls == []     # and we didn't waste a call
-
-
-from runner.adaptive import decide_deviations, Candidate
 
 
 class _VerdictProvider:
@@ -244,9 +241,6 @@ def test_decide_justified_without_reason_gets_fallback():
     cands = [Candidate(subquestion="Q1", trigger="empty_result", detail="0 hits")]
     kept = decide_deviations(prov, cands)
     assert kept[0].rationale == "justified by orchestrator"
-
-
-from runner.adaptive import run_search_loop
 
 
 class _LoopProvider:
