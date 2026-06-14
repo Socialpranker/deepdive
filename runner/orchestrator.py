@@ -112,32 +112,38 @@ class Orchestrator:
     def search(self, s: RunState) -> None:
         n = DEPTH_SOURCES[s.depth]
         k = DEPTH_FANOUT[s.depth]
+        collected: list[dict] = []
 
         def run_round(round_index, _round_depth, directives):
-            # scaffold: fan out, return placeholder agent outputs with empty signals.
-            # Real retrieval + real signals are downstream work; the loop machinery is
-            # what we exercise here. Round 1 carries the planned fan-out.
-            tasks = [f"[r{round_index}] Search subtopic {i} for: {s.question}"
-                     for i in range(max(1, k))]
-            self.p.fanout(tasks, model_tier="cheap")
-            return [{"subquestion_id": f"Q{i}", "sources": [], "signals": {}}
-                    for i in range(max(1, k))]
+            blobs = [
+                self.p.search(f"[r{round_index}] subtopic {i} for: {s.question}",
+                              subquestion_id=f"Q{i}", model_tier="cheap")
+                for i in range(max(1, k))
+            ]
+            collected.extend(blobs)
+            return blobs
 
         deviations, _rounds = run_search_loop(self.p, s.depth, run_round)
         s.deviations = deviations
         write_deviations(s.dir, s.slug, deviations)
 
+        # sources from collected blobs (dedup by url), capped at n
         srcdir = s.dir / "sources"
         srcdir.mkdir(exist_ok=True)
-        for i in range(1, n + 1):
-            sid = f"s{i:02d}"
-            url = f"https://example.com/source-{i}"  # TODO: real retrieved URLs
-            s.sources.append({"id": sid, "url": url, "type": "Primary" if i % 2 else "Academic"})
-            fm = (f"---\nid: {sid}\nurl: {url}\ntitle: Source {i}\n"
-                  f"access: OPEN\ntype: {'Primary' if i % 2 else 'Academic'}\n---\n"
-                  f"(scaffold body for source {i})\n")
-            (srcdir / f"{i:02d}_source-{i}.md").write_text(fm, encoding="utf-8")
-        # sources.csv index
+        seen: set[str] = set()
+        flat = [src for blob in collected for src in blob.get("sources", [])]
+        for i, src in enumerate(flat, start=1):
+            if i > n or src["url"] in seen:
+                continue
+            seen.add(src["url"])
+            sid = src.get("id", f"s{i:02d}")
+            url = src["url"]
+            stype = "Primary" if i % 2 else "Academic"
+            s.sources.append({"id": sid, "url": url, "type": stype})
+            fm = (f"---\nid: {sid}\nurl: {url}\ntitle: {src.get('title', 'Source')}\n"
+                  f"access: OPEN\ntype: {stype}\n---\n{src.get('claim', '')}\n")
+            (srcdir / f"{i:02d}_{sid}.md").write_text(fm, encoding="utf-8")
+
         rows = ["id,title,url,type,used"]
         rows += [f"{x['id']},Source {x['id']},{x['url']},{x['type']},Y" for x in s.sources]
         (s.dir / "sources.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
