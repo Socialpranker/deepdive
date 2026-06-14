@@ -119,6 +119,7 @@ This reproduces today's "loop exits after round 1" behaviour while flowing throu
 
 ## Open questions / future work
 
-- Stage 2: exact `SIGNALS_SCHEMA` (json_schema) shape for the structured-output call — drafted then, validated against a live response.
-- Stage 2: whether call 1 and call 2 should reuse the same `messages` prefix for prompt-cache benefit, or run independently.
+- ~~Stage 2: exact `SIGNALS_SCHEMA` (json_schema) shape~~ — **resolved** in the [Stage 2 design](2026-06-14-real-retrieval-search-stage2-design.md): whole-blob schema (`sources` + `signals`), `detail` as `["string","null"]`, no `minItems` (non-empty sources asserted in tests, not schema).
+- ~~Stage 2: reuse `messages` prefix for prompt-cache, or run independently~~ — **resolved**: independent calls. Not just for simplicity — replaying call-1 messages would carry `web_search_tool_result` citations into call 2, and citations + `output_config.format` = 400. See Stage 2 design, "Why call 2 must NOT replay call-1 messages".
+- Stage 2 found a new risk (also resolved there): `model_tier="cheap"` resolves to `claude-haiku-4-5`, which is not in the docs' `web_search_20260209` support list; `search()` hard-resolves to `mid` (`claude-sonnet-4-6`).
 - Whether `DryRunProvider.search()` should *optionally* fire signals by seed (rejected for Stage 1 — would change scaffold output and force `validate_structure` edits; revisit if an end-to-end "loop deviates without a key" demo is wanted).
