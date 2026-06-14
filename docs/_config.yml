@@ -24,3 +24,5 @@ exclude:
   - README.md
   - CONTRIBUTING.md
   - LICENSE
+  - growth/
+  - superpowers/

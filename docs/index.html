@@ -4,19 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title data-i18n="meta.title">Deep Research — Claude Code Skill for Documented Investigation</title>
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="/claude-deep-research/favicon.svg">
+<link rel="alternate icon" href="/claude-deep-research/favicon.svg">
+<meta name="theme-color" content="#0a1828">
 <meta name="description" data-i18n-attr="content" data-i18n="meta.description" content="A <!--gen:count:phases-->9<!--/gen-->-phase meta-research skill for Claude Code. Stop ad-hoc Googling, start documented investigation. <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources, <!--gen:count:api-->39<!--/gen-->+ APIs, <!--gen:count:blocks-->103<!--/gen--> report blocks, weekly auto-validation.">
 
 <!-- Open Graph -->
 <meta property="og:title" content="Deep Research — Claude Code Skill">
 <meta property="og:description" content="Stop ad-hoc Googling. Start documented investigation. <!--gen:count:phases-->9<!--/gen-->-phase pipeline with source triangulation and adversarial review.">
-<meta property="og:image" content="og-image.svg">
+<meta property="og:image" content="https://socialpranker.github.io/claude-deep-research/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://socialpranker.github.io/claude-deep-research/">
 <meta property="og:type" content="website">
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Deep Research — Claude Code Skill">
 <meta name="twitter:description" content="Stop ad-hoc Googling. Start documented investigation.">
-<meta name="twitter:image" content="og-image.svg">
+<meta name="twitter:image" content="https://socialpranker.github.io/claude-deep-research/og-image.png">
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1074,7 +1082,7 @@ footer a {
 <!-- HOW IT WORKS -->
 <section id="how">
   <span class="section-tag" data-i18n="how.tag">§ 02 · workflow</span>
-  <h2 class="section-title" data-i18n-html="how.title">Seven phases.<br>Every one transparent.</h2>
+  <h2 class="section-title" data-i18n-html="how.title">Nine phases.<br>Every one transparent.</h2>
   <p class="section-intro" data-i18n-html="how.intro">
     Each phase has a defined output and a checkpoint. You confirm key decisions.
     The skill records what it chose and why in <code>plan.md</code>.
@@ -1113,13 +1121,18 @@ footer a {
     </div>
     <div class="phase">
       <div class="phase-num">6</div>
-      <h3 data-i18n="how.p6.title">Adversarial</h3>
-      <p data-i18n="how.p6.desc">Self-critique with 4 opposition questions. Steel-man counter-arguments documented.</p>
+      <h3 data-i18n="how.p6.title">Synthesis</h3>
+      <p data-i18n="how.p6.desc">Assembles the report from blocks, then runs an adversarial pass: 4 opposition questions, steel-man counter-arguments documented.</p>
+    </div>
+    <div class="phase">
+      <div class="phase-num">6.5</div>
+      <h3 data-i18n="how.p65.title">Verify</h3>
+      <p data-i18n="how.p65.desc">Lightweight citation check before closing. Confirms every claim still resolves to a saved source quote.</p>
     </div>
     <div class="phase">
       <div class="phase-num">7</div>
-      <h3 data-i18n="how.p7.title">Synthesis</h3>
-      <p data-i18n="how.p7.desc">Assembles final report from blocks. Writes findings/FN.md atomic theses for cross-research reuse.</p>
+      <h3 data-i18n="how.p7.title">Refresh</h3>
+      <p data-i18n="how.p7.desc">Extracts entities, numbers, and hypotheses into refresh_targets.md — the entry point for a later delta-update without re-running everything.</p>
     </div>
   </div>
 </section>
@@ -1399,7 +1412,7 @@ zip -r ../deep-research.skill . \
       'demo.success': 'REPORT READY → research/postgres-replication-vs-cdc/2026-05-21_decision.md',
 
       'how.tag': '§ 02 · workflow',
-      'how.title': 'Seven phases.<br>Every one transparent.',
+      'how.title': 'Nine phases.<br>Every one transparent.',
       'how.intro': 'Each phase has a defined output and a checkpoint. You confirm key decisions. The skill records what it chose and why in <code>plan.md</code>.',
       'how.p1.title': 'Reframing',
       'how.p1.desc': 'Restates the question. Identifies the decision it supports. Formulates 2-4 falsifiable hypotheses.',
@@ -1413,10 +1426,12 @@ zip -r ../deep-research.skill . \
       'how.p4.desc': 'Launches 2-5 parallel Explore sub-agents across <!--gen:count:channels-->29<!--/gen--> channels and <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources.',
       'how.p5.title': 'Score',
       'how.p5.desc': 'Each source rated Credibility/Recency/Bias. Every claim backed by ≥3 independent sources of different types.',
-      'how.p6.title': 'Adversarial',
-      'how.p6.desc': 'Self-critique with 4 opposition questions. Steel-man counter-arguments documented.',
-      'how.p7.title': 'Synthesis',
-      'how.p7.desc': 'Assembles final report from blocks. Writes findings/FN.md atomic theses for cross-research reuse.',
+      'how.p6.title': 'Synthesis',
+      'how.p6.desc': 'Assembles the report from blocks, then runs an adversarial pass: 4 opposition questions, steel-man counter-arguments documented.',
+      'how.p65.title': 'Verify',
+      'how.p65.desc': 'Lightweight citation check before closing. Confirms every claim still resolves to a saved source quote.',
+      'how.p7.title': 'Refresh',
+      'how.p7.desc': 'Extracts entities, numbers, and hypotheses into refresh_targets.md — the entry point for a later delta-update without re-running everything.',
 
       'inside.tag': '§ 03 · catalog',
       'inside.title': 'A curated catalog.<br>Auto-validated weekly.',
@@ -1542,7 +1557,7 @@ zip -r ../deep-research.skill . \
       'demo.success': 'ОТЧЁТ ГОТОВ → research/postgres-replication-vs-cdc/2026-05-21_decision.md',
 
       'how.tag': '§ 02 · workflow',
-      'how.title': 'Семь фаз.<br>Каждая прозрачна.',
+      'how.title': 'Девять фаз.<br>Каждая прозрачна.',
       'how.intro': 'У каждой фазы — свой output и контрольная точка. Ключевые решения ты подтверждаешь сам. Что и почему выбрал — скилл записывает в <code>plan.md</code>.',
       'how.p1.title': 'Reframing',
       'how.p1.desc': 'Переформулирует вопрос. Находит решение, которое он поддерживает. Формулирует 2–4 опровергаемых гипотезы.',
@@ -1556,10 +1571,12 @@ zip -r ../deep-research.skill . \
       'how.p4.desc': 'Запускает 2–5 параллельных Explore-агентов по <!--gen:count:channels-->29<!--/gen--> каналам и <!--gen:count:stat_sources-->460<!--/gen-->+ стат-источникам.',
       'how.p5.title': 'Score',
       'how.p5.desc': 'Каждый источник оценивается по Credibility/Recency/Bias. Каждое утверждение — ≥3 независимых источника разного типа.',
-      'how.p6.title': 'Adversarial',
-      'how.p6.desc': 'Самокритика по 4 контр-вопросам. Steel-man контр-аргументы фиксируются в отчёте.',
-      'how.p7.title': 'Synthesis',
-      'how.p7.desc': 'Собирает финальный отчёт из блоков. Записывает атомарные тезисы в findings/FN.md для переиспользования.',
+      'how.p6.title': 'Synthesis',
+      'how.p6.desc': 'Собирает отчёт из блоков, затем прогон adversarial: 4 контр-вопроса, steel-man контр-аргументы фиксируются в отчёте.',
+      'how.p65.title': 'Verify',
+      'how.p65.desc': 'Лёгкая проверка цитат перед закрытием. Подтверждает, что каждое утверждение всё ещё ведёт к сохранённой цитате источника.',
+      'how.p7.title': 'Refresh',
+      'how.p7.desc': 'Извлекает сущности, числа и гипотезы в refresh_targets.md — точку входа для дельта-обновления без перезапуска всего ресёрча.',
 
       'inside.tag': '§ 03 · каталог',
       'inside.title': 'Кураторский каталог.<br>Авто-валидация раз в неделю.',
