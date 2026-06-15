@@ -270,6 +270,7 @@ class Orchestrator:
         self.choose_genre(s)
         self.plan(s)
         self.search(s)
+        self.score(s)
         self.synthesize(s)
         return s.dir
 

@@ -55,3 +55,11 @@ def test_score_backfills_pursued_deviations(tmp_path):
         assert d.outcome != "(pending scoring)"
     text = (s.dir / "deviations.md").read_text(encoding="utf-8")
     assert "(pending scoring)" not in text
+
+
+def test_run_invokes_score_phase(tmp_path):
+    o = Orchestrator(DryRunProvider())
+    out_dir = o.run("does X cause Y", "medium", tmp_path)
+    assert (out_dir / "triangulation.md").exists()
+    csv = (out_dir / "sources.csv").read_text(encoding="utf-8")
+    assert "credibility" in csv.splitlines()[0]
