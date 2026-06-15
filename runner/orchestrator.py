@@ -67,6 +67,8 @@ class RunState:
     hypotheses: list[str] = field(default_factory=list)
     sources: list[dict] = field(default_factory=list)
     deviations: list = field(default_factory=list)
+    round_source_ids: dict = field(default_factory=dict)  # round_index -> [source_id]
+    triangulation: list = field(default_factory=list)     # Phase 5 output
 
     @property
     def dir(self) -> Path:
@@ -120,6 +122,8 @@ class Orchestrator:
                               subquestion_id=f"Q{i}", model_tier="cheap")
                 for i in range(max(1, k))
             ]
+            for b in blobs:
+                b["_round"] = round_index
             collected.extend(blobs)
             return blobs
 
@@ -136,9 +140,10 @@ class Orchestrator:
         srcdir = s.dir / "sources"
         srcdir.mkdir(exist_ok=True)
         seen: set[str] = set()
-        flat = [src for blob in collected for src in blob.get("sources", [])]
+        flat = [(blob.get("_round", 1), src)
+                for blob in collected for src in blob.get("sources", [])]
         written = 0
-        for src in flat:
+        for round_index, src in flat:
             if written >= n or src["url"] in seen:
                 continue
             seen.add(src["url"])
@@ -146,7 +151,10 @@ class Orchestrator:
             sid = src.get("id", f"s{written:02d}")
             url = src["url"]
             stype = "Primary" if written % 2 else "Academic"  # scaffold: type is placeholder, not derived from the source
-            s.sources.append({"id": sid, "url": url, "type": stype})
+            s.sources.append({"id": sid, "url": url, "type": stype,
+                              "title": src.get("title", "Source"),
+                              "claim": src.get("claim", "")})
+            s.round_source_ids.setdefault(round_index, []).append(sid)
             fm = (f"---\nid: {sid}\nurl: {url}\ntitle: {src.get('title', 'Source')}\n"
                   f"access: OPEN\ntype: {stype}\n---\n{src.get('claim', '')}\n")
             (srcdir / f"{written:02d}_{sid}.md").write_text(fm, encoding="utf-8")
