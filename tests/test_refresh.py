@@ -1,4 +1,4 @@
-from runner.refresh import extract_hypotheses
+from runner.refresh import extract_entities, extract_hypotheses
 
 
 def test_extract_hypotheses_maps_status():
@@ -24,3 +24,25 @@ def test_extract_hypotheses_no_triangulation_is_inconclusive():
 
 def test_extract_hypotheses_empty():
     assert extract_hypotheses([], []) == []
+
+
+def test_extract_entities_dedups_by_domain():
+    sources = [
+        {"id": "s01", "url": "https://acme.com/pricing", "claim": "Acme raised $5M"},
+        {"id": "s02", "url": "https://acme.com/blog/post", "claim": "Acme ships v2"},
+        {"id": "s03", "url": "https://beta.io/about", "claim": "Beta is new"},
+    ]
+    out = extract_entities(sources)
+    domains = [e["domain"] for e in out]
+    assert domains == ["acme.com", "beta.io"]
+    assert out[0]["url"] == "https://acme.com/pricing"  # first wins
+    assert out[0]["why"] == "Acme raised $5M"
+
+
+def test_extract_entities_skips_empty_url():
+    out = extract_entities([{"id": "s01", "url": "", "claim": "x"}])
+    assert out == []
+
+
+def test_extract_entities_empty():
+    assert extract_entities([]) == []

@@ -33,3 +33,20 @@ def extract_hypotheses(hypotheses: list[str], triangulation: list[dict]) -> list
         out.append({"id": hid, "text": text, "status": status,
                     "supporting_types": n_sup})
     return out
+
+
+def extract_entities(sources: list[dict]) -> list[dict]:
+    """One entity per distinct URL domain, first source wins. Skips empty URLs."""
+    seen: set[str] = set()
+    out = []
+    for src in sources:
+        url = (src.get("url") or "").strip()
+        if not url:
+            continue
+        domain = urlsplit(url).netloc
+        if not domain or domain in seen:
+            continue
+        seen.add(domain)
+        out.append({"domain": domain, "url": url,
+                    "why": (src.get("claim") or "").strip()})
+    return out
