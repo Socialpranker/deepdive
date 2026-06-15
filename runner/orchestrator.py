@@ -96,8 +96,9 @@ class RunState:
 
 
 class Orchestrator:
-    def __init__(self, provider: LLMProvider):
+    def __init__(self, provider: LLMProvider, *, verify_live: bool = False):
         self.p = provider
+        self.verify_live = verify_live
 
     # --- Phase 1: reframing ------------------------------------------------
     def reframe(self, s: RunState) -> None:
@@ -298,25 +299,26 @@ class Orchestrator:
 
     # --- Phase 6.5: verify (citation checking) -----------------------------
     def verify(self, s: RunState) -> None:
-        verify_dir = s.dir / ".verify"
-        verify_dir.mkdir(exist_ok=True)
-        out_base = verify_dir / "citations"
-        checker = Path(__file__).parent.parent / "eval" / "check_citations.py"
         citations = None
-        try:
-            subprocess.run(
-                [sys.executable, str(checker),
-                 "--research-dir", str(s.dir), "--out", str(out_base), "--json"],
-                check=False,
-            )
-        except (FileNotFoundError, OSError):
-            citations = None
-        json_path = out_base.with_suffix(".json")
-        if json_path.exists():
+        if self.verify_live:
+            verify_dir = s.dir / ".verify"
+            verify_dir.mkdir(exist_ok=True)
+            out_base = verify_dir / "citations"
+            checker = Path(__file__).parent.parent / "eval" / "check_citations.py"
             try:
-                citations = json.loads(json_path.read_text(encoding="utf-8"))
-            except (ValueError, OSError):
+                subprocess.run(
+                    [sys.executable, str(checker),
+                     "--research-dir", str(s.dir), "--out", str(out_base), "--json"],
+                    check=False,
+                )
+            except (FileNotFoundError, OSError):
                 citations = None
+            json_path = out_base.with_suffix(".json")
+            if json_path.exists():
+                try:
+                    citations = json.loads(json_path.read_text(encoding="utf-8"))
+                except (ValueError, OSError):
+                    citations = None
         block = render_verification(citations)
 
         date = dt.date.today().isoformat()
