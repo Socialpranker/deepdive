@@ -22,8 +22,11 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import os
 import re
+import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -46,6 +49,11 @@ try:
     from .capabilities import audit_env, render_capabilities
 except ImportError:  # run as a script
     from capabilities import audit_env, render_capabilities
+
+try:
+    from .verify import PLACEHOLDER, render_verification
+except ImportError:  # run as a script
+    from verify import PLACEHOLDER, render_verification
 
 DEPTH_SOURCES = {"shallow": 6, "medium": 14, "deep": 28}
 DEPTH_FANOUT = {"shallow": 0, "medium": 3, "deep": 5}
@@ -88,8 +96,9 @@ class RunState:
 
 
 class Orchestrator:
-    def __init__(self, provider: LLMProvider):
+    def __init__(self, provider: LLMProvider, *, verify_live: bool = False):
         self.p = provider
+        self.verify_live = verify_live
 
     # --- Phase 1: reframing ------------------------------------------------
     def reframe(self, s: RunState) -> None:
@@ -288,6 +297,45 @@ class Orchestrator:
         ]
         (s.dir / f"{date}_{s.genre}.md").write_text("\n".join(report), encoding="utf-8")
 
+    # --- Phase 6.5: verify (citation checking) -----------------------------
+    def verify(self, s: RunState) -> None:
+        citations = None
+        if self.verify_live:
+            verify_dir = s.dir / ".verify"
+            verify_dir.mkdir(exist_ok=True)
+            out_base = verify_dir / "citations"
+            checker = Path(__file__).parent.parent / "eval" / "check_citations.py"
+            try:
+                subprocess.run(
+                    [sys.executable, str(checker),
+                     "--research-dir", str(s.dir), "--out", str(out_base), "--json"],
+                    check=False,
+                )
+            except (FileNotFoundError, OSError):
+                citations = None
+            json_path = out_base.with_suffix(".json")
+            if json_path.exists():
+                try:
+                    citations = json.loads(json_path.read_text(encoding="utf-8"))
+                except (ValueError, OSError):
+                    citations = None
+        block = render_verification(citations)
+
+        date = dt.date.today().isoformat()
+        report_path = s.dir / f"{date}_{s.genre}.md"
+        try:
+            text = report_path.read_text(encoding="utf-8")
+        except (FileNotFoundError, OSError):
+            # no report to patch (synthesize skipped / date rolled) — write the block alone
+            text = ""
+        if PLACEHOLDER in text:
+            text = text.replace(PLACEHOLDER, block)
+        elif text:
+            text = text.rstrip() + "\n\n" + block + "\n"
+        else:
+            text = block + "\n"
+        report_path.write_text(text, encoding="utf-8")
+
     def run(self, question: str, depth: str, root: Path) -> Path:
         s = RunState(question=question, depth=depth, root=root)
         self.reframe(s)
@@ -298,6 +346,7 @@ class Orchestrator:
         self.search(s)
         self.score(s)
         self.synthesize(s)
+        self.verify(s)
         return s.dir
 
 
