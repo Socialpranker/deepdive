@@ -176,11 +176,13 @@ def test_refresh_skipped_for_shallow(tmp_path):
 
 
 def test_refresh_survives_missing_deviations(tmp_path):
-    # call refresh() directly on a state with no deviations.md written
+    # refresh() must not raise when deviations.md is absent; set state directly
+    # (no reframe/choose_genre side-effects) to isolate the defensive file read
     o = Orchestrator(DryRunProvider())
     s = RunState(question="q about x", depth="medium", root=tmp_path)
-    o.reframe(s)
-    o.choose_genre(s)
+    s.slug = "q-about-x"
+    s.genre = "explainer"
     s.dir.mkdir(parents=True, exist_ok=True)
+    assert not (s.dir / "deviations.md").exists()  # precondition: no deviations file
     o.refresh(s)  # must NOT raise
     assert (s.dir / "refresh_targets.md").exists()
