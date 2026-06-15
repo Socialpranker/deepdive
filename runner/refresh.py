@@ -14,6 +14,8 @@ try:
 except ImportError:  # run as a script
     from scoring import hypothesis_ids
 
+DATA_DOMAINS = ("fred", "worldbank", "statista", "oecd", "data.gov", "stlouisfed")
+
 
 def extract_hypotheses(hypotheses: list[str], triangulation: list[dict]) -> list[dict]:
     """Pair each hypothesis with its triangulation status.
@@ -49,4 +51,17 @@ def extract_entities(sources: list[dict]) -> list[dict]:
         seen.add(domain)
         out.append({"domain": domain, "url": url,
                     "why": (src.get("claim") or "").strip()})
+    return out
+
+
+def extract_numbers(sources: list[dict]) -> list[dict]:
+    """Sources whose claim contains a digit, or whose URL is a known data domain."""
+    out = []
+    for src in sources:
+        claim = (src.get("claim") or "").strip()
+        url = (src.get("url") or "").strip()
+        is_data_domain = any(d in url.lower() for d in DATA_DOMAINS)
+        if not (re.search(r"\d", claim) or is_data_domain):
+            continue
+        out.append({"phrase": claim or url, "url": url})
     return out

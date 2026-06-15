@@ -1,4 +1,4 @@
-from runner.refresh import extract_entities, extract_hypotheses
+from runner.refresh import extract_entities, extract_hypotheses, extract_numbers
 
 
 def test_extract_hypotheses_maps_status():
@@ -46,3 +46,25 @@ def test_extract_entities_skips_empty_url():
 
 def test_extract_entities_empty():
     assert extract_entities([]) == []
+
+
+def test_extract_numbers_keeps_numeric_claim():
+    sources = [
+        {"id": "s01", "url": "https://x.com/a", "claim": "GDP grew 3.2% in 2025"},
+        {"id": "s02", "url": "https://x.com/b", "claim": "no digits here"},
+    ]
+    out = extract_numbers(sources)
+    assert len(out) == 1
+    assert out[0]["phrase"] == "GDP grew 3.2% in 2025"
+    assert out[0]["url"] == "https://x.com/a"
+
+
+def test_extract_numbers_keeps_data_domain_even_without_digit():
+    sources = [{"id": "s01", "url": "https://fred.stlouisfed.org/series/CPI",
+                "claim": "consumer prices"}]
+    out = extract_numbers(sources)
+    assert len(out) == 1
+
+
+def test_extract_numbers_empty():
+    assert extract_numbers([]) == []
