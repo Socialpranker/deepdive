@@ -1,4 +1,5 @@
 from runner.scoring import compute_total, render_triangulation, triangulate
+from runner.providers import DryRunProvider
 
 def test_compute_total_sums_three_axes():
     assert compute_total({"credibility": 5, "recency": 4, "bias": 3}) == 12
@@ -53,3 +54,23 @@ def test_render_triangulation_has_header_and_row_per_hypothesis():
 def test_render_triangulation_empty_still_has_header():
     md = render_triangulation("topic", [])
     assert "# Triangulation — topic" in md
+
+
+def test_dryrun_score_returns_deterministic_scores():
+    p = DryRunProvider()
+    srcs = [{"id": "s01", "url": "https://x", "title": "T", "claim": "c"}]
+    out = p.score(srcs, ["H1: a", "H2: b"], model_tier="cheap")
+    assert out["sources"][0]["id"] == "s01"
+    for axis in ("credibility", "recency", "bias"):
+        assert 1 <= out["sources"][0][axis] <= 5
+    assert out["sources"][0]["type"] in (
+        "Primary", "Academic", "Industry-media", "General-media",
+        "Expert-blog", "Forum", "Other")
+    assert set(out["sources"][0]["hypothesis_evidence"]) == {"H1", "H2"}
+
+def test_dryrun_score_is_stable_across_calls():
+    p = DryRunProvider()
+    srcs = [{"id": "s01", "url": "https://x", "title": "T", "claim": "c"}]
+    a = p.score(srcs, ["H1: a"], model_tier="cheap")
+    b = p.score(srcs, ["H1: a"], model_tier="cheap")
+    assert a == b

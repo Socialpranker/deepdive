@@ -61,6 +61,33 @@ SIGNALS_SCHEMA = {
     "additionalProperties": False,
 }
 
+SOURCE_TYPES = ("Primary", "Academic", "Industry-media", "General-media",
+                "Expert-blog", "Forum", "Other")
+STANCES = ("supports", "contradicts", "partial", "neutral")
+
+_SCORE_ITEM_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "id": {"type": "string"},
+        "credibility": {"type": "integer", "minimum": 1, "maximum": 5},
+        "recency": {"type": "integer", "minimum": 1, "maximum": 5},
+        "bias": {"type": "integer", "minimum": 1, "maximum": 5},
+        "type": {"type": "string", "enum": list(SOURCE_TYPES)},
+        "hypothesis_evidence": {
+            "type": "object",
+            "additionalProperties": {"type": "string", "enum": list(STANCES)},
+        },
+    },
+    "required": ["id", "credibility", "recency", "bias", "type", "hypothesis_evidence"],
+    "additionalProperties": False,
+}
+SCORE_SCHEMA = {
+    "type": "object",
+    "properties": {"sources": {"type": "array", "items": _SCORE_ITEM_SCHEMA}},
+    "required": ["sources"],
+    "additionalProperties": False,
+}
+
 _SEARCH_PROMPT = (
     "Search the web to answer this sub-question for a research report. "
     "Cite concrete sources.\n\nSub-question: {subquery}"
@@ -108,6 +135,14 @@ class LLMProvider(Protocol):
         The shape matches what runner.adaptive.parse_signals consumes."""
         ...
 
+    def score(self, sources: list[dict], hypotheses: list[str],
+              *, model_tier: str = "cheap") -> dict:
+        """Phase 5 per-source scoring. Returns
+            {"sources": [{"id", "credibility", "recency", "bias", "type",
+                          "hypothesis_evidence": {Hn: stance}}, ...]}.
+        Does NOT compute `total` — that is summed in Python (runner.scoring.compute_total)."""
+        ...
+
 
 class DryRunProvider:
     """Deterministic, no-network provider. Produces stable placeholder text so the
@@ -137,6 +172,24 @@ class DryRunProvider:
         ]
         signals = {t: {"fired": False, "detail": None} for t in SEARCH_TRIGGERS}
         return {"subquestion_id": subquestion_id, "sources": sources, "signals": signals}
+
+    def score(self, sources: list[dict], hypotheses: list[str],
+              *, model_tier: str = "cheap") -> dict:
+        assert model_tier in TIERS, f"unknown tier {model_tier}"
+        from runner.scoring import hypothesis_ids
+        hids = hypothesis_ids(hypotheses)
+        scored = []
+        for src in sources:
+            h = hashlib.sha1(src["id"].encode()).hexdigest()
+            cred = int(h[0], 16) % 5 + 1
+            rec = int(h[1], 16) % 5 + 1
+            bias = int(h[2], 16) % 5 + 1
+            stype = SOURCE_TYPES[int(h[3], 16) % len(SOURCE_TYPES)]
+            evidence = {hid: STANCES[int(h[4 + i % 4], 16) % len(STANCES)]
+                        for i, hid in enumerate(hids)}
+            scored.append({"id": src["id"], "credibility": cred, "recency": rec,
+                           "bias": bias, "type": stype, "hypothesis_evidence": evidence})
+        return {"sources": scored}
 
 
 def _empty_signals() -> dict:
