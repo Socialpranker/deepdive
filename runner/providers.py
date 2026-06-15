@@ -69,16 +69,12 @@ _SCORE_ITEM_SCHEMA = {
     "type": "object",
     "properties": {
         "id": {"type": "string"},
-        "credibility": {"type": "integer", "minimum": 1, "maximum": 5},
-        "recency": {"type": "integer", "minimum": 1, "maximum": 5},
-        "bias": {"type": "integer", "minimum": 1, "maximum": 5},
+        "credibility": {"type": "integer"},
+        "recency": {"type": "integer"},
+        "bias": {"type": "integer"},
         "type": {"type": "string", "enum": list(SOURCE_TYPES)},
-        "hypothesis_evidence": {
-            "type": "object",
-            "additionalProperties": {"type": "string", "enum": list(STANCES)},
-        },
     },
-    "required": ["id", "credibility", "recency", "bias", "type", "hypothesis_evidence"],
+    "required": ["id", "credibility", "recency", "bias", "type"],
     "additionalProperties": False,
 }
 SCORE_SCHEMA = {
@@ -342,6 +338,29 @@ class ClaudeProvider:
 
     def score(self, sources: list[dict], hypotheses: list[str],
               *, model_tier: str = "cheap") -> dict:
+        from runner.scoring import hypothesis_ids
+        hids = hypothesis_ids(hypotheses)
+        ev_props = {hid: {"type": "string", "enum": list(STANCES)} for hid in hids}
+        score_item = {
+            "type": "object",
+            "properties": {
+                **_SCORE_ITEM_SCHEMA["properties"],
+                "hypothesis_evidence": {
+                    "type": "object",
+                    "properties": ev_props,
+                    "required": hids,
+                    "additionalProperties": False,
+                },
+            },
+            "required": [*_SCORE_ITEM_SCHEMA["required"], "hypothesis_evidence"],
+            "additionalProperties": False,
+        }
+        schema = {
+            "type": "object",
+            "properties": {"sources": {"type": "array", "items": score_item}},
+            "required": ["sources"],
+            "additionalProperties": False,
+        }
         rendered_sources = "\n".join(
             f"- [{s['id']}] {s.get('title', '')}: {s.get('url', '')} — {s.get('claim', '')}"
             for s in sources
@@ -351,7 +370,7 @@ class ClaudeProvider:
         resp = self.client.messages.create(
             model=self._model_for(model_tier),
             max_tokens=MAX_TOKENS,
-            output_config={"format": {"type": "json_schema", "schema": SCORE_SCHEMA}},
+            output_config={"format": {"type": "json_schema", "schema": schema}},
             messages=[{"role": "user", "content": prompt}],
         )
         text = "".join(b.text for b in resp.content if b.type == "text")

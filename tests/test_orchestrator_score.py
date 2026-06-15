@@ -41,20 +41,29 @@ def test_score_enriches_sources_and_writes_triangulation(tmp_path):
     assert src0["total"] == src0["credibility"] + src0["recency"] + src0["bias"]
 
 
-def test_score_backfills_pursued_deviations(tmp_path):
+def test_score_backfills_pursued_deviation_injected(tmp_path):
+    from runner.adaptive import Deviation
     o = Orchestrator(DryRunProvider())
-    s = RunState(question="does X cause Y", depth="deep", root=tmp_path)
+    s = RunState(question="q", depth="medium", root=tmp_path)
     o.reframe(s)
     o.choose_genre(s)
     o.plan(s)
-    o.search(s)
+    sid = "sABC"
+    s.sources = [{"id": sid, "url": "https://x.example", "title": "T", "claim": "c"}]
+    s.round_source_ids = {2: [sid]}
+    (s.dir / "sources").mkdir(parents=True, exist_ok=True)
+    dev = Deviation(
+        subquestion="Q1", round_from=1, round_to=2,
+        trigger="empty_result", klass="cheap", status="pursued",
+        rationale="test", action="launched round 2",
+        depth=1, budget_after={"cheap": 3, "expensive": 1},
+        outcome="(pending scoring)", new_source_ids=[],
+    )
+    s.deviations = [dev]
     o.score(s)
-
-    pursued = [d for d in s.deviations if d.status == "pursued"]
-    for d in pursued:
-        assert d.outcome != "(pending scoring)"
-    text = (s.dir / "deviations.md").read_text(encoding="utf-8")
-    assert "(pending scoring)" not in text
+    assert dev.outcome != "(pending scoring)"
+    assert sid in dev.new_source_ids
+    assert "pending scoring" not in (s.dir / "deviations.md").read_text()
 
 
 def test_run_invokes_score_phase(tmp_path):

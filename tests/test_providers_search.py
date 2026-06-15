@@ -10,6 +10,7 @@ from runner.providers import (
     OpenAICompatProvider,
     SEARCH_TRIGGERS,
     SIGNALS_SCHEMA,
+    SCORE_SCHEMA,
 )
 
 
@@ -22,24 +23,29 @@ def _resp(content, stop_reason="end_turn"):
     return types.SimpleNamespace(content=content, stop_reason=stop_reason)
 
 
+_UNSUPPORTED_KEYWORDS = {"minLength", "maxLength", "minimum", "maximum", "minItems", "maxItems"}
+
+
+def _walk_schema_safe(node):
+    """Walk a JSON schema node and assert it is Anthropic structured-output safe:
+    every object node must have additionalProperties:false, and no unsupported
+    keywords (minLength/maxLength/minimum/maximum/minItems/maxItems) appear."""
+    if not isinstance(node, dict):
+        return
+    if node.get("type") == "object":
+        assert node.get("additionalProperties") is False, f"missing additionalProperties:false in {node}"
+    assert _UNSUPPORTED_KEYWORDS.isdisjoint(node), f"unsupported keyword in {node}"
+    for v in node.get("properties", {}).values():
+        _walk_schema_safe(v)
+    if "items" in node:
+        _walk_schema_safe(node["items"])
+
+
 def test_signals_schema_is_structured_output_safe():
     # Every object in the schema must forbid extra props and use no unsupported
     # keywords (minLength/maxLength/minimum/maximum/minItems) — structured outputs
     # reject those. Walk the schema and assert.
-    UNSUPPORTED = {"minLength", "maxLength", "minimum", "maximum", "minItems", "maxItems"}
-
-    def walk(node):
-        if not isinstance(node, dict):
-            return
-        if node.get("type") == "object":
-            assert node.get("additionalProperties") is False, f"missing additionalProperties:false in {node}"
-        assert UNSUPPORTED.isdisjoint(node), f"unsupported keyword in {node}"
-        for v in node.get("properties", {}).values():
-            walk(v)
-        if "items" in node:
-            walk(node["items"])
-
-    walk(SIGNALS_SCHEMA)
+    _walk_schema_safe(SIGNALS_SCHEMA)
     # signals object lists exactly the 4 triggers, all required
     sig = SIGNALS_SCHEMA["properties"]["signals"]
     assert set(sig["properties"]) == set(SEARCH_TRIGGERS)
@@ -47,6 +53,12 @@ def test_signals_schema_is_structured_output_safe():
     # each trigger entry allows null detail
     entry = sig["properties"][SEARCH_TRIGGERS[0]]
     assert entry["properties"]["detail"]["type"] == ["string", "null"]
+
+
+def test_score_schema_is_structured_output_safe():
+    # SCORE_SCHEMA (and its nested _SCORE_ITEM_SCHEMA) must also pass the same
+    # structured-output safety checks — the prior guard only covered SIGNALS_SCHEMA.
+    _walk_schema_safe(SCORE_SCHEMA)
 
 
 def test_search_triggers_match_adaptive_taxonomy():
