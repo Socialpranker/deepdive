@@ -1,4 +1,4 @@
-from runner.capabilities import KNOWN_KEYS, audit_env
+from runner.capabilities import KNOWN_KEYS, audit_env, render_capabilities
 
 
 def test_audit_env_marks_present_key():
@@ -28,3 +28,18 @@ def test_audit_env_empty_string_is_absent():
     audit = audit_env({"FRED_API_KEY": ""})
     fred = next(a for a in audit if a["key"] == "FRED_API_KEY")
     assert fred["present"] is False
+
+
+def test_render_capabilities_has_header_and_keys():
+    audit = [{"key": "FRED_API_KEY", "present": True},
+             {"key": "BRAVE_API_KEY", "present": False}]
+    md = render_capabilities(audit, "Use FRED for macro context.")
+    assert "## Capabilities check (Phase 3.5)" in md
+    assert "✅ FRED_API_KEY" in md
+    assert "❌ BRAVE_API_KEY" in md
+    assert "Use FRED for macro context." in md
+
+
+def test_render_capabilities_starts_with_blank_line_for_append():
+    md = render_capabilities([{"key": "FRED_API_KEY", "present": True}], "m")
+    assert md.startswith("\n")

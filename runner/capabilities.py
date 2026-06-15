@@ -20,3 +20,16 @@ def audit_env(env: dict) -> list[dict]:
     """For each known key, whether it is present (non-empty) in `env`.
     Pure: takes env explicitly, never raises."""
     return [{"key": k, "present": bool(env.get(k))} for k in KNOWN_KEYS]
+
+
+def render_capabilities(audit: list[dict], mapping_text: str) -> str:
+    """Markdown block appended to plan.md. Leads with a blank line so it separates
+    cleanly from the existing plan body."""
+    lines = ["", "## Capabilities check (Phase 3.5)", "", "**API keys:**"]
+    for a in audit:
+        if a["present"]:
+            lines.append(f"- ✅ {a['key']} — authenticated")
+        else:
+            lines.append(f"- ❌ {a['key']} — not set (fallback to standard web search)")
+    lines += ["", "**Subtopic → source mapping:**", "", mapping_text, ""]
+    return "\n".join(lines)
