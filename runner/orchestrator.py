@@ -55,6 +55,15 @@ try:
 except ImportError:  # run as a script
     from verify import PLACEHOLDER, render_verification
 
+try:
+    from .refresh import (extract_carry_forward, extract_entities,
+                          extract_hypotheses, extract_numbers,
+                          render_refresh_targets)
+except ImportError:  # run as a script
+    from refresh import (extract_carry_forward, extract_entities,
+                         extract_hypotheses, extract_numbers,
+                         render_refresh_targets)
+
 DEPTH_SOURCES = {"shallow": 6, "medium": 14, "deep": 28}
 DEPTH_FANOUT = {"shallow": 0, "medium": 3, "deep": 5}
 GENRE_BY_HINT = [
@@ -336,6 +345,24 @@ class Orchestrator:
             text = block + "\n"
         report_path.write_text(text, encoding="utf-8")
 
+    # --- Phase 7: refresh targets generation -------------------------------
+    def refresh(self, s: RunState) -> None:
+        if s.depth == "shallow":
+            return  # refresh targets are for medium/deep only
+        try:
+            devs_text = (s.dir / "deviations.md").read_text(encoding="utf-8")
+        except (FileNotFoundError, OSError):
+            devs_text = ""
+        content = render_refresh_targets(
+            s.slug, s.depth,
+            extract_hypotheses(s.hypotheses, s.triangulation),
+            extract_entities(s.sources),
+            extract_numbers(s.sources),
+            extract_carry_forward(devs_text),
+            today=dt.date.today().isoformat(),
+        )
+        (s.dir / "refresh_targets.md").write_text(content, encoding="utf-8")
+
     def run(self, question: str, depth: str, root: Path) -> Path:
         s = RunState(question=question, depth=depth, root=root)
         self.reframe(s)
@@ -347,6 +374,7 @@ class Orchestrator:
         self.score(s)
         self.synthesize(s)
         self.verify(s)
+        self.refresh(s)
         return s.dir
 
 

@@ -18,6 +18,11 @@ import json
 import os
 from typing import Callable, Protocol, runtime_checkable
 
+try:
+    from .scoring import hypothesis_ids
+except ImportError:  # run as a script
+    from scoring import hypothesis_ids
+
 TIERS = ("strong", "mid", "cheap")
 SEARCH_TRIGGERS = ("empty_result", "citation_lead", "unexpected_finding", "contradiction")
 
@@ -183,7 +188,6 @@ class DryRunProvider:
     def score(self, sources: list[dict], hypotheses: list[str],
               *, model_tier: str = "cheap") -> dict:
         assert model_tier in TIERS, f"unknown tier {model_tier}"
-        from runner.scoring import hypothesis_ids
         hids = hypothesis_ids(hypotheses)
         scored = []
         for src in sources:
@@ -338,7 +342,6 @@ class ClaudeProvider:
 
     def score(self, sources: list[dict], hypotheses: list[str],
               *, model_tier: str = "cheap") -> dict:
-        from runner.scoring import hypothesis_ids
         hids = hypothesis_ids(hypotheses)
         ev_props = {hid: {"type": "string", "enum": list(STANCES)} for hid in hids}
         score_item = {
