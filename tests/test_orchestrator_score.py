@@ -39,3 +39,19 @@ def test_score_enriches_sources_and_writes_triangulation(tmp_path):
 
     src0 = s.sources[0]
     assert src0["total"] == src0["credibility"] + src0["recency"] + src0["bias"]
+
+
+def test_score_backfills_pursued_deviations(tmp_path):
+    o = Orchestrator(DryRunProvider())
+    s = RunState(question="does X cause Y", depth="deep", root=tmp_path)
+    o.reframe(s)
+    o.choose_genre(s)
+    o.plan(s)
+    o.search(s)
+    o.score(s)
+
+    pursued = [d for d in s.deviations if d.status == "pursued"]
+    for d in pursued:
+        assert d.outcome != "(pending scoring)"
+    text = (s.dir / "deviations.md").read_text(encoding="utf-8")
+    assert "(pending scoring)" not in text

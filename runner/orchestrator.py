@@ -201,6 +201,23 @@ class Orchestrator:
         (s.dir / "triangulation.md").write_text(
             render_triangulation(s.slug, s.triangulation), encoding="utf-8")
 
+        # step 4: backfill deviations now that sources are scored (closes the
+        # TODO(Phase 5) in adaptive.py). For each pursued deviation, attach the
+        # source ids produced by the round it spawned.
+        for d in s.deviations:
+            if d.status != "pursued":
+                continue
+            ids = s.round_source_ids.get(d.round_to, [])
+            d.new_source_ids = list(ids)
+            if ids:
+                totals = [lookup[i]["total"] for i in ids
+                          if i in lookup and lookup[i].get("total") is not None]
+                avg = round(sum(totals) / len(totals), 1) if totals else "n/a"
+                d.outcome = f"{len(ids)} sources, avg total {avg}"
+            else:
+                d.outcome = "no unique sources"
+        write_deviations(s.dir, s.slug, s.deviations)
+
     def _rewrite_sources(self, s: RunState) -> None:
         srcdir = s.dir / "sources"
         srcdir.mkdir(exist_ok=True)
