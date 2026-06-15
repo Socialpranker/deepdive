@@ -6,7 +6,35 @@ from runner.providers import (
     DryRunProvider,
     OpenAICompatProvider,
     SEARCH_TRIGGERS,
+    SIGNALS_SCHEMA,
 )
+
+
+def test_signals_schema_is_structured_output_safe():
+    # Every object in the schema must forbid extra props and use no unsupported
+    # keywords (minLength/maxLength/minimum/maximum/minItems) — structured outputs
+    # reject those. Walk the schema and assert.
+    UNSUPPORTED = {"minLength", "maxLength", "minimum", "maximum", "minItems", "maxItems"}
+
+    def walk(node):
+        if not isinstance(node, dict):
+            return
+        if node.get("type") == "object":
+            assert node.get("additionalProperties") is False, f"missing additionalProperties:false in {node}"
+        assert UNSUPPORTED.isdisjoint(node), f"unsupported keyword in {node}"
+        for v in node.get("properties", {}).values():
+            walk(v)
+        if "items" in node:
+            walk(node["items"])
+
+    walk(SIGNALS_SCHEMA)
+    # signals object lists exactly the 4 triggers, all required
+    sig = SIGNALS_SCHEMA["properties"]["signals"]
+    assert set(sig["properties"]) == set(SEARCH_TRIGGERS)
+    assert set(sig["required"]) == set(SEARCH_TRIGGERS)
+    # each trigger entry allows null detail
+    entry = sig["properties"][SEARCH_TRIGGERS[0]]
+    assert entry["properties"]["detail"]["type"] == ["string", "null"]
 
 
 def test_search_triggers_match_adaptive_taxonomy():

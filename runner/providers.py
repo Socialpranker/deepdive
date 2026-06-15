@@ -22,6 +22,44 @@ SEARCH_TRIGGERS = ("empty_result", "citation_lead", "unexpected_finding", "contr
 
 MAX_TOKENS = 4096
 
+# --- Stage 2: structured-output schema for the web_search signals call ---
+# Constraints (Anthropic structured outputs): every object needs
+# additionalProperties:false; no min/max length, no minItems, no recursion.
+_SIGNAL_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "fired": {"type": "boolean"},
+        "detail": {"type": ["string", "null"]},
+    },
+    "required": ["fired", "detail"],
+    "additionalProperties": False,
+}
+_SOURCE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "id": {"type": "string"},
+        "url": {"type": "string"},
+        "title": {"type": "string"},
+        "claim": {"type": "string"},
+    },
+    "required": ["id", "url", "title", "claim"],
+    "additionalProperties": False,
+}
+SIGNALS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "sources": {"type": "array", "items": _SOURCE_SCHEMA},
+        "signals": {
+            "type": "object",
+            "properties": {t: _SIGNAL_SCHEMA for t in SEARCH_TRIGGERS},
+            "required": list(SEARCH_TRIGGERS),
+            "additionalProperties": False,
+        },
+    },
+    "required": ["sources", "signals"],
+    "additionalProperties": False,
+}
+
 
 def run_parallel(thunks: list[Callable[[], str]], *, limit: int = 5) -> list[str]:
     """Run N thunks concurrently. Result order == input order.
