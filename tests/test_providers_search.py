@@ -85,13 +85,6 @@ def test_dryrun_search_varies_by_subquery():
     assert a["sources"] != b["sources"]
 
 
-def test_claude_search_not_implemented_yet():
-    # construct without touching the network: pass a dummy client
-    p = ClaudeProvider(client=object())
-    with pytest.raises(NotImplementedError):
-        p.search("x")
-
-
 def test_openai_search_not_implemented_yet():
     p = OpenAICompatProvider(client=object())
     with pytest.raises(NotImplementedError):
@@ -166,3 +159,88 @@ def test_parse_call2_failsafe_on_garbage():
     # all triggers present, none fired
     assert set(blob["signals"]) == set(SEARCH_TRIGGERS)
     assert all(v == {"fired": False, "detail": None} for v in blob["signals"].values())
+
+
+class _FakeClient:
+    """Records each messages.create call and returns scripted responses in order."""
+    def __init__(self, responses):
+        self._responses = list(responses)
+        self.calls = []
+        self.messages = self  # so client.messages.create works
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        return self._responses.pop(0)
+
+
+def _call1_resp():
+    return _resp([
+        _block(type="text", text="Answer text. "),
+        _block(type="web_search_tool_result", content=[
+            _block(type="web_search_result", url="https://r.example", title="R"),
+        ]),
+    ])
+
+
+def _call2_resp():
+    payload = {
+        "sources": [{"id": "s1", "url": "https://r.example", "title": "R", "claim": "c"}],
+        "signals": {
+            "empty_result": {"fired": False, "detail": None},
+            "citation_lead": {"fired": True, "detail": "lead"},
+            "unexpected_finding": {"fired": False, "detail": None},
+            "contradiction": {"fired": False, "detail": None},
+        },
+    }
+    return _resp([_block(type="text", text=json.dumps(payload))])
+
+
+def test_claude_search_makes_two_calls_with_right_shapes():
+    client = _FakeClient([_call1_resp(), _call2_resp()])
+    p = ClaudeProvider(client=client)
+    blob = p.search("widget market size", subquestion_id="Q4", model_tier="cheap")
+
+    # exactly two create calls
+    assert len(client.calls) == 2
+    call1, call2 = client.calls
+
+    # call 1: web_search tool, NO output_config; model is sonnet (mid)
+    assert call1["model"] == "claude-sonnet-4-6"
+    assert call1["tools"][0]["type"] == "web_search_20260209"
+    assert "output_config" not in call1
+
+    # call 2: structured output, NO tools
+    assert call2["model"] == "claude-sonnet-4-6"
+    assert call2["output_config"]["format"]["schema"] == SIGNALS_SCHEMA
+    assert "tools" not in call2
+
+    # blob shape + caller-owned subquestion_id
+    assert blob["subquestion_id"] == "Q4"
+    assert blob["sources"][0]["url"] == "https://r.example"
+    assert set(blob["signals"]) == set(SEARCH_TRIGGERS)
+    assert blob["signals"]["citation_lead"]["fired"] is True
+
+
+def test_claude_search_call2_user_text_is_plain_not_tool_blocks():
+    # The whole point of two calls: call 2 must NOT carry call-1's
+    # web_search_tool_result blocks (citations + format = 400). Its messages
+    # must be plain user text only.
+    client = _FakeClient([_call1_resp(), _call2_resp()])
+    p = ClaudeProvider(client=client)
+    p.search("q", subquestion_id="Q0")
+    call2 = client.calls[1]
+    for msg in call2["messages"]:
+        content = msg["content"]
+        if isinstance(content, list):
+            for block in content:
+                assert block.get("type") != "web_search_tool_result"
+
+
+def test_claude_search_blob_feeds_parse_signals():
+    # Prove the returned blob actually mates with the loop's signal reader.
+    from runner.adaptive import parse_signals
+    client = _FakeClient([_call1_resp(), _call2_resp()])
+    blob = ClaudeProvider(client=client).search("q", subquestion_id="Q1")
+    fired, details = parse_signals(blob)
+    assert "citation_lead" in fired
+    assert details["citation_lead"] == "lead"

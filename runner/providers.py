@@ -61,6 +61,21 @@ SIGNALS_SCHEMA = {
     "additionalProperties": False,
 }
 
+_SEARCH_PROMPT = (
+    "Search the web to answer this sub-question for a research report. "
+    "Cite concrete sources.\n\nSub-question: {subquery}"
+)
+_SIGNALS_PROMPT = (
+    "You just researched a sub-question. Return JSON matching the schema: a list "
+    "of `sources` (id, url, title, claim) and a `signals` object. For each signal, "
+    "set fired=true with a short detail only if it genuinely applies:\n"
+    "- empty_result: the search found nothing useful\n"
+    "- citation_lead: a source points to another worth chasing\n"
+    "- unexpected_finding: a result contradicts the premise or surprises\n"
+    "- contradiction: two sources disagree\n\n"
+    "Sub-question: {subquery}\n\nYour findings:\n{answer}\n\nSources:\n{sources}"
+)
+
 
 def run_parallel(thunks: list[Callable[[], str]], *, limit: int = 5) -> list[str]:
     """Run N thunks concurrently. Result order == input order.
@@ -219,8 +234,47 @@ class ClaudeProvider:
         )
 
     def search(self, subquery: str, *, subquestion_id: str = "Q0", model_tier: str = "cheap") -> dict:
-        raise NotImplementedError(
-            "ClaudeProvider.search (real web_search) lands in Phase 5 stage 2")
+        model = self._search_model(model_tier)
+
+        # --- call 1: web_search, no structured output ---
+        messages = [{"role": "user", "content": _SEARCH_PROMPT.format(subquery=subquery)}]
+        resp = self.client.messages.create(
+            model=model,
+            max_tokens=MAX_TOKENS,
+            tools=[{"type": "web_search_20260209", "name": "web_search"}],
+            messages=messages,
+        )
+        # server-side tool loop may pause after N iterations; resume until terminal
+        guard = 0
+        while getattr(resp, "stop_reason", None) == "pause_turn" and guard < 5:
+            guard += 1
+            messages = [
+                {"role": "user", "content": _SEARCH_PROMPT.format(subquery=subquery)},
+                {"role": "assistant", "content": resp.content},
+            ]
+            resp = self.client.messages.create(
+                model=model,
+                max_tokens=MAX_TOKENS,
+                tools=[{"type": "web_search_20260209", "name": "web_search"}],
+                messages=messages,
+            )
+        answer_text, raw_sources = _collect_call1(resp)
+
+        # --- call 2: structured output, NO web_search (citations + format = 400) ---
+        # call-1 sources/text passed as PLAIN user text, never the tool-result blocks.
+        rendered_sources = "\n".join(
+            f"- {s['title']}: {s['url']}" for s in raw_sources
+        ) or "(no sources found)"
+        call2_prompt = _SIGNALS_PROMPT.format(
+            subquery=subquery, answer=answer_text, sources=rendered_sources
+        )
+        resp2 = self.client.messages.create(
+            model=model,
+            max_tokens=MAX_TOKENS,
+            output_config={"format": {"type": "json_schema", "schema": SIGNALS_SCHEMA}},
+            messages=[{"role": "user", "content": call2_prompt}],
+        )
+        return _parse_call2(resp2, subquestion_id)
 
 
 class OpenAICompatProvider:
