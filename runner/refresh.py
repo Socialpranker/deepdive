@@ -72,12 +72,12 @@ def extract_carry_forward(deviations_text: str) -> list[dict]:
     """Parse deviations.md: each '## D*' block with a carry_forward line becomes a
     refresh candidate. subquestion defaults to '?' if the block lacks one."""
     out = []
-    blocks = re.split(r"^## D\d+\s*$", deviations_text, flags=re.MULTILINE)
+    blocks = re.split(r"^## D\d+\b.*$", deviations_text, flags=re.MULTILINE)
     for block in blocks:
         cf = re.search(r"^- carry_forward:\s*(.+)$", block, flags=re.MULTILINE)
         if not cf:
             continue
         sq = re.search(r"^- subquestion:\s*(.+)$", block, flags=re.MULTILINE)
-        out.append({"subquestion": sq.group(1).strip() if sq else "?",
-                    "carry_forward": cf.group(1).strip()})
+        subq = sq.group(1).strip() if sq else "?"
+        out.append({"subquestion": subq, "carry_forward": cf.group(1).strip()})
     return out

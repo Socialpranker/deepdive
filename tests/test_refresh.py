@@ -102,3 +102,9 @@ def test_extract_carry_forward_empty_text():
 def test_extract_carry_forward_no_carry_lines():
     text = "# Deviations\n\n## D1\n- subquestion: Q1\n- status: pursued\n"
     assert extract_carry_forward(text) == []
+
+
+def test_extract_carry_forward_defaults_subquestion():
+    text = "## D1\n- carry_forward: orphan candidate\n"
+    out = extract_carry_forward(text)
+    assert out == [{"subquestion": "?", "carry_forward": "orphan candidate"}]
