@@ -1,4 +1,4 @@
-from runner.refresh import extract_entities, extract_hypotheses, extract_numbers
+from runner.refresh import extract_carry_forward, extract_entities, extract_hypotheses, extract_numbers
 
 
 def test_extract_hypotheses_maps_status():
@@ -74,3 +74,31 @@ def test_extract_numbers_skips_no_digit_no_domain():
 
 def test_extract_numbers_empty():
     assert extract_numbers([]) == []
+
+
+DEVIATIONS_SAMPLE = """# Deviations — my topic
+
+## D1
+- subquestion: Q3
+- status: pursued
+- new_source_ids: [S11]
+
+## D2
+- subquestion: Q5
+- status: not_pursued
+- carry_forward: Phase 7 refresh-target
+"""
+
+
+def test_extract_carry_forward_parses_records():
+    out = extract_carry_forward(DEVIATIONS_SAMPLE)
+    assert out == [{"subquestion": "Q5", "carry_forward": "Phase 7 refresh-target"}]
+
+
+def test_extract_carry_forward_empty_text():
+    assert extract_carry_forward("") == []
+
+
+def test_extract_carry_forward_no_carry_lines():
+    text = "# Deviations\n\n## D1\n- subquestion: Q1\n- status: pursued\n"
+    assert extract_carry_forward(text) == []
