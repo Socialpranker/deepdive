@@ -61,9 +61,43 @@ SIGNALS_SCHEMA = {
     "additionalProperties": False,
 }
 
+SOURCE_TYPES = ("Primary", "Academic", "Industry-media", "General-media",
+                "Expert-blog", "Forum", "Other")
+STANCES = ("supports", "contradicts", "partial", "neutral")
+
+_SCORE_ITEM_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "id": {"type": "string"},
+        "credibility": {"type": "integer"},
+        "recency": {"type": "integer"},
+        "bias": {"type": "integer"},
+        "type": {"type": "string", "enum": list(SOURCE_TYPES)},
+    },
+    "required": ["id", "credibility", "recency", "bias", "type"],
+    "additionalProperties": False,
+}
+SCORE_SCHEMA = {
+    "type": "object",
+    "properties": {"sources": {"type": "array", "items": _SCORE_ITEM_SCHEMA}},
+    "required": ["sources"],
+    "additionalProperties": False,
+}
+
 _SEARCH_PROMPT = (
     "Search the web to answer this sub-question for a research report. "
     "Cite concrete sources.\n\nSub-question: {subquery}"
+)
+_SCORE_PROMPT = (
+    "Score each source on three axes (integers 1-5) using this rubric:\n"
+    "- credibility: 5=peer-reviewed/official/primary, 3=quality edited media, 1=anonymous forum.\n"
+    "- recency: 5=current, 1=clearly outdated for the question.\n"
+    "- bias: 5=neutral/balanced, 1=strongly partisan or promotional.\n"
+    "Classify `type` as one of: Primary, Academic, Industry-media, General-media, "
+    "Expert-blog, Forum, Other.\n"
+    "For `hypothesis_evidence`, judge each hypothesis id against the source: "
+    "supports | contradicts | partial | neutral.\n\n"
+    "Hypotheses:\n{hypotheses}\n\nSources:\n{sources}\n"
 )
 _SIGNALS_PROMPT = (
     "You just researched a sub-question. Return JSON matching the schema: a list "
@@ -108,6 +142,14 @@ class LLMProvider(Protocol):
         The shape matches what runner.adaptive.parse_signals consumes."""
         ...
 
+    def score(self, sources: list[dict], hypotheses: list[str],
+              *, model_tier: str = "cheap") -> dict:
+        """Phase 5 per-source scoring. Returns
+            {"sources": [{"id", "credibility", "recency", "bias", "type",
+                          "hypothesis_evidence": {Hn: stance}}, ...]}.
+        Does NOT compute `total` — that is summed in Python (runner.scoring.compute_total)."""
+        ...
+
 
 class DryRunProvider:
     """Deterministic, no-network provider. Produces stable placeholder text so the
@@ -137,6 +179,24 @@ class DryRunProvider:
         ]
         signals = {t: {"fired": False, "detail": None} for t in SEARCH_TRIGGERS}
         return {"subquestion_id": subquestion_id, "sources": sources, "signals": signals}
+
+    def score(self, sources: list[dict], hypotheses: list[str],
+              *, model_tier: str = "cheap") -> dict:
+        assert model_tier in TIERS, f"unknown tier {model_tier}"
+        from runner.scoring import hypothesis_ids
+        hids = hypothesis_ids(hypotheses)
+        scored = []
+        for src in sources:
+            h = hashlib.sha1(src["id"].encode()).hexdigest()
+            cred = int(h[0], 16) % 5 + 1
+            rec = int(h[1], 16) % 5 + 1
+            bias = int(h[2], 16) % 5 + 1
+            stype = SOURCE_TYPES[int(h[3], 16) % len(SOURCE_TYPES)]
+            evidence = {hid: STANCES[int(h[4 + i % 4], 16) % len(STANCES)]
+                        for i, hid in enumerate(hids)}
+            scored.append({"id": src["id"], "credibility": cred, "recency": rec,
+                           "bias": bias, "type": stype, "hypothesis_evidence": evidence})
+        return {"sources": scored}
 
 
 def _empty_signals() -> dict:
@@ -276,6 +336,46 @@ class ClaudeProvider:
         )
         return _parse_call2(resp2, subquestion_id)
 
+    def score(self, sources: list[dict], hypotheses: list[str],
+              *, model_tier: str = "cheap") -> dict:
+        from runner.scoring import hypothesis_ids
+        hids = hypothesis_ids(hypotheses)
+        ev_props = {hid: {"type": "string", "enum": list(STANCES)} for hid in hids}
+        score_item = {
+            "type": "object",
+            "properties": {
+                **_SCORE_ITEM_SCHEMA["properties"],
+                "hypothesis_evidence": {
+                    "type": "object",
+                    "properties": ev_props,
+                    "required": hids,
+                    "additionalProperties": False,
+                },
+            },
+            "required": [*_SCORE_ITEM_SCHEMA["required"], "hypothesis_evidence"],
+            "additionalProperties": False,
+        }
+        schema = {
+            "type": "object",
+            "properties": {"sources": {"type": "array", "items": score_item}},
+            "required": ["sources"],
+            "additionalProperties": False,
+        }
+        rendered_sources = "\n".join(
+            f"- [{s['id']}] {s.get('title', '')}: {s.get('url', '')} — {s.get('claim', '')}"
+            for s in sources
+        ) or "(no sources)"
+        rendered_hyps = "\n".join(f"- {h}" for h in hypotheses) or "(none)"
+        prompt = _SCORE_PROMPT.format(hypotheses=rendered_hyps, sources=rendered_sources)
+        resp = self.client.messages.create(
+            model=self._model_for(model_tier),
+            max_tokens=MAX_TOKENS,
+            output_config={"format": {"type": "json_schema", "schema": schema}},
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = "".join(b.text for b in resp.content if b.type == "text")
+        return json.loads(text)
+
 
 class OpenAICompatProvider:
     """Adapter for any OpenAI-compatible endpoint: OpenAI itself, OpenRouter,
@@ -318,6 +418,21 @@ class OpenAICompatProvider:
     def search(self, subquery: str, *, subquestion_id: str = "Q0", model_tier: str = "cheap") -> dict:
         raise NotImplementedError(
             "web_search is Anthropic-specific; OpenAICompatProvider has no search backend")
+
+    def score(self, sources: list[dict], hypotheses: list[str],
+              *, model_tier: str = "cheap") -> dict:
+        rendered_sources = "\n".join(
+            f"- [{s['id']}] {s.get('title', '')}: {s.get('url', '')} — {s.get('claim', '')}"
+            for s in sources
+        ) or "(no sources)"
+        rendered_hyps = "\n".join(f"- {h}" for h in hypotheses) or "(none)"
+        prompt = _SCORE_PROMPT.format(hypotheses=rendered_hyps, sources=rendered_sources)
+        resp = self.client.chat.completions.create(
+            model=self._model_for(model_tier),
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+        )
+        return json.loads(resp.choices[0].message.content)
 
 
 def _require_env(name: str) -> None:
