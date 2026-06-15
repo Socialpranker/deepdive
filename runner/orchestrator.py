@@ -323,11 +323,17 @@ class Orchestrator:
 
         date = dt.date.today().isoformat()
         report_path = s.dir / f"{date}_{s.genre}.md"
-        text = report_path.read_text(encoding="utf-8")
+        try:
+            text = report_path.read_text(encoding="utf-8")
+        except (FileNotFoundError, OSError):
+            # no report to patch (synthesize skipped / date rolled) — write the block alone
+            text = ""
         if PLACEHOLDER in text:
             text = text.replace(PLACEHOLDER, block)
-        else:
+        elif text:
             text = text.rstrip() + "\n\n" + block + "\n"
+        else:
+            text = block + "\n"
         report_path.write_text(text, encoding="utf-8")
 
     def run(self, question: str, depth: str, root: Path) -> Path:

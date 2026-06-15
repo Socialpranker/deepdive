@@ -84,3 +84,15 @@ def test_verify_offline_by_default_skips_subprocess(tmp_path, monkeypatch):
     assert called["n"] == 0  # subprocess NOT invoked offline
     report = _report_path(s).read_text(encoding="utf-8")
     assert "verification unavailable" in report
+
+
+def test_verify_survives_missing_report(tmp_path):
+    o = Orchestrator(DryRunProvider())
+    s = RunState(question="q", depth="medium", root=tmp_path)
+    o.reframe(s)
+    o.choose_genre(s)
+    o.plan(s)
+    # NOTE: synthesize() intentionally NOT called → report file is absent
+    o.verify(s)  # must NOT raise
+    report = _report_path(s).read_text(encoding="utf-8")  # file should now exist
+    assert "Citation integrity" in report
