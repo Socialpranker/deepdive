@@ -28,3 +28,16 @@ def test_claude_live_fanout():
 def test_openai_live_completes():
     out = OpenAICompatProvider().complete("Reply with the single word: pong", model_tier="cheap")
     assert isinstance(out, str) and out.strip() != ""
+
+
+@pytest.mark.skipif(not os.environ.get("ANTHROPIC_API_KEY"), reason="no ANTHROPIC_API_KEY")
+def test_claude_live_search():
+    from runner.providers import SEARCH_TRIGGERS
+    blob = ClaudeProvider().search(
+        "What is the current stable version of Python?", subquestion_id="Q0"
+    )
+    assert blob["subquestion_id"] == "Q0"
+    assert set(blob["signals"]) == set(SEARCH_TRIGGERS)
+    assert isinstance(blob["sources"], list)
+    # at least one real (non-example.com) source on a successful search
+    assert any("example.com" not in s.get("url", "") for s in blob["sources"]) or blob["sources"] == []
