@@ -1,4 +1,6 @@
 from runner.refresh import extract_carry_forward, extract_entities, extract_hypotheses, extract_numbers, render_refresh_targets
+from runner.orchestrator import Orchestrator, RunState
+from runner.providers import DryRunProvider
 
 
 def test_extract_hypotheses_maps_status():
@@ -154,3 +156,31 @@ def test_render_handles_empty():
     assert "_none_" in md
     assert "_no hypotheses recorded_" in md
     assert "# Refresh targets — s" in md  # не падает
+
+
+def test_run_generates_refresh_targets(tmp_path):
+    o = Orchestrator(DryRunProvider())
+    out_dir = o.run("does coffee boost focus", "medium", tmp_path)
+    rt = out_dir / "refresh_targets.md"
+    assert rt.exists()
+    text = rt.read_text(encoding="utf-8")
+    assert "# Refresh targets" in text
+    assert "## 4. Hypotheses to re-test" in text
+    assert "slug:" in text
+
+
+def test_refresh_skipped_for_shallow(tmp_path):
+    o = Orchestrator(DryRunProvider())
+    out_dir = o.run("q", "shallow", tmp_path)
+    assert not (out_dir / "refresh_targets.md").exists()
+
+
+def test_refresh_survives_missing_deviations(tmp_path):
+    # call refresh() directly on a state with no deviations.md written
+    o = Orchestrator(DryRunProvider())
+    s = RunState(question="q about x", depth="medium", root=tmp_path)
+    o.reframe(s)
+    o.choose_genre(s)
+    s.dir.mkdir(parents=True, exist_ok=True)
+    o.refresh(s)  # must NOT raise
+    assert (s.dir / "refresh_targets.md").exists()
