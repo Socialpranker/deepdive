@@ -136,3 +136,33 @@ def test_collect_call1_handles_no_search():
     text, sources = _collect_call1(resp)
     assert text == "No search needed."
     assert sources == []
+
+
+def test_parse_call2_happy_path():
+    from runner.providers import _parse_call2
+    payload = {
+        "sources": [{"id": "s1", "url": "https://x.example", "title": "X", "claim": "c"}],
+        "signals": {
+            "empty_result": {"fired": False, "detail": None},
+            "citation_lead": {"fired": True, "detail": "found a lead"},
+            "unexpected_finding": {"fired": False, "detail": None},
+            "contradiction": {"fired": False, "detail": None},
+        },
+    }
+    resp = _resp([_block(type="text", text=json.dumps(payload))])
+    blob = _parse_call2(resp, "Q2")
+    assert blob["subquestion_id"] == "Q2"
+    assert blob["sources"] == payload["sources"]
+    assert blob["signals"]["citation_lead"] == {"fired": True, "detail": "found a lead"}
+
+
+def test_parse_call2_failsafe_on_garbage():
+    from runner.providers import _parse_call2
+    from runner.providers import SEARCH_TRIGGERS
+    resp = _resp([_block(type="text", text="I cannot help with that.")], stop_reason="refusal")
+    blob = _parse_call2(resp, "Q0")
+    assert blob["subquestion_id"] == "Q0"
+    assert blob["sources"] == []
+    # all triggers present, none fired
+    assert set(blob["signals"]) == set(SEARCH_TRIGGERS)
+    assert all(v == {"fired": False, "detail": None} for v in blob["signals"].values())

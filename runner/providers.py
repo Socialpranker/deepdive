@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import hashlib
+import json
 import os
 from typing import Callable, Protocol, runtime_checkable
 
@@ -121,6 +122,37 @@ class DryRunProvider:
         ]
         signals = {t: {"fired": False, "detail": None} for t in SEARCH_TRIGGERS}
         return {"subquestion_id": subquestion_id, "sources": sources, "signals": signals}
+
+
+def _empty_signals() -> dict:
+    return {t: {"fired": False, "detail": None} for t in SEARCH_TRIGGERS}
+
+
+def _parse_call2(resp, subquestion_id: str) -> dict:
+    """Parse the structured-output call-2 response into a contract blob.
+
+    Fail-safe: malformed JSON, a refusal, or a missing signals block yields a
+    valid blob with empty sources and all-fired:false signals — never raises,
+    so one bad cheap-model turn can't break the loop (mirrors parse_signals).
+    subquestion_id is always the caller's value, never the model's.
+    """
+    text = "".join(
+        getattr(b, "text", "") for b in (getattr(resp, "content", []) or [])
+        if getattr(b, "type", None) == "text"
+    )
+    try:
+        data = json.loads(text)
+        assert isinstance(data, dict)
+    except (ValueError, AssertionError):
+        return {"subquestion_id": subquestion_id, "sources": [], "signals": _empty_signals()}
+
+    sources = data.get("sources")
+    if not isinstance(sources, list):
+        sources = []
+    signals = data.get("signals")
+    if not isinstance(signals, dict):
+        signals = _empty_signals()
+    return {"subquestion_id": subquestion_id, "sources": sources, "signals": signals}
 
 
 def _collect_call1(resp) -> tuple[str, list[dict]]:
