@@ -139,7 +139,7 @@ def render_refresh_targets(slug: str, depth: str, hypotheses: list[dict],
     else:
         out += ["_no hypotheses recorded_", ""]
 
-    out += ["## 5. Refresh candidates (carry-forward)"]
+    out += ["", "## 5. Refresh candidates (carry-forward)"]
     if carry:
         for c in carry:
             out.append(f"- **{c['subquestion']}** — {c['carry_forward']}")
