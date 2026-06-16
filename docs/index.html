@@ -551,8 +551,20 @@ section:last-of-type { border-bottom: none; }
 
 .pipeline {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(10, 1fr);
   gap: 16px;
+  align-items: stretch;
+}
+
+/* Each card spans 2 of 10 columns → 5 cards per row.
+   With 9 phases the second row holds 4 cards; offsetting the first
+   card of that row by one column centers the 5+4 layout (no orphan gap). */
+.pipeline .phase {
+  grid-column: span 2;
+}
+
+.pipeline .phase:nth-child(6) {
+  grid-column: 2 / span 2;
 }
 
 .phase {
@@ -947,6 +959,8 @@ footer a {
   .kpi { border-right: none; border-bottom: 2px solid var(--ink); }
   .kpi:last-child { border-bottom: none; }
   .compare { grid-template-columns: 1fr; }
+  .pipeline { grid-template-columns: repeat(4, 1fr); }
+  .pipeline .phase:nth-child(6) { grid-column: span 2; }
   .cta h2 { font-size: 32px; }
   .cta { padding: 40px 24px; box-shadow: 6px 6px 0 var(--yellow); }
 }
@@ -955,6 +969,9 @@ footer a {
   .hero h1 { font-size: 44px; }
   .kpi-num { font-size: 38px; }
   .section-title { font-size: 28px; }
+  .pipeline { grid-template-columns: 1fr; }
+  .pipeline .phase,
+  .pipeline .phase:nth-child(6) { grid-column: auto; }
 }
 </style>
 </head>
@@ -1650,6 +1667,14 @@ zip -r ../deep-research.skill . \
     }
   };
 
+  // Strip stamp_docs count markers (<!--gen:KEY-->N<!--/gen-->) down to their
+  // value. The markers are HTML comments that collapse in static markup, but a
+  // translated string is inserted via textContent, where they would otherwise
+  // render literally. Keeps stamp_docs as the single source of truth.
+  function stripGenMarkers(s) {
+    return s.replace(/<!--gen:[a-z0-9:_]+-->/g, '').replace(/<!--\/gen-->/g, '');
+  }
+
   function applyLanguage(lang) {
     const dict = translations[lang];
     if (!dict) return;
@@ -1661,8 +1686,9 @@ zip -r ../deep-research.skill . \
     // textContent updates
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
-      const val = dict[key];
-      if (val === undefined) return;
+      const raw = dict[key];
+      if (raw === undefined) return;
+      const val = stripGenMarkers(raw);
 
       const attrName = el.getAttribute('data-i18n-attr');
       if (attrName) {
@@ -1672,11 +1698,13 @@ zip -r ../deep-research.skill . \
       }
     });
 
-    // innerHTML updates (for keys containing HTML markup)
+    // innerHTML updates (for keys containing HTML markup).
+    // Content is static, hard-coded translations from this file (not user input);
+    // stripGenMarkers only removes count-marker comment wrappers.
     document.querySelectorAll('[data-i18n-html]').forEach(el => {
       const key = el.getAttribute('data-i18n-html');
       const val = dict[key];
-      if (val !== undefined) el.innerHTML = val;
+      if (val !== undefined) el.innerHTML = stripGenMarkers(val);
     });
 
     // Toggle active class on language buttons
