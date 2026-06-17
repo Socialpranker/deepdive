@@ -40,3 +40,7 @@ eval/output/*
 .env
 .env.local
 *.key
+
+# Browser-automation artifacts (Playwright MCP screenshots/snapshots — per-session)
+.playwright-mcp/
+site-*.png
