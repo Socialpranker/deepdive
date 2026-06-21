@@ -34,9 +34,11 @@
 | **Phase 4.3** | Save sources to files | **Haiku** | low | Механическая запись по шаблону |
 | **Phase 5** | Scoring (credibility/recency/bias по rubric) | **Haiku** | low | Простой паттерн оценки. Sonnet излишен |
 | **Phase 5** | Triangulation check (3 источника на claim) | **Sonnet** | medium | Понимание содержания, не только URL |
-| **Phase 6** | Adversarial pass — 4 self-critique questions | **Opus** | high | **Самая дорогая модель здесь обязательна.** Steel-man counter-args требует настоящего рассуждения, не паттерн-матчинга |
+| **Phase 6** | Multi-angle red team — N враждебных ролей как суб-агенты | **Opus** | high | **Самая дорогая модель здесь обязательна.** Атака на гипотезы (Skeptic/Contrarian/Gap-hunter) требует настоящего рассуждения, не паттерн-матчинга. Medium → sonnet/high |
 | **Phase 7** | Synthesis — сборка отчёта из блоков | **Sonnet** | high | Длинный контекст всех источников + блоков + плана. Sonnet/high лучше чем Opus/medium здесь |
 | **Phase 7** | Final report write-up (язык, стиль, чистка) | **Sonnet** | medium | Качественное письмо |
+
+Phase 6 red-team суб-агенты: deep → opus/high; medium → sonnet/high; shallow → R1 инлайн (sonnet/high, без суб-агента). Synthesis/chairman → sonnet/high. Cost: +3 суб-агента на deep-отчёт (≈ дёшево относительно поиска).
 
 ---
 

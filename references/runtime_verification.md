@@ -52,6 +52,39 @@ is written but not yet "done" until it carries a verification header.
    - `deep` — required; **zero unresolved red flags** allowed. Every OPEN source must
      resolve or be replaced.
 
+## Layer 2 — Faithfulness (does the source actually support the claim?)
+
+Liveness (above) only proves the URL resolves. The dominant failure mode in the
+literature is different: the link is live but the source **does not support** the
+claim attached to it (citation ≠ entailment; CiteGuard / CiteCheck). A live URL can
+still back a fabricated or overstated claim.
+
+Run this AFTER liveness, reusing what `sources/NN.md` already stores — the supporting
+quote(s) per source. No re-fetch in the common case.
+
+1. For each thesis↔citation pair, take the claim and the stored quote from
+   `sources/NN.md`. Ask: **does the quote entail the claim?**
+   - SUPPORTED — quote directly backs the claim.
+   - PARTIAL — quote is related but weaker/narrower (overclaim).
+   - UNSUPPORTED — quote does not back the claim (citation misuse / hallucination).
+2. Model: `haiku`/low (runs on every pair); escalate disputed pairs to `sonnet`/medium
+   on deep. NOTE: this is an LLM judge with its own error rate — calibrate the prompt
+   on a small labelled set; treat one UNSUPPORTED verdict as a flag to re-check, not
+   as ground truth.
+3. Act, don't just score:
+   - PARTIAL → soften the claim to match the source, or find a stronger source.
+   - UNSUPPORTED → re-search for real support; if none, demote the thesis to Open
+     Questions. A claim with no entailing source is not a finding.
+4. Output a second integrity axis — `faithfulness_integrity = SUPPORTED / total` —
+   separate from liveness. The F9 header carries both.
+5. Depth gate:
+   - `shallow` — optional.
+   - `medium` — required; any UNSUPPORTED on a hypothesis-bearing claim blocks finish.
+   - `deep` — required; zero UNSUPPORTED; every PARTIAL softened or re-sourced.
+
+**Two axes, one verdict:** liveness (URL alive) × faithfulness (source backs claim).
+A citation counts as verified only if it passes BOTH.
+
 ## Block F9 — Verification header (add to `references/blocks/frame.md`)
 
 Rendered at the very top of the final report:
@@ -89,10 +122,11 @@ in the same run is something no closed product offers.
 Add to the "Workflow — 9 фаз" list, after Phase 6:
 
 ```
-6.5. **Verify** [`haiku`/low, deterministic] — прогнать `check_citations.py` на готовом
-     run-dir, вставить verification-header (блок F9) в отчёт, отработать red flags
-     (re-search или demote claim). medium: integrity < 0.70 блокирует finish.
-     deep: ноль нерешённых red flags. См. `references/runtime_verification.md`.
+6.5. **Verify** [`haiku`/low] — две оси: (1) **liveness** — `check_citations.py` (URL жив?),
+     (2) **faithfulness** — entailment claim ⊨ цитата из `sources/NN.md` (источник реально
+     подтверждает тезис?). Вставить verification-header (F9), отработать флаги: re-search /
+     demote claim / смягчить overclaim. medium: integrity < 0.70 ИЛИ UNSUPPORTED на гипотезе
+     блокирует finish; deep: ноль red flags и ноль UNSUPPORTED. См. `references/runtime_verification.md`.
 ```
 
 And to "Что НЕ делать":

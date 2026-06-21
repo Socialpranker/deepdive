@@ -142,7 +142,7 @@ The skill runs **<!--gen:count:phases-->9<!--/gen--> phases** in order:
 | **3.5** | **Capability Discovery** | sonnet / low |
 | **4** | **Search** | sonnet / medium |
 | **5** | **Scoring + triangulation** | sonnet / medium |
-| **6** | **Synthesis + adversarial pass** | opus / high |
+| **6** | **Synthesis + multi-angle red team** | opus / high |
 | **6.5** | **Verify** | haiku / low |
 | **7** | **Refresh targets** | sonnet / medium |<!--/gen-->
 
@@ -446,14 +446,14 @@ The methodology is portable. ~70% of content is LLM-agnostic markdown templates.
 
 ### Что внутри
 
-- **<!--gen:count:phases-->9<!--/gen--> фаз workflow**: <!--gen:phases:list:ru-->Reframing → Genre & block selection → Plan → Capability Discovery → Поиск → Скоринг + триангуляция → Синтез + adversarial pass → Verify → Refresh targets<!--/gen-->
+- **<!--gen:count:phases-->9<!--/gen--> фаз workflow**: <!--gen:phases:list:ru-->Reframing → Genre & block selection → Plan → Capability Discovery → Поиск → Скоринг + триангуляция → Синтез + multi-angle red team → Verify → Refresh targets<!--/gen-->
 - **<!--gen:count:genres-->6<!--/gen--> жанров отчёта**: qa / explainer / decision / landscape / validation / custom
 - **<!--gen:count:blocks-->103<!--/gen--> блоков** в 10 категориях — переиспользуемые секции с шаблонами и анти-паттернами
 - **<!--gen:count:channels-->29<!--/gen--> каналов поиска** с paywall fallback протоколом (включая api-direct)
 - **<!--gen:count:stat_sources-->460<!--/gen-->+ статистических источников** в 14 cross-industry + 19 отраслевых категориях
 - **<!--gen:count:api-->39<!--/gen-->+ API endpoints** для programmatic доступа (free no-auth приоритетны)
 - **plan.md** с 17 секциями для прозрачности
-- **Adversarial pass** с 4 вопросами самокритики (обязателен для medium/deep)
+- **Multi-angle red team** из враждебных ролей (Skeptic/Contrarian/Gap-hunter) с триажем severity (обязателен для medium/deep)
 - **Weekly auto-validation** через GitHub Actions
 
 ### Установка

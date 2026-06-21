@@ -30,7 +30,7 @@ phases:
     name_en: "Capability Discovery"
     model: sonnet
     effort: low
-    depth_gate: deep
+    depth_gate: medium
   # Phase 4 is an orchestrator-driven LOOP (round -> Opus eval -> optional
   # bounded deviation round). The per-round search fan-out is sonnet/medium;
   # the between-rounds evaluation runs at the strong tier. This is ONE phase
@@ -50,8 +50,8 @@ phases:
     effort: medium
     depth_gate: shallow
   - id: "6"
-    name_ru: "Синтез + adversarial pass"
-    name_en: "Synthesis + adversarial pass"
+    name_ru: "Синтез + multi-angle red team"
+    name_en: "Synthesis + multi-angle red team"
     model: opus
     effort: high
     depth_gate: shallow

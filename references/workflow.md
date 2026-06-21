@@ -120,7 +120,7 @@ time_box_hard: <Y hours>
 - [ ] `<specific deliverable 2>` (e.g. ответы на 4 конкретных Q пользователя)
 - [ ] `<specific deliverable 3>`
 - [ ] Counter-arguments ≥2 для medium / ≥3 для deep
-- [ ] Adversarial pass пройден (для medium/deep)
+- [ ] Multi-angle red team пройден (для medium/deep)
 - [ ] Все sources/NN.md имеют channel + access поля
 
 ## 5. Discovered existing
@@ -466,6 +466,11 @@ plan stays authoritative as the starting point; deviations are bounded and recor
    - Opus reviews flags + scan + aggregated output and selects which triggers are
      *justified* (strict precision — a sub-agent's `unexpected_finding` is a candidate,
      not an automatic spend).
+   - **Trajectory sanity-check (cheap tier):** before pursuing an `unexpected_finding`
+     or `citation_lead`, verify the *intermediate claim* that triggered it is itself
+     backed by a real source. A round seeded by an unsupported intermediate claim
+     compounds hallucination downstream (trajectory error) — drop the trigger and flag
+     the originating source instead of spawning a search on a phantom.
    - For each justified trigger, if budget for its class remains AND depth < limit:
      classify cheap/expensive, debit the counter, write a `deviations.md` record,
      and launch the next round. Otherwise write a `not_pursued` record.
@@ -504,6 +509,18 @@ Written beside `plan.md` / `sources/`. One record per *considered* trigger (both
 `pursued` and `not_pursued` — **exhausted budget/depth still leaves a record; never a
 silent skip**). Phase 6 audits it; Phase 7 reads `not_pursued`/`carry_forward`.
 
+### Dynamic outline revision (ScaffoldAgent)
+
+The plan's block/outline (Phase 2 genre + `plan.md` §8) is the *starting* structure,
+not a cage. If a round's aggregated evidence shows the planned outline no longer fits —
+a whole dimension surfaced that no block covers, or a planned subtopic came back empty
+across rounds — the orchestrator may spend **one expensive-class** deviation to revise
+the outline: add/drop/reorder blocks, update `plan.md` §8 + §11, and record it in
+`deviations.md` (`type: outline_revision`, before/after, reason). Gate: medium ≤1,
+deep ≤2, shallow never (fixed outline). Don't silently rewrite structure — every
+revision is a recorded, budgeted decision, same as any deviation. This keeps the report
+shape adaptive to what the evidence actually is, not what we guessed at Phase 2.
+
 ## Фаза 5. Скоринг и триангуляция
 
 **Model:** scoring per source — `haiku` / `low` (простой rubric). Triangulation check — `sonnet` / `medium` (требует понимания содержания).
@@ -525,9 +542,9 @@ silent skip**). Phase 6 audits it; Phase 7 reads `not_pursued`/`carry_forward`.
 2,https://...,Industry benchmark,Industry-media,J. Smith,2026-02,4,5,4,13,Y,sources/02_industry.md,Supports H1
 ```
 
-## Фаза 6. Синтез + adversarial pass
+## Фаза 6. Синтез + multi-angle red team
 
-**Model:** adversarial pass — `opus` / `high` **(обязательно)**. Synthesis assembly — `sonnet` / `high` (длинный контекст). Не экономить на adversarial — это где Haiku/Sonnet делают soft-pushback без реальной атаки на гипотезы.
+**Model:** red-team суб-агенты — `opus` / `high` **(обязательно для deep)**, `sonnet` / `high` для medium. Synthesis assembly — `sonnet` / `high` (длинный контекст). Не экономить на red team — это где Haiku/Sonnet делают soft-pushback без реальной атаки на гипотезы.
 
 **Порядок:**
 1. Перечитай ВСЕ `sources/NN.md` с `used: Y`. Не делай синтез из памяти.
@@ -535,7 +552,7 @@ silent skip**). Phase 6 audits it; Phase 7 reads `not_pursued`/`carry_forward`.
 3. Загрузи нужные категорийные файлы `blocks/*.md` (только те что нужны для выбранных blocks). Прогрессивно — не сразу все.
 4. Для каждой гипотезы — собери поддерживающие/опровергающие цитаты. Опционально вынеси крупные в `findings/FN.md` (см. `blocks/close.md` блок Z6).
 5. Собери черновик `<date>_<genre>.md` из выбранных блоков по порядку из `plan.md`. Каждый блок — по шаблону из своего категорийного файла.
-6. **Adversarial pass** (см. `adversarial_pass.md`) — 5 вопросов. Counter-arguments — блок `Z1` в отчёте. Не маскируй несогласие.
+6. **Multi-angle red team** (см. `adversarial_pass.md`) — draft → claim ledger → N враждебных ролей (Skeptic/Contrarian/Gap-hunter) как `general-purpose` суб-агенты → триаж severity → ОДИН раунд ремедиации HIGH → финал. Гейт глубины: shallow=R1 инлайн, medium=R1+R2, deep=R1+R2+R3. Дефекты → counter-arguments (`Z1`) + Open Questions; лог в `findings/redteam_<date>.md`. Не маскируй несогласие.
 7. Если в системе есть `anthropic-skills:humanizer-ru` — прогони финальный отчёт через него.
 8. Сохрани финальный отчёт.
 
@@ -574,7 +591,7 @@ silent skip**). Phase 6 audits it; Phase 7 reads `not_pursued`/`carry_forward`.
 - [ ] Все required блоки для жанра присутствуют (см. `genres.md`)
 - [ ] Каждое утверждение имеет ссылку на конкретный [sNN] или помечено `[без подтверждения]`
 - [ ] Каналы coverage ≥3 разных типов (см. plan.md секция 14)
-- [ ] Adversarial pass выполнен (5 вопросов), Z1 counter-arguments записаны
+- [ ] Multi-angle red team выполнен (роли по гейту глубины), Z1 counter-arguments записаны, лог `findings/redteam_<date>.md` создан
 - [ ] Hypotheses outcome таблица заполнена — все H1-H4 имеют status
 - [ ] Risk register из plan.md (секция 10) проверен — risks которые реализовались отмечены, mitigation работала?
 - [ ] Open questions перечислены (Z2)
