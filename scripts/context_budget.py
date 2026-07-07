@@ -55,7 +55,10 @@ def check_proxy_in_sync(root: Path) -> str | None:
 
 # Budgets in tokens. Tune as the catalog evolves; these are the guard-rails CI enforces.
 BUDGET_SKILL_MD = 7500        # SKILL.md is read on EVERY invocation — keep it lean
-BUDGET_ALWAYS_FLOOR = 55000   # the "base refs" SKILL.md says to always load for medium/deep
+BUDGET_ALWAYS_FLOOR = 56000   # the "base refs" SKILL.md says to always load for medium/deep
+# Raised from 55000 on 2026-07-07: claims.csv artifact + gap-wave loop (Phase 5) + 2
+# new report blocks (F9 background, Z12 so-what-for-you) added durable value at a
+# modest, deliberately-trimmed floor cost (~1200 tok). See docs/2026-07-07-v2-design.md.
 
 # Files SKILL.md marks as "Базовые (всегда)" — the unavoidable floor for a medium/deep run.
 ALWAYS_LOAD = [

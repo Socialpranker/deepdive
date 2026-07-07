@@ -27,12 +27,12 @@
 | **Phase 3** | Plan composition (17 секций) | **Opus** | medium | Архитектурное решение, документирует все будущие выборы |
 | **Phase 3.5** | Capability discovery — env vars audit, mapping | **Sonnet** | low | Механический проход, простые таблицы |
 | **Phase 4.0** | Source Dispatch — прогон подвопросов через matrix | **Sonnet** | medium | Lookup в `source_dispatch.md` + запись в plan.md |
-| **Phase 4.1** | Launch sub-agents (web search, simple lookups) | **Haiku** | low | Sub-agents с узкой задачей и JSON output. Дёшево × N агентов. Каждый агент сам скорит найденные источники (см. Phase 5) — отдельного scoring-прохода на эти источники не требуется |
+| **Phase 4.1** | Launch sub-agents (web search, simple lookups) | **Haiku** | low | Sub-agents с узкой задачей и JSON output. Дёшево × N агентов. Скорит сам, см. Phase 5 |
 | **Phase 4.1** | Launch sub-agents (чтение длинных источников, извлечение цитат) | **Sonnet** | low | Когда нужен длинный контекст под цитаты |
 | **Phase 4.1** | Launch sub-agents (api-direct: curl + jq + parse) | **Haiku** | low | Bash работа + механический парсинг JSON |
 | **Phase 4.1** | Launch sub-agents (анализ кода в репозитории) | **Sonnet** | medium | Code understanding требует средней модели |
 | **Phase 4.2** | Fetch + dedup (главный поток) | **Sonnet** | medium | Управляет sub-agents, агрегирует результаты |
-| **Phase 4.3** | Save sources to files | **Haiku** | low | Механическая запись по шаблону. Сам fetch-агент пишет `sources/NN.md` в своём диапазоне номеров (см. `subagents_v2.md`) — не главный поток пересохраняет |
+| **Phase 4.3** | Save sources to files | **Haiku** | low | Пишет сам fetch-агент в свой диапазон номеров, см. `subagents_v2.md` |
 | **Phase 4.5** | Gap-волна — точечные агенты на дыры в `claims.csv` (status ≠ triangulated), максимум 2 круга | **Haiku** | low | Узкая задача «найди ещё один источник типа X на claim Y» — не нужна дорогая модель |
 | **Phase 5** | Scoring (credibility/recency/bias по rubric) | *(встроено в Phase 4.1, см. выше)* | — | Отдельный проход не запускается — скорит тот агент, который читал источник |
 | **Phase 5** | Triangulation check по `claims.csv` (механическая: ≥3 источника И ≥2 типа → triangulated) | **Haiku** | low | Правило механическое — подсчёт источников/типов по строке, не нужна дорогая модель |
@@ -42,8 +42,6 @@
 | **Phase 7** | Final report write-up (язык, стиль, чистка) | **Sonnet** | medium | Качественное письмо |
 
 Phase 6 red-team суб-агенты: deep → opus/high; medium → sonnet/high; shallow → R1 инлайн (sonnet/high, без суб-агента). Synthesis/chairman → sonnet/high. Cost: +3 суб-агента на deep-отчёт (≈ дёшево относительно поиска).
-
-**Про исчезновение отдельного scoring-прохода:** раньше scoring источников был отдельным шагом Phase 5 на Haiku после того как источники уже собраны. Теперь скоринг встроен в Phase 4.1 — сам fetch-агент, читая источник, сразу проставляет `credibility/recency/bias` в frontmatter `sources/NN.md` (H7-правило: скорит тот, кто читал). Phase 5 остаётся, но её работа сузилась до triangulation по `claims.csv` — механической проверки, не повторного чтения источников.
 
 ---
 
@@ -63,11 +61,7 @@ Phase 6 red-team суб-агенты: deep → opus/high; medium → sonnet/high
 
 **Default для sub-agent** если не уверен → **Sonnet / low**. Это safe middle ground.
 
-**Скоринг встроен, не отдельный вызов.** Каждый fetch sub-agent (любая строка таблицы
-выше) скорит найденные источники сам, той же моделью, тем же вызовом — читает источник →
-сразу проставляет credibility/recency/bias → пишет `sources/NN.md` в свой закреплённый
-диапазон номеров (см. `subagents_v2.md` про диапазоны и `general-purpose` вместо
-`Explore` для этого шага). Отдельного «scoring pass» после сбора источников нет.
+**Скоринг встроен.** Каждый fetch sub-agent сам скорит источник тем же вызовом (читает → проставляет credibility/recency/bias → пишет `sources/NN.md` в свой диапазон номеров, `general-purpose` а не `Explore` — см. `subagents_v2.md`). Отдельного scoring pass нет.
 
 ---
 
@@ -82,32 +76,11 @@ Anthropic Pricing. Срез на 2026-07-07:
 | Sonnet 5 | `claude-sonnet-5` | $3.00 (интро $2.00 до 2026-08-31) | $15.00 (интро $10.00) | 3× |
 | Opus 4.8 | `claude-opus-4-8` | $5.00 | $25.00 | 5× |
 
-**Главный сдвиг экономики: Opus теперь всего 5× от Haiku** (раньше был 18.75× при
-$15/$75 за 1M). Держать Opus на критических одиночных фазах (Phase 1 reframing, Phase 6
-adversarial) — почти бесплатно относительно риска смазать самые важные решения ресёрча.
-Экономить нужно не на этих фазах, а на **массовом fan-out** — N параллельных sub-agents
-в Phase 4, где цена умножается на N вне зависимости от модели.
+**Главный сдвиг: Opus теперь всего 5× от Haiku** (было 18.75× при $15/$75). Держать Opus на Phase 1/Phase 6 — почти бесплатно. Экономить нужно на fan-out (N sub-agents в Phase 4), не на этих фазах.
 
-**Иллюстрация для deep ресёрча (~5 sub-agents), по срезу цен выше:**
+**Иллюстрация (deep, ~5 sub-agents):** всё на Opus = 250k in + 50k out ≈ **$1.62** только на Phase 4. Правильный routing: Phase 1 Opus/high $0.075 + Phase 3 Opus/medium $0.115 + Phase 4 5×Haiku/low $0.15 + Phase 6 Opus/high $0.275 + Phase 7 Sonnet/high $0.405 = **~$1.02** total. Разница уже не в разах — но не экономить на Phase 1/6 остаётся правилом архитектурным (узкая задача = дешёвая модель), не ценовым.
 
-Если всё на Opus: 5 × ~50k input + 5 × ~10k output = 250k input + 50k output = **$1.62**
-только на Phase 4 (при $5/$25).
-
-То же на правильном routing:
-- Phase 1 (reframing) Opus/high: 5k in + 2k out = **$0.075**
-- Phase 3 (plan) Opus/medium: 8k in + 3k out = **$0.115**
-- Phase 4 (5 sub-agents Haiku/low): 5 × (15k in + 3k out) = **$0.15**
-- Phase 6 (adversarial) Opus/high: 30k in + 5k out = **$0.275**
-- Phase 7 (synthesis) Sonnet/high: 60k in + 15k out = **$0.405**
-
-**Total ~$1.02** против $1.62 если бы Phase 4 тоже шла на Opus — разница уже не в
-разах, а в разумных центах. Это ровно та причина, по которой **не экономить на
-Phase 1/6 больше не вопрос цены** — вопрос был архитектурным (узкая задача = дешёвая
-модель), он остаётся в силе, но давление "Opus дорого, избегай" снято.
-
-(Цифры приблизительные — суть в порядке величин относительно друг друга, не точных
-значениях; используй их для решения "какую модель на какую фазу", не как финансовый
-прогноз.)
+(Порядок величин, не точный прогноз — проверяй актуальные цены.)
 
 ---
 

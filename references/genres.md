@@ -61,16 +61,16 @@
 **Recommended order:**
 ```
 1.  tldr                      [F1]
-2.  background                [F9]   ← medium/deep обязательно
+2.  background                [F9]
 3.  decision-context          [F2]   (если есть decision)
 4.  qa-list                   [A3]   ← главная секция
 5.  hypotheses-outcome        [A4]   (если в plan были hypotheses)
 6.  counter-arguments         [Z1]   (medium/deep)
 7.  open-questions            [Z2]
 8.  next-research             [Z3]
-9.  confidence-summary        [Z7]   ← medium/deep обязательно
-10. so-what-for-you           [Z12]  ← medium/deep обязательно, перед Z4
-11. actionable-next-steps     [Z4]   ← medium/deep обязательно
+9.  confidence-summary        [Z7]
+10. so-what-for-you           [Z12]  (перед Z4)
+11. actionable-next-steps     [Z4]
 12. map-of-sources            [Z5]
 13. findings-index            [Z6]   (если есть)
 14. metadata                  [F5]
@@ -87,12 +87,10 @@
 
 **Required blocks:** `tldr`, `mental-model`, `stepwise`, `map-of-sources`, `metadata`. Для medium/deep — обязательно ещё: `background` [F9], `so-what-for-you` [Z12], `actionable-next-steps` [Z4], `confidence-summary` [Z7].
 
-**Note:** `prerequisites` [E8] — background для читателя (что нужно знать заранее); `background` [F9] — background для темы (почему вопрос возник). Разные блоки, оба могут быть.
-
 **Recommended order:**
 ```
 1.  tldr                      [F1]
-2.  background                [F9]   ← medium/deep обязательно
+2.  background                [F9]
 3.  prerequisites             [E8]   (если нужно читателю)
 4.  glossary-mini             [E2]   ← термины перед схемой
 5.  mental-model              [E1]   ← схема устройства
@@ -106,9 +104,9 @@
 13. counter-arguments         [Z1]
 14. open-questions            [Z2]
 15. next-research             [Z3]
-16. confidence-summary        [Z7]   ← medium/deep обязательно
-17. so-what-for-you           [Z12]  ← medium/deep обязательно, перед Z4
-18. actionable-next-steps     [Z4]   ← medium/deep обязательно
+16. confidence-summary        [Z7]
+17. so-what-for-you           [Z12]  (перед Z4)
+18. actionable-next-steps     [Z4]
 19. map-of-sources            [Z5]
 20. metadata                  [F5]
 ```
@@ -119,7 +117,7 @@
 - + `tech-stack-context` [X6] для tech foundation
 
 **Опциональные additions:**
-- `historical-context` [X4] если «как мы здесь оказались» важно (более широкий, чем `background` — историческая ретроспектива, не только непосредственный триггер вопроса)
+- `historical-context` [X4] если «как мы здесь оказались» важно
 
 ---
 
@@ -127,12 +125,12 @@
 
 **Когда:** Сравнение опций для принятия решения. С явной рекомендацией.
 
-**Required blocks:** `tldr`, `decision-context`, `options-matrix`, `recommendation-conditional`, `map-of-sources`, `metadata`. Для medium/deep — обязательно ещё: `background` [F9], `so-what-for-you` [Z12], `confidence-summary` [Z7] (`actionable-next-steps` [Z4] здесь уже required всегда).
+**Required blocks:** `tldr`, `decision-context`, `options-matrix`, `recommendation-conditional`, `map-of-sources`, `metadata`. Для medium/deep — обязательно ещё: `background` [F9], `so-what-for-you` [Z12], `confidence-summary` [Z7].
 
 **Recommended order:**
 ```
 1.  tldr                      [F1]
-2.  background                [F9]   ← medium/deep обязательно
+2.  background                [F9]
 3.  executive-summary         [F7]   (опционально, для стейкхолдеров)
 4.  decision-context          [F2]   ← рамка решения
 5.  options-matrix            [C1]
@@ -150,8 +148,8 @@
 17. kill-criteria             [C13]
 18. counter-arguments         [Z1]
 19. recommendation-conditional [C6]  ← финальная рекомендация
-20. confidence-summary        [Z7]   ← medium/deep обязательно
-21. so-what-for-you           [Z12]  ← medium/deep обязательно, перед Z4
+20. confidence-summary        [Z7]
+21. so-what-for-you           [Z12]  (перед Z4)
 22. actionable-next-steps     [Z4]
 23. assumptions-log           [Z8]
 24. open-questions            [Z2]
@@ -175,7 +173,7 @@
 **Recommended order:**
 ```
 1.  tldr                      [F1]
-2.  background                [F9]   ← medium/deep обязательно
+2.  background                [F9]
 3.  scope                     [F3]   ← границы карты
 4.  categories                [M1]   ← деление области
 5.  profile-card × N          [M2]   ← карточки игроков по категориям
@@ -193,9 +191,9 @@
 17. open-questions            [Z2]
 18. next-research             [Z3]
 19. update-triggers           [Z10]  ← landscape устаревает быстро
-20. confidence-summary        [Z7]   ← medium/deep обязательно
-21. so-what-for-you           [Z12]  ← medium/deep обязательно, перед Z4
-22. actionable-next-steps     [Z4]   ← medium/deep обязательно
+20. confidence-summary        [Z7]
+21. so-what-for-you           [Z12]  (перед Z4)
+22. actionable-next-steps     [Z4]
 23. map-of-sources            [Z5]
 24. metadata                  [F5]
 ```
@@ -210,12 +208,12 @@
 
 **Когда:** Проверка claim. С verdict.
 
-**Required blocks:** `tldr`, `claim-precise`, `falsification-criteria`, `evidence-graded`, `verdict-conditional`, `map-of-sources`, `metadata`. Для medium/deep — обязательно ещё: `background` [F9], `so-what-for-you` [Z12], `confidence-summary` [Z7] (`actionable-next-steps` [Z4] здесь уже required всегда).
+**Required blocks:** `tldr`, `claim-precise`, `falsification-criteria`, `evidence-graded`, `verdict-conditional`, `map-of-sources`, `metadata`. Для medium/deep — обязательно ещё: `background` [F9], `so-what-for-you` [Z12], `confidence-summary` [Z7].
 
 **Recommended order:**
 ```
 1.  tldr                      [F1]
-2.  background                [F9]   ← medium/deep обязательно
+2.  background                [F9]
 3.  claim-precise             [F4]   ← точная формулировка
 4.  scope                     [F3]   ← где применимо
 5.  base-rates                [V4]   (для probabilistic claims)
@@ -231,8 +229,8 @@
 15. what-would-change-verdict [V6]
 16. common-confusions         [E7]   (часто claim путают с X)
 17. counter-arguments         [Z1]
-18. confidence-summary        [Z7]   ← medium/deep обязательно
-19. so-what-for-you           [Z12]  ← medium/deep обязательно, перед Z4
+18. confidence-summary        [Z7]
+19. so-what-for-you           [Z12]  (перед Z4)
 20. actionable-next-steps     [Z4]   (что делать с этим verdict)
 21. assumptions-log           [Z8]
 22. open-questions            [Z2]
@@ -285,15 +283,15 @@
 **Базовая обвязка для custom:**
 ```
 1. tldr [F1]
-2. background [F9] (medium/deep обязательно)
+2. background [F9]
 3. scope [F3] (если границы важны)
 4. <выбранные блоки по эвристике>
 5. counter-arguments [Z1]
 6. open-questions [Z2]
 7. next-research [Z3]
-8. confidence-summary [Z7] (medium/deep обязательно)
-9. so-what-for-you [Z12] (medium/deep обязательно, перед actionable-next-steps)
-10. actionable-next-steps [Z4] (medium/deep обязательно)
+8. confidence-summary [Z7]
+9. so-what-for-you [Z12] (перед actionable-next-steps)
+10. actionable-next-steps [Z4]
 11. map-of-sources [Z5]
 12. metadata [F5]
 ```
