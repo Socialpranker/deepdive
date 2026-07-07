@@ -30,6 +30,17 @@ is written but not yet "done" until it carries a verification header.
    (The script ignores env proxies and retries transport flaps once — a dead OPEN
    source is a confirmed red flag, a timeout is UNKNOWN and not penalised.)
 
+   **Standalone fallback (no `eval/` shipped).** When the skill is installed on its own
+   (only `SKILL.md` + `references/`), `eval/check_citations.py` is absent — do liveness
+   manually, no script needed:
+   - For each source with `access: OPEN`, WebFetch its URL:
+     - 2xx/3xx (or 401/403 = alive-but-auth) → live.
+     - 404 / dead / DNS-fail → **red flag** (likely hallucinated or stale URL).
+     - timeout / transport error → UNKNOWN; retry once, then leave UNKNOWN (no penalty).
+   - `access: paywalled / closed / archive-restored` + non-200 → expected, **not** a flag.
+   - Compute `liveness_integrity = live / checkable` by hand; apply the same depth gate
+     and floor (0.70) below. Identical result to the script, just slower.
+
 2. Read back `<run-dir>/.verify/citations.json`. Extract `citation_integrity`,
    the count of `red_flag: true` results, and their source ids/urls.
 
