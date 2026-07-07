@@ -141,7 +141,7 @@ The skill runs **<!--gen:count:phases-->9<!--/gen--> phases** in order:
 | **3** | **Plan** | opus / medium |
 | **3.5** | **Capability Discovery** | sonnet / low |
 | **4** | **Search** | sonnet / medium |
-| **5** | **Scoring + triangulation** | sonnet / medium |
+| **5** | **Claims-ledger + triangulation** | haiku / low |
 | **6** | **Synthesis + multi-angle red team** | opus / high |
 | **6.5** | **Verify** | haiku / low |
 | **7** | **Refresh targets** | sonnet / medium |<!--/gen-->
@@ -158,7 +158,7 @@ Every phase is **transparent**: you see what's happening, you confirm key decisi
 <tr>
 <td width="33%" valign="top">
 
-### <!--gen:count:blocks-->103<!--/gen--> Report Blocks
+### <!--gen:count:blocks-->105<!--/gen--> Report Blocks
 
 10 categories: **FRAME** · **EXPLAIN** · **COMPARE** · **MAP** · **VALIDATE** · **ANALYZE** · **CLOSE** · **PEOPLE** · **NUMBERS** · **CONTEXT**
 
@@ -391,7 +391,7 @@ It's **structured methodology + curated catalog + reusable templates + automatio
 
 - The <!--gen:count:phases-->9<!--/gen-->-phase workflow forces discipline
 - <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources catalog is curated knowledge
-- <!--gen:count:blocks-->103<!--/gen--> reusable blocks compose any report shape
+- <!--gen:count:blocks-->105<!--/gen--> reusable blocks compose any report shape
 - Weekly auto-validation keeps the catalog alive
 - 25+ upstream awesome-lists give infinite discovery layer
 
@@ -417,7 +417,7 @@ The methodology is portable. ~70% of content is LLM-agnostic markdown templates.
 | `SKILL.md` frontmatter | ✓ | — |
 | Sub-agent `Explore` type | ✓ | — |
 | <!--gen:count:phases-->9<!--/gen-->-phase workflow | — | ✓ |
-| <!--gen:count:blocks-->103<!--/gen--> report blocks | — | ✓ |
+| <!--gen:count:blocks-->105<!--/gen--> report blocks | — | ✓ |
 | <!--gen:count:channels-->29<!--/gen--> search channels | — | ✓ |
 | <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources | — | ✓ |
 
@@ -446,9 +446,9 @@ The methodology is portable. ~70% of content is LLM-agnostic markdown templates.
 
 ### Что внутри
 
-- **<!--gen:count:phases-->9<!--/gen--> фаз workflow**: <!--gen:phases:list:ru-->Reframing → Genre & block selection → Plan → Capability Discovery → Поиск → Скоринг + триангуляция → Синтез + multi-angle red team → Verify → Refresh targets<!--/gen-->
+- **<!--gen:count:phases-->9<!--/gen--> фаз workflow**: <!--gen:phases:list:ru-->Reframing → Genre & block selection → Plan → Capability Discovery → Поиск → Claims-ledger + триангуляция → Синтез + multi-angle red team → Verify → Refresh targets<!--/gen-->
 - **<!--gen:count:genres-->6<!--/gen--> жанров отчёта**: qa / explainer / decision / landscape / validation / custom
-- **<!--gen:count:blocks-->103<!--/gen--> блоков** в 10 категориях — переиспользуемые секции с шаблонами и анти-паттернами
+- **<!--gen:count:blocks-->105<!--/gen--> блоков** в 10 категориях — переиспользуемые секции с шаблонами и анти-паттернами
 - **<!--gen:count:channels-->29<!--/gen--> каналов поиска** с paywall fallback протоколом (включая api-direct)
 - **<!--gen:count:stat_sources-->460<!--/gen-->+ статистических источников** в 14 cross-industry + 19 отраслевых категориях
 - **<!--gen:count:api-->39<!--/gen-->+ API endpoints** для programmatic доступа (free no-auth приоритетны)

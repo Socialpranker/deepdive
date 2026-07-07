@@ -47,6 +47,6 @@ can audit.
 ## Next steps
 
 - Full methodology: [`SKILL.md`](SKILL.md) — the <!--gen:count:phases-->9<!--/gen-->-phase workflow.
-- The catalog: [`references/`](references/) — <!--gen:count:blocks-->103<!--/gen--> report
+- The catalog: [`references/`](references/) — <!--gen:count:blocks-->105<!--/gen--> report
   blocks, <!--gen:count:genres-->6<!--/gen--> genres.
 - Want to add sources or APIs? [`CONTRIBUTING.md`](CONTRIBUTING.md).

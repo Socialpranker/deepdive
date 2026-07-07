@@ -196,11 +196,11 @@ time_box_hard: <Y hours>
 
 Какая подтема собирает evidence для каких блоков. Без этого агенты не знают для чего работают.
 
-| Subtopic | Под какие блоки | Кому (Explore # / main thread) |
+| Subtopic | Под какие блоки | Кому (agent # + source range / main thread) |
 |---|---|---|
-| ST1: <название> | F3, E1, E4 | Explore #1 |
-| ST2: <название> | A1 (data-table rows), M2 (profile cards) | Explore #2 |
-| ST3: <название> | V2 (evidence FOR/AGAINST), Z1 (counter-args) | Explore #3 |
+| ST1: <название> | F3, E1, E4 | Agent #1 (`general-purpose`, s01-s09) |
+| ST2: <название> | A1 (data-table rows), M2 (profile cards) | Agent #2 (`general-purpose`, s10-s19) |
+| ST3: <название> | V2 (evidence FOR/AGAINST), Z1 (counter-args) | Agent #3 (`general-purpose`, s20-s29) |
 | ST4: <название> | E10 (failure modes), Z2 (open questions) | main thread |
 
 ## 12. Information sourcing strategy
@@ -521,20 +521,37 @@ deep ≤2, shallow never (fixed outline). Don't silently rewrite structure — e
 revision is a recorded, budgeted decision, same as any deviation. This keeps the report
 shape adaptive to what the evidence actually is, not what we guessed at Phase 2.
 
-## Фаза 5. Скоринг и триангуляция
+## Фаза 5. Claims-ledger и триангуляция
 
-**Model:** scoring per source — `haiku` / `low` (простой rubric). Triangulation check — `sonnet` / `medium` (требует понимания содержания).
+**Model:** сборка `claims.csv` из index-строк — `haiku` / `low` (механическая работа). Triangulation check — `haiku` / `low` (правило механическое, см. ниже — не требует "понимания" содержания, только подсчёта источников/типов по строке).
 
-Каждый источник в `sources/NN.md` имеет frontmatter со scoring (см. `source_scoring.md`).
+**Скоринг источников больше не отдельный шаг.** Каждый источник в `sources/NN.md` уже имеет заполненный frontmatter со scoring — его проставил fetch sub-agent на шаге 4.1, в момент когда читал источник (H7-правило: скорит тот, кто читал). Здесь, в Фазе 5, шкала подробно описана в `source_scoring.md` для справки, но повторного прохода по всем источникам не требуется.
 
-**Triangulation rule:** каждое утверждение в финальных выводах подтверждено ≥3 независимыми источниками **разного типа**. Не три статьи одного автора, не три новости одного издания.
+**Claims-ledger (`claims.csv`)** — новый артефакт-ledger рядом с `sources.csv`. Схема:
 
-**Если триангуляция не сходится:**
-- < 3 источников → пометь тезис «спорно / требует проверки», confidence: low
-- 3 источника, но одного типа → «требует подтверждения первичным источником», confidence: medium
-- Нашёл оппозицию → отдельный counter-argument в Фазу 5
+```
+claim_id, claim, hypothesis, sources, source_types, status, confidence, primary_source
+```
 
-**После скоринга** — обнови `sources.csv`:
+- `claim` — тезис одной строкой.
+- `hypothesis` — H1-H4 или `-` если не привязан к гипотезе.
+- `sources` — список id (`s01;s07;s12`).
+- `source_types` — типы источников через `;` (`primary;academic;industry`).
+- `status` — `triangulated | weak | single-type | contradicted | data-insufficient`.
+- `confidence` — `high | medium | low`.
+- `primary_source` — `Y | N`.
+
+**Заполнение:** главный поток собирает `claims.csv` из `claim_candidates`, которые вернул каждый fetch sub-agent (см. `subagents_v2.md`), плюс из явного чтения claims в уже записанных `sources/NN.md`. Дублирующиеся claim'ы от разных агентов — смёржить в одну строку (объединить `sources`/`source_types`).
+
+**Triangulation rule (механическая):** строка получает `status: triangulated`, если ≥3 источника **И** ≥2 разных типа. Иначе:
+- < 3 источников → `status: weak`, confidence: low
+- ≥3 источника, но один тип → `status: single-type`, confidence: medium (max)
+- Явное противоречие между источниками → `status: contradicted` — отдельный counter-argument (Z1)
+- После gap-волны (см. выше) всё ещё не закрыто → `status: data-insufficient` (честный результат, не скрывать)
+
+**Primary-first правило:** ключевое число/факт без хотя бы одного primary-источника (`primary_source: N`) не может получить `confidence` выше `medium`, даже если формально triangulated по количеству/разнотипности. Primary здесь — filing, официальная дока, датасет, оригинальное исследование (см. Credibility=5 в `source_scoring.md`).
+
+**После сборки** — обнови `sources.csv` (индекс источников, как раньше) и новый `claims.csv`:
 
 ```csv
 №,URL,Title,Type,Author,Date,Credibility,Recency,Bias,Total,Used,File,Note
@@ -542,17 +559,42 @@ shape adaptive to what the evidence actually is, not what we guessed at Phase 2.
 2,https://...,Industry benchmark,Industry-media,J. Smith,2026-02,4,5,4,13,Y,sources/02_industry.md,Supports H1
 ```
 
+```csv
+claim_id,claim,hypothesis,sources,source_types,status,confidence,primary_source
+CL1,"Logical replication scales to N nodes without external tooling",H1,s01;s07;s12,primary;industry;academic,triangulated,high,Y
+CL2,"CDC adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,single-type,medium,N
+```
+
+### Gap-волна (Фаза 5 продолжается — не новая фаза, аналогично loop-конвенции Фазы 4)
+
+**Model:** `haiku` / `low`. Узкая точечная задача на конкретную дыру — дорогая модель не нужна.
+
+После первого заполнения `claims.csv` собери список дыр — строки со `status ≠ triangulated`.
+
+**Точечная вторая волна:** по одному агенту на дыру (или пачкой, параллельно), промпт = конкретный claim + чего конкретно не хватает:
+- «нужен primary-источник для CL2»
+- «нужен 3-й тип источника, сейчас только industry×2»
+- «противоречие между s09 и s14 — найти причину или дополнительный арбитр»
+
+**Максимум 2 круга.** Если после второго круга дыра не закрылась — строка помечается `status: data-insufficient`. Это честный результат отчёта, не провал: попадает в Open Questions (Z2), а не маскируется.
+
+**Выход:** обновлённый `claims.csv`, обновлённые `sources/NN.md` (новые источники в свежем диапазоне номеров — следующий свободный блок после уже занятых).
+
 ## Фаза 6. Синтез + multi-angle red team
 
 **Model:** red-team суб-агенты — `opus` / `high` **(обязательно для deep)**, `sonnet` / `high` для medium. Synthesis assembly — `sonnet` / `high` (длинный контекст). Не экономить на red team — это где Haiku/Sonnet делают soft-pushback без реальной атаки на гипотезы.
 
 **Порядок:**
-1. Перечитай ВСЕ `sources/NN.md` с `used: Y`. Не делай синтез из памяти.
-2. Перечитай `plan.md` — жанр, blocks, гипотезы.
+1. Перечитай ВСЕ `sources/NN.md` с `used: Y`. Не делай синтез из памяти. Для **deep**: `findings/` слой обязателен — синтез идёт из `findings/` + `claims.csv`, точечная сверка `sources/NN.md` только по спорным местам. Для shallow/medium — как раньше, перечитать used sources целиком.
+2. Перечитай `plan.md` (жанр, blocks, гипотезы, секция 0 User context) и `claims.csv` (статус/confidence каждого тезиса).
 3. Загрузи нужные категорийные файлы `blocks/*.md` (только те что нужны для выбранных blocks). Прогрессивно — не сразу все.
 4. Для каждой гипотезы — собери поддерживающие/опровергающие цитаты. Опционально вынеси крупные в `findings/FN.md` (см. `blocks/close.md` блок Z6).
-5. Собери черновик `<date>_<genre>.md` из выбранных блоков по порядку из `plan.md`. Каждый блок — по шаблону из своего категорийного файла.
-6. **Multi-angle red team** (см. `adversarial_pass.md`) — draft → claim ledger → N враждебных ролей (Skeptic/Contrarian/Gap-hunter) как `general-purpose` суб-агенты → триаж severity → ОДИН раунд ремедиации HIGH → финал. Гейт глубины: shallow=R1 инлайн, medium=R1+R2, deep=R1+R2+R3. Дефекты → counter-arguments (`Z1`) + Open Questions; лог в `findings/redteam_<date>.md`. Не маскируй несогласие.
+5. Собери черновик `<date>_<genre>.md` из выбранных блоков по порядку из `plan.md`. Каждый блок — по шаблону из своего категорийного файла. Три сквозных правила синтеза (применяй ко всем блокам, не только TL;DR):
+   - **Числа с якорем сравнения.** Ключевое число без базы сравнения запрещено: «Рынок $4.5B» — недостаточно. «Рынок $4.5B — втрое меньше соседнего сегмента X, растёт втрое быстрее среднего по индустрии» — годится. Якорь: vs база / vs сосед / vs динамика во времени.
+   - **Условия применимости.** Каждый вывод — с явным «когда верен, когда нет», не голое утверждение.
+   - **Confidence из claims.csv.** Каждый пункт TL;DR (F1) несёт свой `confidence` (high/medium/low), взятый из соответствующей строки `claims.csv` — не придуманный на глаз при синтезе.
+   - Блок Z12 `so-what-for-you` (см. `blocks/close.md`) собирается на этом же шаге из `plan.md` секции 0 (User context) + `claims.csv` — проекция выводов на кейс пользователя, до `actionable-next-steps`.
+6. **Multi-angle red team** (см. `adversarial_pass.md`) — draft → claim ledger (внутренний список falsifiable-тезисов для red team, не путать с файлом `claims.csv`) → N враждебных ролей (Skeptic/Contrarian/Gap-hunter) как `general-purpose` суб-агенты → триаж severity → ОДИН раунд ремедиации HIGH → финал. Гейт глубины: shallow=R1 инлайн, medium=R1+R2, deep=R1+R2+R3. Дефекты → counter-arguments (`Z1`) + Open Questions; лог в `findings/redteam_<date>.md`. Не маскируй несогласие. 5-й adversarial-вопрос (см. `adversarial_pass.md`): есть ли числа без якоря сравнения, выводы без Z12-проекции, рекомендации без trade-off/kill-criteria?
 7. Если в системе есть `anthropic-skills:humanizer-ru` — прогони финальный отчёт через него.
 8. Сохрани финальный отчёт.
 
@@ -585,6 +627,8 @@ shape adaptive to what the evidence actually is, not what we guessed at Phase 2.
 - [ ] **Acceptance criteria из plan.md (секция 4) ВСЕ выполнены** — перепроверь каждый чек-бокс
 - [ ] Все `sources/NN.md` имеют корректный frontmatter (scoring, channel, access заполнены)
 - [ ] `sources.csv` обновлён, total пересчитан
+- [ ] `claims.csv` заполнен — каждая строка имеет status; строки не triangulated прошли gap-волну (см. Фаза 5, max 2 круга) и честно помечены `data-insufficient` если не закрылись
+- [ ] Ни один тезис с `confidence: high` не нарушает primary-first правило (без primary-источника confidence ≤ medium)
 - [ ] `plan.md` имеет `status: completed`
 - [ ] `plan.md` секция 15 (notes) финализирована — все важные observations документированы
 - [ ] `<date>_<genre>.md` собран из всех блоков из `plan.md` → `blocks:`

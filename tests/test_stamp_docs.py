@@ -57,7 +57,7 @@ def test_render_values_has_all_keys():
               "count:genres", "count:phases", "phases:list:ru",
               "phases:table:en"):
         assert k in v
-    assert v["count:blocks"] == "103"
+    assert v["count:blocks"] == "105"
     assert v["count:phases"] == "9"
 
 
@@ -65,14 +65,14 @@ def test_check_mode_detects_drift(tmp_path):
     f = tmp_path / "doc.md"
     f.write_text("n=<!--gen:count:blocks-->75<!--/gen-->", encoding="utf-8")
     rc = stamp_docs.run(REPO, [f], write=False)
-    assert rc == 1  # 75 != 103 → drift
+    assert rc == 1  # 75 != 105 → drift
 
 
 def test_write_mode_fixes_and_check_passes(tmp_path):
     f = tmp_path / "doc.md"
     f.write_text("n=<!--gen:count:blocks-->75<!--/gen-->", encoding="utf-8")
     assert stamp_docs.run(REPO, [f], write=True) == 0
-    assert "103" in f.read_text(encoding="utf-8")
+    assert "105" in f.read_text(encoding="utf-8")
     assert stamp_docs.run(REPO, [f], write=False) == 0  # now synced
 
 
@@ -87,7 +87,7 @@ def test_zero_count_refused(monkeypatch, tmp_path):
 def test_unused_key_warns_not_fails(tmp_path, capsys):
     # a doc using only ONE key → the other keys are "stamped nowhere" → WARNING, rc 0
     f = tmp_path / "doc.md"
-    f.write_text("n=<!--gen:count:blocks-->103<!--/gen-->", encoding="utf-8")
+    f.write_text("n=<!--gen:count:blocks-->105<!--/gen-->", encoding="utf-8")
     rc = stamp_docs.run(REPO, [f], write=False)
     out = capsys.readouterr().out
     assert rc == 0  # warning, not drift

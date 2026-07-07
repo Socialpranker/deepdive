@@ -39,7 +39,7 @@ Need a stat sources file for an industry not covered (e.g., aerospace, mining, f
 
 ### 2-4 hours — Add a new report block
 
-The block library has <!--gen:count:blocks-->103<!--/gen--> blocks but specific use cases might need more.
+The block library has <!--gen:count:blocks-->105<!--/gen--> blocks but specific use cases might need more.
 
 **Example:** You want a `decision-tree` block in `compare.md`.
 
