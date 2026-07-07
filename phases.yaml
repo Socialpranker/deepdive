@@ -43,12 +43,17 @@ phases:
     effort: medium
     depth_gate: shallow
     loop: "true"
+  # Phase 5 includes a gap-wave LOOP after the first claims.csv pass: rows
+  # with status != triangulated get one targeted haiku/low sub-agent each,
+  # max 2 rounds, else marked data-insufficient. Same convention as Phase 4 —
+  # no new phase id for the loop, see references/workflow.md "Фаза 5".
   - id: "5"
-    name_ru: "Скоринг + триангуляция"
-    name_en: "Scoring + triangulation"
-    model: sonnet
-    effort: medium
+    name_ru: "Claims-ledger + триангуляция"
+    name_en: "Claims-ledger + triangulation"
+    model: haiku
+    effort: low
     depth_gate: shallow
+    loop: "true"
   - id: "6"
     name_ru: "Синтез + multi-angle red team"
     name_en: "Synthesis + multi-angle red team"

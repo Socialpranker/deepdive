@@ -46,6 +46,50 @@
 - Тема плохо исследована (тогда честно: «литературы по теме мало, выводы предварительные»).
 - Эхокамера / мы плохо ищем (тогда отдельный поиск с противоположным запросом).
 
+## Claims-ledger — `claims.csv`
+
+С этой версии триангуляция трекается не только «в уме» при синтезе, а отдельным
+артефактом-ledger рядом с `sources.csv`. Заполняется в Фазе 5 (см. `workflow.md`)
+из index-строк и claim-кандидатов, которые вернули fetch sub-agents (см.
+`subagents_v2.md`) — каждый агент сам замечает, какой тезис подтверждает его
+подтема, и передаёт кандидат-строку, а не оставляет это на «вспомнить в конце».
+
+**Схема:**
+
+| Поле | Значение |
+|---|---|
+| `claim_id` | `CL1`, `CL2`, ... сквозная нумерация |
+| `claim` | тезис одной строкой |
+| `hypothesis` | `H1`-`H4` или `-` если тезис не привязан к гипотезе плана |
+| `sources` | id источников через `;` (`s01;s07;s12`) |
+| `source_types` | типы через `;`, тот же порядок что `sources` (`primary;academic;industry`) |
+| `status` | `triangulated` \| `weak` \| `single-type` \| `contradicted` \| `data-insufficient` |
+| `confidence` | `high` \| `medium` \| `low` |
+| `primary_source` | `Y` \| `N` — есть ли среди sources хотя бы один Credibility=5 первичный |
+
+**Механическая триангуляция:** `status: triangulated` ⟺ ≥3 источника **И** ≥2 разных
+типа в строке. Это проверяется подсчётом полей `sources`/`source_types`, не
+повторным чтением содержания — отсюда `haiku`/low модель на этом шаге в
+`model_routing.md`.
+
+**Primary-first правило:** `confidence: high` разрешён ТОЛЬКО если `primary_source: Y`.
+Без первичного источника — потолок `medium`, даже если формально triangulated по
+количеству и разнотипности. Причина: три вторичных пересказа одного и того же
+первичного факта легко создают иллюзию независимого подтверждения.
+
+**Пример:**
+
+```csv
+claim_id,claim,hypothesis,sources,source_types,status,confidence,primary_source
+CL1,"Postgres logical replication handles N nodes without external tooling",H1,s01;s07;s12,primary;industry;academic,triangulated,high,Y
+CL2,"CDC tooling adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,single-type,medium,N
+CL3,"Vendor X claims zero-downtime migration",-,s22,industry,weak,low,N
+```
+
+**Дыры (status ≠ triangulated) → gap-волна.** См. `workflow.md` Фаза 4.5: точечный
+haiku/low агент на конкретную дыру, максимум 2 круга, иначе честно
+`status: data-insufficient`.
+
 ## Файл sources/NN_slug.md — шаблон
 
 Каждый источник = отдельный файл. Это долгосрочная память исследования — через месяц возвращаешься и видишь цитаты с метаданными без перечитывания отчёта.
@@ -132,3 +176,5 @@ fetched: 2026-05-21              # дата извлечения
 - ❌ Помечать источник «total 12+» без пересчёта — пересчитывай явно.
 - ❌ Парафразить цитаты в `sources/NN.md` — только дословные.
 - ❌ Сжимать все источники в один файл — теряется поиск, переиспользование, ссылка из отчёта.
+- ❌ Ставить `confidence: high` в `claims.csv` без primary-источника — нарушает primary-first правило, даже если формально 3+ источника разного типа.
+- ❌ Оставлять строку `claims.csv` без статуса после первого прохода — прогони gap-волну (Фаза 4.5), максимум 2 круга, потом честно `data-insufficient`.

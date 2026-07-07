@@ -1,6 +1,6 @@
 # Block Library — INDEX
 
-<!--gen:count:blocks-->103<!--/gen--> блоков в 10 категориях. Композируемые секции для финального отчёта.
+<!--gen:count:blocks-->105<!--/gen--> блоков в 10 категориях. Композируемые секции для финального отчёта.
 
 ## Как использовать
 
@@ -13,18 +13,18 @@
 
 | Cat | Файл | Блоки | Назначение |
 |---|---|---|---|
-| FRAME | [frame.md](frame.md) | F1-F8 | Рамка отчёта: TL;DR, scope, claim, metadata |
+| FRAME | [frame.md](frame.md) | F1-F10 | Рамка отчёта: TL;DR, scope, background, claim, metadata |
 | EXPLAIN | [explain.md](explain.md) | E1-E14 | Объяснение устройства: mental model, glossary, mechanism |
 | COMPARE | [compare.md](compare.md) | C1-C13 | Сравнение и выбор: matrices, scoring, trade-offs |
 | MAP | [map.md](map.md) | M1-M12 | Картография: profiles, positioning, trends |
 | VALIDATE | [validate.md](validate.md) | V1-V10 | Проверка истинности: falsification, evidence grades |
 | ANALYZE | [analyze.md](analyze.md) | A1-A13 | Структурированный анализ: SWOT, timeline, root cause |
-| CLOSE | [close.md](close.md) | Z1-Z11 | Закрытие: counter-args, open Q, next research |
+| CLOSE | [close.md](close.md) | Z1-Z12 | Закрытие: counter-args, open Q, next research |
 | PEOPLE | [people.md](people.md) | P1-P7 | Люди, команды, поведение: persona, journey, incentives |
 | NUMBERS | [numbers.md](numbers.md) | N1-N8 | Количественные: метрики, market sizing, forecasts |
 | CONTEXT | [context.md](context.md) | X1-X7 | Внешний контекст: регуляторика, гео, культура |
 
-## Полная таблица всех <!--gen:count:blocks-->103<!--/gen--> блоков
+## Полная таблица всех <!--gen:count:blocks-->105<!--/gen--> блоков
 
 ### FRAME
 
@@ -38,6 +38,8 @@
 | F6 | `key-finding-callout` | Главный single insight выделенный | Длинные отчёты |
 | F7 | `executive-summary` | 1-страничный TL;DR для стейкхолдеров | Decision/landscape для не-технических |
 | F8 | `glossary-link` | Ссылка на внешний/общий глоссарий | Если есть проектный glossary |
+| F9 | `background` | Почему вопрос стоит так — предыстория, причины, 5-10 строк | Medium/deep, все жанры (дефолт) |
+| F10 | `verification-header` | Citation integrity (liveness + faithfulness) | Medium/deep, после Фазы 6.5 verify |
 
 ### EXPLAIN
 
@@ -141,6 +143,7 @@
 | Z9 | `glossary-final` | Финальный глоссарий из отчёта | Длинные с обильной терминологией |
 | Z10 | `update-triggers` | Что должно произойти для update | Все ресёрчи (life cycle) |
 | Z11 | `refresh-targets` (отдельный файл) | Что конкретно проверять при update — entities, numbers, hypotheses | Medium/deep — обязательно |
+| Z12 | `so-what-for-you` | Проекция выводов на кейс пользователя: действие + trade-off + kill-criteria | Medium/deep — обязательно |
 
 ### PEOPLE
 
@@ -181,7 +184,7 @@
 
 ## Progressive loading discipline
 
-При <!--gen:count:blocks-->103<!--/gen--> блоках критично не загружать всё в контекст.
+При <!--gen:count:blocks-->105<!--/gen--> блоках критично не загружать всё в контекст.
 
 ```
 Главный поток:

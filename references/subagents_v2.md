@@ -7,26 +7,30 @@
 ```
 Главный поток (assistant):
   - формирует план, разбивает тему на подтемы
+  - назначает каждому агенту диапазон номеров источников (s01-s09, s10-s19, ...)
   - запускает суб-агентов в ОДНОМ сообщении (параллель)
-  - получает JSON выжимки
-  - дедуплицирует URLs
-  - ПИШЕТ файлы sources/NN.md из полученного JSON
-  - триангулирует, синтезирует
+  - получает ТОЛЬКО индекс-строки для sources.csv (URL/title/type/date/scores/
+    subquestion_ids/файл) — не полные тексты
+  - мёржит sources.csv, дедуплицирует по URL между диапазонами
+  - заполняет claims.csv из индекс-строк + заявленных claim'ов
+  - триангулирует по claims.csv, синтезирует
 
-Суб-агент (subagent_type=Explore):
-  - читает свой промпт
+Суб-агент (subagent_type=general-purpose, свой диапазон NN):
+  - читает свой промпт (включая закреплённый диапазон номеров)
   - делает WebSearch + WebFetch
-  - оценивает источники по шкале
-  - возвращает структурированный JSON
-  - НЕ пишет файлы (Explore read-only)
+  - оценивает каждый источник по шкале сам (не отдельный scoring pass — H7)
+  - ПИШЕТ полные файлы sources/NN_slug.md в своём диапазоне (Write — параллельно,
+    без конфликтов, т.к. диапазоны не пересекаются)
+  - возвращает в главный поток ТОЛЬКО индекс-строки (компактно — полные тексты
+    источников через главный контекст не проходят)
 ```
 
-Так главный поток сохраняет контроль над файлами и дедупликацией, а суб-агенты — параллельны и не забивают контекст сырыми данными.
+Так главный поток не раздувается сырыми текстами источников (только компактные индекс-строки), а параллельная запись `sources/NN.md` не конфликтует, потому что у каждого агента свой непересекающийся диапазон номеров.
 
 ## Какой subagent_type
 
-- **`Explore`** — дефолт для deep-research. Read-only, имеет WebFetch/WebSearch, защищает основной контекст. Не может писать файлы — это ок, файлы пишет главный поток.
-- **`general-purpose`** — только если подтема требует одновременно веб-поиска И чтения локальных файлов проекта (например, ресёрч под фичу с учётом существующего кода в репо). Имеет полный доступ.
+- **`general-purpose`** — дефолт для fetch+save (Phase 4.1). Нужен `Write`, чтобы агент сам сохранял `sources/NN.md` в своём диапазоне номеров, а не передавал полные тексты обратно в главный поток. Каждому агенту — явный диапазон: агент №1 → `s01-s09`, №2 → `s10-s19`, и т.д. (см. промпт-шаблон ниже, поле `SOURCE ID RANGE`).
+- **`Explore`** — только для чистой discovery-разведки БЕЗ сохранения файлов (например, Phase 3.5 capability discovery или предварительная разведка «сколько вообще есть материала» до того как решили дробить на подтемы). Как только агенту нужно писать `sources/NN.md` — это `general-purpose`, не `Explore`.
 - **`Plan`** — НЕ для поиска. В deep-research не использовать.
 
 ## Какую модель выбрать (model routing)
@@ -50,7 +54,7 @@
 
 ```
 Agent({
-  subagent_type: "Explore",
+  subagent_type: "general-purpose",   // fetch+save нужен Write, см. выше
   model: "haiku",    // ← важно: явный выбор
   description: "...",
   prompt: "..."
@@ -82,6 +86,7 @@ Agent({
 - `API ENDPOINTS TO USE` ← из той же секции 12 → конкретные API из `api_sources/` (с пометкой какие auth-env-vars нужны)
 - `DISCOVERY EXECUTED` ← из секции 12: что уже было найдено через awesome-lists registry / GitHub topics / HuggingFace на шаге 4.0 — суб-агент может на это опираться, не повторять discovery впустую
 - `CRITICAL GAPS` ← из секции 12 → critical gaps to address для этой подтемы
+- `SOURCE ID RANGE` ← закреплённый за этим агентом диапазон номеров источников, назначает главный поток ПЕРЕД launch: агент №1 → `s01-s09`, №2 → `s10-s19`, №3 → `s20-s29`, и т.д. (шаг по 9-10 номеров с запасом). Диапазоны не пересекаются — это устраняет конфликты при параллельной записи `sources/NN.md`.
 
 Так главный поток не дублирует работу плана и обеспечивает прозрачность: пользователь в plan.md видит точно тот же brief что и агент.
 
@@ -96,6 +101,10 @@ CONTEXT: We are researching <main_question>. This is the deep-research workflow,
 medium/deep depth, with structured JSON output requested.
 
 YOUR SUBTOPIC: <narrow subtopic — what THIS agent looks for, not the whole theme>
+
+YOUR SOURCE ID RANGE: s<NN>-s<MM> (e.g. s10-s19). Use ONLY these numbers for the
+files you write. Do not reuse a number outside your range — other agents are
+writing in parallel with their own ranges.
 
 BLOCKS THIS SUBTOPIC FEEDS:
 - <block-id>: <what data the block needs>
@@ -137,7 +146,8 @@ TASK:
    - 2-4 key direct quotes (verbatim, with location/page if possible)
    - Author, publication date, source type
    - How it relates to each hypothesis (supports / contradicts / neutral)
-3. Score each source on three axes 1-5:
+3. Score each source YOURSELF on three axes 1-5 (no separate scoring pass follows —
+   you are the one who read it, you score it):
    - Credibility: 5=primary/peer-review, 4=industry-authority, 3=quality general media,
      2=expert blog, 1=forum/anon
    - Recency: 5=<1yr, 4=1-3yr, 3=3-5yr, 2=5-10yr, 1=>10yr (unless historical topic)
@@ -145,36 +155,41 @@ TASK:
      2=lobbyist, 1=propaganda
 4. CRITICAL: include at least 1-2 sources representing OPPOSITION or CRITICISM
    of the dominant view in this subtopic. If you cannot find any — say so explicitly.
+5. WRITE the full source file yourself: `sources/<id>_<short-slug>.md` using the
+   template in `source_scoring.md`, with complete frontmatter (channel, access,
+   scores, subquestion_ids) and verbatim quotes. Use ONLY ids from your assigned
+   range (see YOUR SOURCE ID RANGE above).
+6. For each claim/thesis this subtopic supports, note it as a candidate row for
+   `claims.csv` (claim text, hypothesis id if any, which source ids back it, source
+   types, whether at least one is Primary — the "primary_source" flag).
 
-OUTPUT FORMAT (strict JSON, no commentary outside JSON):
+OUTPUT FORMAT — return ONLY compact index rows to the main thread, NOT full source
+text (full text already lives in the files you wrote in step 5). Strict JSON, no
+commentary outside JSON:
 
 {
   "subtopic": "<this subtopic>",
   "summary": "<3-5 sentence summary of what you found>",
-  "sources": [
+  "source_index": [
     {
+      "id": "s07",
       "url": "https://...",
       "title": "...",
-      "author": "...",
-      "date": "YYYY-MM-DD or YYYY",
       "type": "Primary|Academic|Industry-media|General-media|Expert-blog|Forum|Other",
       "channel": "<channel-name-from-channels.md>",
-      "access": "OPEN|PARTIAL|paywalled-abstract-only|gray-area-source|closed",
-      "credibility": 5,
-      "recency": 4,
-      "bias": 4,
-      "total": 13,
-      "summary": "<2-3 sentence summary>",
-      "quotes": [
-        {"text": "...", "location": "Section 2 / p.34"},
-        {"text": "..."}
-      ],
-      "hypothesis_evidence": {
-        "H1": "supports — quote 1 directly states ...",
-        "H2": "contradicts — author argues opposite ...",
-        "H3": "neutral / not addressed"
-      },
-      "notes": "<any context: author background, publication agenda, etc>"
+      "date": "YYYY-MM-DD or YYYY",
+      "credibility": 5, "recency": 4, "bias": 4, "total": 13,
+      "subquestion_ids": ["Q2"],
+      "file": "sources/07_<slug>.md"
+    }
+  ],
+  "claim_candidates": [
+    {
+      "claim": "<one-line thesis>",
+      "hypothesis": "H1",
+      "sources": ["s07", "s09"],
+      "source_types": ["Primary", "Industry-media"],
+      "primary_source": true
     }
   ],
   "opposition_found": true,
@@ -188,6 +203,8 @@ CONSTRAINTS:
 - If a source is paywalled / inaccessible — note it in `gaps` and try alternative.
 - Do not use bash/curl to bypass WebFetch restrictions.
 - If WebFetch fails for a URL — try alternative source, don't insist.
+- Do NOT return full source text/quotes in your final JSON reply — they belong in
+  the files you wrote. Returning them again bloats the main thread's context.
 ```
 
 ### RU template
@@ -197,6 +214,9 @@ CONSTRAINTS:
 ожидается структурированный JSON.
 
 ТВОЯ ПОДТЕМА: <узкая подтема — что ищет ЭТОТ агент, не вся тема>
+
+ТВОЙ ДИАПАЗОН НОМЕРОВ ИСТОЧНИКОВ: s<NN>-s<MM> (например s10-s19). Используй ТОЛЬКО
+эти номера для своих файлов — другие агенты параллельно пишут в своих диапазонах.
 
 ГИПОТЕЗЫ ДЛЯ ТЕСТИРОВАНИЯ:
 - H1: <опровергаемое утверждение>
@@ -209,7 +229,8 @@ CONSTRAINTS:
    - 2-4 прямые цитаты (дословно, с указанием раздела/страницы если есть)
    - Автор, дата публикации, тип источника
    - Отношение к каждой гипотезе (supports / contradicts / neutral)
-3. Оценить каждый источник по 3 осям 1-5:
+3. Оценить каждый источник САМОМУ по 3 осям 1-5 (отдельного scoring-прохода не
+   будет — кто прочитал, тот и скорит):
    - Credibility: 5=первичный/peer-review, 4=отраслевая медиа, 3=качественная пресса,
      2=экспертный блог, 1=форум/анон
    - Recency: 5=<1г, 4=1-3г, 3=3-5л, 2=5-10л, 1=>10л
@@ -217,33 +238,41 @@ CONSTRAINTS:
      2=лоббист, 1=пропаганда
 4. КРИТИЧНО: включить ≥1-2 источника с противоположной позицией / критикой
    доминирующего взгляда. Если не нашёл — сказать прямо.
+5. ЗАПИСАТЬ полные файлы `sources/<id>_<slug>.md` самому (шаблон в
+   `source_scoring.md`), используя только номера из своего диапазона.
+6. Для каждого тезиса, который подтверждает эта подтема, — кандидат-строка для
+   `claims.csv` (текст тезиса, гипотеза, какие sources подтверждают, их типы,
+   есть ли среди них primary source).
 
-ФОРМАТ ВЫВОДА (строгий JSON, без комментариев вне JSON):
+ФОРМАТ ВЫВОДА — вернуть в главный поток ТОЛЬКО компактные index-строки, НЕ полные
+тексты источников (полный текст уже в файле из шага 5). Строгий JSON:
 
-[см. EN шаблон выше — структура та же]
+[см. EN шаблон выше — структура `source_index` + `claim_candidates` та же]
 
 ОГРАНИЧЕНИЯ:
 - Максимум 10 источников. Качество важнее количества.
 - Цитаты ДОСЛОВНЫЕ. Не пересказ.
 - Если источник за paywall — в `gaps`, искать альтернативу.
 - НЕ использовать bash/curl для обхода ограничений WebFetch.
+- НЕ возвращать полные цитаты/тексты источников в финальном JSON — они уже в
+  записанных файлах, повторный возврат раздувает контекст главного потока.
 ```
 
 ## После возврата суб-агентов — что делает главный поток
 
-1. **Парсинг JSON.** Если суб-агент вернул мусор — попроси переслать в JSON, не интерпретируй сам.
+1. **Парсинг JSON.** Если суб-агент вернул мусор — попроси переслать в JSON, не интерпретируй сам. Ожидай `source_index` (компактные строки) + `claim_candidates` — НЕ полные тексты источников (их агент уже записал сам, см. выше).
 
-2. **Дедупликация по URL.** Если два суб-агента нашли один и тот же URL — это ОДИН источник, объединить quotes и evidence из обоих ответов.
+2. **Дедупликация по URL.** Если два суб-агента нашли один и тот же URL под разными id (не должно случиться при непересекающихся диапазонах, но проверяй) — это ОДИН источник, оставить файл с лучшим scoring, вторую запись пометить дублем в `sources.csv`.
 
-3. **Запись файлов `sources/NN_slug.md`.** Для каждого уникального source создать файл по шаблону из `source_scoring.md`. Нумерация сквозная, не сбрасывается.
+3. **Мёрж `sources.csv`** из всех `source_index` — файлы уже на диске (агенты сами их записали в своих диапазонах), главный поток здесь только сводит индекс, не переписывает `sources/NN.md`.
 
-4. **Обновление `sources.csv`.** Все источники из всех суб-агентов с пересчитанным total.
+4. **Заполнение `claims.csv`** из всех `claim_candidates` (Phase 5 — см. `source_scoring.md` раздел claims-ledger). Смёржить дублирующиеся claim'ы от разных агентов (если тезис один и тот же — объединить sources/source_types в одну строку).
 
 5. **Проверка покрытия:**
    - Сколько типов источников? (нужно ≥4)
    - Найдена ли оппозиция? (нужна минимум одна)
    - Все ли гипотезы получили evidence? (нужно ≥3 источника на гипотезу)
-   - Если что-то не покрыто — отдельный round доп-поиска (без суб-агентов, в основном потоке, целевыми запросами).
+   - Сколько строк `claims.csv` НЕ triangulated? → это вход в gap-волну (Phase 4.5, см. `workflow.md`).
 
 ## Антипаттерны
 
@@ -251,8 +280,9 @@ CONSTRAINTS:
 - ❌ Дать слишком общий промпт «ищи про X» — вернётся жидкая выжимка. Подтема должна быть УЗКОЙ.
 - ❌ Запустить суб-агентов последовательно (Agent call → ждать → следующий). Только параллельно в одном сообщении.
 - ❌ Принимать выжимку суб-агента как финал без проверки. Дедуплицируй URLs и проверь scoring.
-- ❌ Использовать `general-purpose` когда хватает `Explore`. Explore быстрее и дешевле.
-- ❌ Просить суб-агента ПИСАТЬ файлы — Explore не умеет. Главный поток пишет.
+- ❌ Использовать `Explore` когда агенту нужно писать `sources/NN.md` — Explore read-only, не сохранит файл. Для fetch+save всегда `general-purpose`.
+- ❌ Не назначить агенту диапазон номеров ПЕРЕД launch — без этого параллельная запись рискует коллизией id.
+- ❌ Просить суб-агента вернуть полные тексты/цитаты источников в JSON-ответе — раздувает контекст главного потока. Полный текст живёт в файле, в главный поток идёт только index-строка.
 - ❌ Пропустить требование «найди оппозицию» — суб-агенты по умолчанию ищут confirmation, не contradiction.
 
 ## Когда НЕ запускать суб-агентов

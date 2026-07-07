@@ -34,7 +34,7 @@ is written but not yet "done" until it carries a verification header.
    the count of `red_flag: true` results, and their source ids/urls.
 
 3. **Insert a verification header** at the top of the final report, right under the
-   title (block F9 below).
+   title (block F10 below).
 
 4. **Act on red flags — do not just report them.** For each OPEN source confirmed
    dead (likely hallucinated or stale URL):
@@ -76,7 +76,7 @@ quote(s) per source. No re-fetch in the common case.
    - UNSUPPORTED → re-search for real support; if none, demote the thesis to Open
      Questions. A claim with no entailing source is not a finding.
 4. Output a second integrity axis — `faithfulness_integrity = SUPPORTED / total` —
-   separate from liveness. The F9 header carries both.
+   separate from liveness. The F10 header carries both.
 5. Depth gate:
    - `shallow` — optional.
    - `medium` — required; any UNSUPPORTED on a hypothesis-bearing claim blocks finish.
@@ -85,7 +85,12 @@ quote(s) per source. No re-fetch in the common case.
 **Two axes, one verdict:** liveness (URL alive) × faithfulness (source backs claim).
 A citation counts as verified only if it passes BOTH.
 
-## Block F9 — Verification header (add to `references/blocks/frame.md`)
+## Block F10 — Verification header (add to `references/blocks/frame.md`)
+
+> Renumbered from F9 to F10 (2026-07-07): F9 was claimed by the `background` block
+> (see `references/blocks/frame.md`) merged from the deepdive-v2 design doc before this
+> header was actually implemented in `frame.md`. No functional change — same header,
+> same content, next free slot.
 
 Rendered at the very top of the final report:
 
@@ -124,7 +129,7 @@ Add to the "Workflow — 9 фаз" list, after Phase 6:
 ```
 6.5. **Verify** [`haiku`/low] — две оси: (1) **liveness** — `check_citations.py` (URL жив?),
      (2) **faithfulness** — entailment claim ⊨ цитата из `sources/NN.md` (источник реально
-     подтверждает тезис?). Вставить verification-header (F9), отработать флаги: re-search /
+     подтверждает тезис?). Вставить verification-header (F10), отработать флаги: re-search /
      demote claim / смягчить overclaim. medium: integrity < 0.70 ИЛИ UNSUPPORTED на гипотезе
      блокирует finish; deep: ноль red flags и ноль UNSUPPORTED. См. `references/runtime_verification.md`.
 ```
