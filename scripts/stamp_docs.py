@@ -51,10 +51,10 @@ def render_values(repo: Path) -> dict[str, str]:
         raise ValueError("no phases — refusing to stamp")
 
     list_ru = " → ".join(p["name_ru"] for p in phases)
-    table_rows = "\n".join(
+    table_rows = "\n" + "\n".join(
         f"| **{p['id']}** | **{p['name_en']}** | {p['model']} / {p['effort']} |"
         for p in phases
-    )
+    ) + "\n"
 
     return {
         "count:blocks": str(c["blocks"]),

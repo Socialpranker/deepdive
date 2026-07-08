@@ -135,7 +135,8 @@ The skill runs **<!--gen:count:phases-->9<!--/gen--> phases** in order:
 
 | Phase | Name | What happens |
 |:---:|:---|:---|
-<!--gen:phases:table:en-->| **1** | **Reframing** | opus / high |
+<!--gen:phases:table:en-->
+| **1** | **Reframing** | opus / high |
 | **2** | **Genre & block selection** | sonnet / medium |
 | **3** | **Plan** | opus / medium |
 | **3.5** | **Capability Discovery** | sonnet / low |
@@ -143,7 +144,8 @@ The skill runs **<!--gen:count:phases-->9<!--/gen--> phases** in order:
 | **5** | **Claims-ledger + triangulation** | haiku / low |
 | **6** | **Synthesis + multi-angle red team** | opus / high |
 | **6.5** | **Verify** | haiku / low |
-| **7** | **Refresh targets** | sonnet / medium |<!--/gen-->
+| **7** | **Refresh targets** | sonnet / medium |
+<!--/gen-->
 
 Each phase runs on a model matched to its task — Opus where reasoning multiplies (1/3/6), Haiku for the parallel fan-out (4). The skill announces the routing and an estimated cost up front, once.
 
