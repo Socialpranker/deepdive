@@ -1,6 +1,6 @@
 <div align="center">
 
-# Deep Research
+# Deepdive
 
 ### A structured meta-research skill for Claude Code
 
@@ -441,7 +441,7 @@ The methodology is portable. ~70% of content is LLM-agnostic markdown templates.
 <details>
 <summary><h2>На русском</h2></summary>
 
-**Deep Research** — скилл для [Claude Code](https://claude.com/claude-code), превращающий «загугли это» в дисциплинированный <!--gen:count:phases-->9<!--/gen-->-фазный процесс.
+**Deepdive** — скилл для [Claude Code](https://claude.com/claude-code), превращающий «загугли это» в дисциплинированный <!--gen:count:phases-->9<!--/gen-->-фазный процесс.
 
 ### Что внутри
 
