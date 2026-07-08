@@ -3,7 +3,7 @@
 This folder is published as a GitHub Pages site at:
 
 ```
-https://socialpranker.github.io/claude-deep-research/
+https://socialpranker.github.io/deepdive/
 ```
 
 > **Canonical URL.** The site is served from the **`Socialpranker`** account, so the
@@ -15,8 +15,8 @@ https://socialpranker.github.io/claude-deep-research/
 > Fix it in **Settings → General → Website**, or via CLI:
 >
 > ```
-> gh api -X PATCH repos/Socialpranker/claude-deep-research \
->   -f homepage="https://socialpranker.github.io/claude-deep-research/"
+> gh api -X PATCH repos/Socialpranker/deepdive \
+>   -f homepage="https://socialpranker.github.io/deepdive/"
 > ```
 
 ## How to enable

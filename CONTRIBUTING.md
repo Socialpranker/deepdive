@@ -142,4 +142,4 @@ All contributors are listed in the repo's contributors graph. For significant co
 
 ## Questions?
 
-Open a [discussion](https://github.com/Socialpranker/claude-deep-research/discussions) or [issue](https://github.com/Socialpranker/claude-deep-research/issues).
+Open a [discussion](https://github.com/Socialpranker/deepdive/discussions) or [issue](https://github.com/Socialpranker/deepdive/issues).

@@ -5,7 +5,7 @@
 title: Deep Research
 description: A structured <!--gen:count:phases-->9<!--/gen-->-phase meta-research skill for Claude Code. <!--gen:count:channels-->29<!--/gen--> channels, <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources, <!--gen:count:blocks-->105<!--/gen--> report blocks.
 url: https://socialpranker.github.io
-baseurl: /claude-deep-research
+baseurl: /deepdive
 
 # SEO
 author: Socialpranker
