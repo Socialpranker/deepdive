@@ -1,0 +1,16 @@
+{
+  "name": "deepdive",
+  "owner": {
+    "name": "Socialpranker"
+  },
+  "plugins": [
+    {
+      "name": "deepdive",
+      "source": "./",
+      "description": "Meta-research под вопрос или решение: веб-поиск, академические источники, Q&A отчёт с атомарными пере-используемыми тезисами.",
+      "skills": [
+        "./"
+      ]
+    }
+  ]
+}
