@@ -8,6 +8,9 @@ Thumbs.db
 *.swp
 *~
 
+# Claude Code — рабочие заметки/сессии (не для публичного репо)
+.claude/
+
 # Python (если кто-то добавит scripts)
 __pycache__/
 *.py[cod]
