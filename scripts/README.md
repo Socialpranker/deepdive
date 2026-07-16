@@ -1,6 +1,20 @@
 # Scripts
 
-Automation для catalog maintenance — плюс один run-time gate (`validate_phases.py`).
+Automation для catalog maintenance — плюс run-time инструменты прогона (`build_sources_csv.py`, `validate_phases.py`).
+
+## build_sources_csv.py
+
+Собирает `sources.csv` прогона из `sources/NN.md` frontmatter — детерминированно, вместо
+ручного grep|sed. `sources/NN.md` — источник истины; CSV — индекс, который читают
+`check_citations.py`, `validate_structure.py`, `score_run.py`. Колонки в нижнем регистре
+под контракт этих читателей (REQUIRED `url,title`; RECOMMENDED `type,channel`).
+
+```bash
+python scripts/build_sources_csv.py --research-dir research/<slug>
+python scripts/build_sources_csv.py --research-dir research/<slug> --check   # exit 1 если stale (CI)
+```
+
+Прогонять как шаг 0 finish-up (см. `SKILL.md`), перед `validate_phases.py`.
 
 ## validate_phases.py
 
