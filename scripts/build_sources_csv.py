@@ -31,7 +31,7 @@ from pathlib import Path
 # and scoring columns. `file` lets a reader map a row back to its sources/NN.md.
 COLUMNS = [
     "id", "url", "title", "type", "channel", "access",
-    "author", "date", "credibility", "recency", "bias", "total", "used", "file",
+    "author", "date", "credibility", "recency", "bias", "total", "caveat", "used", "file",
 ]
 SOURCE_FILE_RE = re.compile(r"^\d{2,}_.+\.md$")
 

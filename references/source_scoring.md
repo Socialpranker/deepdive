@@ -36,6 +36,30 @@
 - **9–11** — поддерживающие источники. Используй как подкрепление, но не как единственное основание тезиса.
 - **8 и ниже** — дополнительные материалы. НЕ выводи отсюда. Можешь упомянуть как «также встречается мнение …».
 
+## Скепсис на входе — vendor / self-reported / disputed (до claims-ledger)
+
+Bias-шкала выше ловит общий уклон, но НЕ специфичную ловушку количественных выводов:
+**источник, который меряет собственный продукт, публикует self-reported бенчмарк, или
+чью цифру прямо оспаривает другой источник.** Red team на Фазе 6 ловит это поздно —
+когда тезис уже в выводах. Пометь на входе, при скоринге каждого источника, ДО того
+как он попадёт в `claims.csv`:
+
+- **`vendor`** — источник продаёт то, что измеряет (vendor-бенчмарк «наш продукт vs
+  конкурент», кейс с маркетинговым уклоном). Не запрещён — но его **величина** (не
+  направление) недостоверна. Триангулируй направление независимым источником.
+- **`self-reported`** — цифра из собственного замера автора без независимой репликации
+  (заявленный SOTA на своём бенчмарке, «мы достигли X%»).
+- **`disputed:sNN`** — другой собранный источник (sNN) прямо оспаривает эту цифру/вывод.
+  Расхождение само по себе — находка: не выбирай молча «правильную» сторону, покажи спор.
+
+Пиши маркер в поле `caveat:` frontmatter источника (`sources/NN.md`) и переноси в
+claims-ledger (см. ниже). Правило симметрично primary-first: **тезис, чей ключевой
+количественный якорь помечен `vendor`/`self-reported`/`disputed`, не получает
+`confidence: high`** — потолок `medium`, а `disputed` без независимого арбитра →
+`low` + явная оговорка в отчёте. Это дешёвый фильтр на входе, НЕ полный adversarial
+проход (тот остаётся на Фазе 6) — цель: чтобы синтез с самого начала знал, какой
+цифре не доверять как единственному основанию.
+
 ## Триангуляция
 
 Каждое утверждение в финальных выводах должно быть подтверждено **минимум 3 независимыми источниками разного типа**. Например, нельзя обосновать тезис тремя статьями одного автора в одном издании — это один голос, не три.
@@ -66,6 +90,7 @@
 | `status` | `triangulated` \| `weak` \| `single-type` \| `contradicted` \| `data-insufficient` |
 | `confidence` | `high` \| `medium` \| `low` |
 | `primary_source` | `Y` \| `N` — есть ли среди sources хотя бы один Credibility=5 первичный |
+| `source_caveat` | `-` \| `vendor` \| `self-reported` \| `disputed:sNN` — маркер скепсиса на входе (см. выше); не-`-` понижает потолок confidence |
 
 **Механическая триангуляция:** `status: triangulated` ⟺ ≥3 источника **И** ≥2 разных
 типа в строке. Это проверяется подсчётом полей `sources`/`source_types`, не
@@ -77,13 +102,20 @@
 количеству и разнотипности. Причина: три вторичных пересказа одного и того же
 первичного факта легко создают иллюзию независимого подтверждения.
 
+**Caveat-правило (симметрично primary-first):** если `source_caveat` ≠ `-`, потолок
+confidence — `medium` (для `vendor`/`self-reported`), а `disputed:sNN` без независимого
+арбитра → `low` + оговорка в отчёте. Ключевой количественный якорь тезиса на
+vendor/self-reported/оспоренной цифре недостоверен по величине — синтез должен об этом
+знать до выводов, а не узнать от red team.
+
 **Пример:**
 
 ```csv
-claim_id,claim,hypothesis,sources,source_types,status,confidence,primary_source
-CL1,"Postgres logical replication handles N nodes without external tooling",H1,s01;s07;s12,primary;industry;academic,triangulated,high,Y
-CL2,"CDC tooling adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,single-type,medium,N
-CL3,"Vendor X claims zero-downtime migration",-,s22,industry,weak,low,N
+claim_id,claim,hypothesis,sources,source_types,status,confidence,primary_source,source_caveat
+CL1,"Postgres logical replication handles N nodes without external tooling",H1,s01;s07;s12,primary;industry;academic,triangulated,high,Y,-
+CL2,"CDC tooling adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,single-type,medium,N,-
+CL3,"Vendor X claims zero-downtime migration",-,s22,industry,weak,low,N,vendor
+CL4,"Product Z beats competitors 3.4x on benchmark",H3,s31,industry,weak,low,N,disputed:s33
 ```
 
 **Дыры (status ≠ triangulated) → gap-волна.** См. `workflow.md` Фаза 4.5: точечный
@@ -109,6 +141,7 @@ credibility: 5
 recency: 4
 bias: 4
 total: 13
+caveat: -                        # - | vendor | self-reported | disputed:sNN — скепсис на входе (F14), понижает потолок confidence
 used: Y                          # Y — попал в основу выводов, N — только для контекста
 hypothesis_evidence:
   H1: supports                   # supports | contradicts | partial | neutral
