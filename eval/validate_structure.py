@@ -39,6 +39,11 @@ ACCESS_VOCAB = {
 }
 # Source `type` vocab from rubric.md axis 2 (diversity). Lowercased for comparison.
 TYPE_VOCAB = {"primary", "academic", "industry-media", "general-media", "expert-blog", "forum", "other"}
+# Source `caveat` vocab (F14 input-skepticism marker). A strict enum: bare `-`, `vendor`,
+# `self-reported`, or `disputed:sNN` (NN = an integer id). Free text here breaks machine
+# handling — the explanation belongs in the file body, not the field.
+CAVEAT_FIXED = {"-", "", "vendor", "self-reported"}
+CAVEAT_DISPUTED_RE = re.compile(r"^disputed:s?\d+$")
 REPORT_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_([a-z]+)\.md$")
 FINDING_RE = re.compile(r"^F\d+_[a-z0-9][a-z0-9-]*\.md$")
 SOURCE_FILE_RE = re.compile(r"^\d{2,}_[a-z0-9][a-z0-9-]*\.md$")
@@ -106,6 +111,10 @@ def check_sources_dir(d: Path, r: Report) -> int:
         acc = (fm.get("access") or "OPEN").strip().upper()
         if acc not in ACCESS_VOCAB:
             r.warn(f"sources/{f.name}: access '{acc}' not in vocab {sorted(ACCESS_VOCAB)}")
+        cav = (fm.get("caveat") or "-").strip().strip("\"'").strip()
+        if cav.lower() not in CAVEAT_FIXED and not CAVEAT_DISPUTED_RE.match(cav.lower()):
+            r.warn(f"sources/{f.name}: caveat '{cav}' not a valid marker "
+                   f"(use -, vendor, self-reported, or disputed:sNN — put explanation in the body)")
     return n
 
 
