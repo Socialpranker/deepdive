@@ -151,7 +151,7 @@ The skill runs **<!--gen:count:phases-->11<!--/gen--> phases** in order:
 
 Each phase runs on a model matched to its task — Opus where reasoning multiplies (1/3/6), Haiku for the parallel fan-out (4). The skill announces the routing and an estimated cost up front, once.
 
-Every phase is **transparent**: you see what's happening, you confirm key decisions, and you get a folder you can return to. Want to compare models head-to-head? The [eval harness](eval/README.md) scores any run on 6 axes.
+Every phase is **transparent**: you see what's happening, you confirm key decisions, and you get a folder you can return to. Before any search fires, the **plan-review gate** (3.7) shows you the reframing, hypotheses, genre, and channels and lets you approve or edit them — strictness scales with mode (deep waits for an explicit go-ahead, medium is a soft check, shallow skips it). Want to compare models head-to-head? The [eval harness](eval/README.md) scores any run on 6 axes.
 
 ---
 
@@ -276,6 +276,8 @@ Weighted sum with a **citation floor** — hallucinated sources can't win on dep
 
 Ignores env proxies (`trust_env=False`). `--strict` for CI.
 
+Verification runs two layers: **liveness** (does the source exist) and **faithfulness** (does it actually entail the claim it's cited for). Faithfulness verdicts — `SUPPORTED` / `PARTIAL` / `UNSUPPORTED` — land in `.verify/faithfulness.json`.
+
 [Check →](eval/check_citations.py)
 
 </td>
@@ -358,7 +360,7 @@ The catalog is most valuable when **it grows**. Easy contributions:
 
 Those are **products** — closed UI, fixed flow, opaque source selection. This is **open methodology** — you control every step, the protocol is markdown you can fork, the source catalog is yours to extend.
 
-They also don't separate sources into files, don't do explicit triangulation, don't run adversarial passes, and don't produce reusable atomic theses.
+They also don't separate sources into files, don't do explicit triangulation, don't run adversarial passes, and don't produce reusable atomic theses. Nor do they filter evidence for relevance before synthesis (feeding a model everything you found measurably hurts quality — Search-o1 dropped from 33% to 24% accuracy doing that) or verify that a cited source actually *supports* the claim it's attached to, rather than just existing (faithfulness, not just liveness). Citation fabrication is common enough industry-wide — the Tow Center found a >60% error rate in AI-generated citations — that checking for it is a real differentiator, not a nice-to-have.
 
 </details>
 
@@ -457,6 +459,8 @@ The methodology is portable. ~70% of content is LLM-agnostic markdown templates.
 - **<!--gen:count:api-->39<!--/gen-->+ API endpoints** для programmatic доступа (free no-auth приоритетны)
 - **plan.md** с 17 секциями для прозрачности
 - **Multi-angle red team** из враждебных ролей (Skeptic/Contrarian/Gap-hunter) с триажем severity (обязателен для medium/deep)
+- **Evidence-фильтр** (фаза 5.5) — CRAG-классификатор keep/drop по паре (тезис, источник) перед синтезом: наивная подача всего найденного снижает качество (Search-o1 33%→24%), в синтез идут только relevant-цитаты из `evidence/`
+- **Faithfulness-верификация** (фаза 6.5, второй слой) — помимо liveness (жива ли ссылка) проверяется entailment «источник ⊨ тезис» (RAGAS-декомпозиция + ALCE), вердикты SUPPORTED/PARTIAL/UNSUPPORTED в `.verify/faithfulness.json`
 - **Weekly auto-validation** через GitHub Actions
 
 ### Установка
