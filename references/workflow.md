@@ -458,7 +458,24 @@ plan stays authoritative as the starting point; deviations are bounded and recor
    Sub-agents signal **generously** (high recall). They report observations; they do
    NOT decide to deviate.
 
-3. **Orchestrator evaluation (after every round, `strong` tier / Opus):**
+3. **Cheap goal-check (after every round, `haiku` / low — before the Opus pass):** a
+   non-thinking evaluator scores each subquestion against its *goal*, not its sources.
+   For every `subquestion_id` it emits a one-line `goal_status`:
+
+   ```json
+   { "subquestion_id": "Q3", "goal_status": "partial",
+     "missing": "have the 2024 figure, no primary source and no pre-2020 baseline to compare" }
+   ```
+
+   `goal_status ∈ {met, partial, unmet}`; `missing` is a concrete gap phrase when not
+   `met`. This is deer-flow's non-thinking evaluator: a Haiku pass that *names the gap*
+   so the expensive Opus evaluation below works from a diagnosis instead of deriving one
+   from scratch, and so the next round's dispatch targets the named gap rather than
+   re-searching the whole subquestion. It decides nothing — it only labels. The Opus
+   pass and the circuit breaker read these labels; a round where every subquestion is
+   `met` and no trigger is justified ends the loop.
+
+4. **Orchestrator evaluation (after every round, `strong` tier / Opus):**
    - Aggregate all sub-agent JSON for the round.
    - **Cross-agent contradiction scan** (cheap tier): scan the whole pool for sources
      that conflict — this catches contradictions no single sub-agent can see (each
@@ -474,7 +491,7 @@ plan stays authoritative as the starting point; deviations are bounded and recor
    - For each justified trigger, if budget for its class remains AND depth < limit:
      classify cheap/expensive, debit the counter, write a `deviations.md` record,
      and launch the next round. Otherwise write a `not_pursued` record.
-4. **The loop ends** when no justified trigger remains, OR both budgets are exhausted,
+5. **The loop ends** when no justified trigger remains, OR both budgets are exhausted,
    OR the depth limit is reached, OR the **no-progress circuit breaker** fires (see
    below). Then proceed to Phase 5.
 

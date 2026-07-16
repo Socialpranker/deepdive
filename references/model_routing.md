@@ -32,6 +32,7 @@
 | **Phase 4.1** | Launch sub-agents (api-direct: curl + jq + parse) | **Haiku** | low | Bash работа + механический парсинг JSON |
 | **Phase 4.1** | Launch sub-agents (анализ кода в репозитории) | **Sonnet** | medium | Code understanding требует средней модели |
 | **Phase 4.2** | Fetch + dedup (главный поток) | **Sonnet** | medium | Управляет sub-agents, агрегирует результаты |
+| **Phase 4** | Goal-check между раундами — per-subquestion `goal_status` met/partial/unmet + gap | **Haiku** | low | Non-thinking evaluator (deer-flow): называет дыру, чтобы Opus-evaluation работал по диагнозу, а не выводил его с нуля. Только labels, решений не принимает |
 | **Phase 4.3** | Save sources to files | **Haiku** | low | Пишет сам fetch-агент в свой диапазон номеров, см. `subagents_v2.md` |
 | **Phase 4.5** | Gap-волна — точечные агенты на дыры в `claims.csv` (status ≠ triangulated), максимум 2 круга | **Haiku** | low | Узкая задача «найди ещё один источник типа X на claim Y» — не нужна дорогая модель |
 | **Phase 5** | Scoring (credibility/recency/bias по rubric) | *(встроено в Phase 4.1, см. выше)* | — | Отдельный проход не запускается — скорит тот агент, который читал источник |
