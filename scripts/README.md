@@ -1,6 +1,25 @@
 # Scripts
 
-Automation для catalog maintenance.
+Automation для catalog maintenance — плюс один run-time gate (`validate_phases.py`).
+
+## validate_phases.py
+
+Phase-gate для завершённого прогона: проверяет, что каждая обязательная для режима
+фаза оставила свой артефакт. Ловит «модель пропустила фазу» — главный failure mode
+скилла (методология исполняется только дисциплиной модели). Не форматный валидатор
+(`eval/validate_structure.py`) и не оценка качества (`eval/score_run.py`) — проверяет
+именно полноту фаз. Читает `phases.yaml` через `phases_manifest` (без своего YAML-парсера).
+
+```bash
+python scripts/validate_phases.py --research-dir research/<slug>            # авто-детект mode из frontmatter
+python scripts/validate_phases.py --research-dir research/<slug> --mode deep
+python scripts/validate_phases.py --research-dir research/<slug> --strict   # exit 1 при ошибке (для CI)
+python scripts/validate_phases.py --research-dir research/<slug> --json
+```
+
+Обязательный набор по режимам: shallow — `plan.md`, `sources/` или `sources.csv`,
+`claims.csv`, финальный отчёт; medium/deep — плюс `evidence/`, `.verify/*.json`,
+`refresh_targets.md`. Прогонять как шаг 1 finish-up (см. `SKILL.md`).
 
 ## validate_endpoints.py
 
