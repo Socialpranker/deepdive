@@ -10,9 +10,9 @@ sys.path.insert(0, str(REPO / "scripts"))
 import phases_manifest  # noqa: E402
 
 
-def test_loads_nine_phases_in_order():
+def test_loads_ten_phases_in_order():
     phases = phases_manifest.load_phases(REPO / "phases.yaml")
-    assert [p["id"] for p in phases] == ["1", "2", "3", "3.5", "4", "5", "6", "6.5", "7"]
+    assert [p["id"] for p in phases] == ["1", "2", "3", "3.5", "3.7", "4", "5", "6", "6.5", "7"]
 
 
 def test_every_phase_has_required_fields():

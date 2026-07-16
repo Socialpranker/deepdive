@@ -31,6 +31,17 @@ phases:
     model: sonnet
     effort: low
     depth_gate: medium
+  # Phase 3.7 is the plan-review GATE: a single human-in-the-loop checkpoint
+  # before the expensive Search phase. It bundles reframing + hypotheses +
+  # genre + mode + channels into one compact block for the user to approve or
+  # edit. Blocking strength scales with depth (deep -> wait for explicit OK;
+  # medium -> soft pause; shallow -> skip). See references/plan_gate.md.
+  - id: "3.7"
+    name_ru: "Plan-review gate"
+    name_en: "Plan-review gate"
+    model: sonnet
+    effort: low
+    depth_gate: medium
   # Phase 4 is an orchestrator-driven LOOP (round -> Opus eval -> optional
   # bounded deviation round). The per-round search fan-out is sonnet/medium;
   # the between-rounds evaluation runs at the strong tier. This is ONE phase

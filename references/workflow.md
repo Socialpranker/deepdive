@@ -1,4 +1,4 @@
-# Workflow — детали <!--gen:count:phases-->9<!--/gen--> фаз
+# Workflow — детали <!--gen:count:phases-->10<!--/gen--> фаз
 
 Дополнение к SKILL.md. Здесь — пошаговые инструкции и шаблоны. Читать в начале medium/deep ресёрча.
 
