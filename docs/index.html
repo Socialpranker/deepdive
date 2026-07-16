@@ -557,14 +557,14 @@ section:last-of-type { border-bottom: none; }
 }
 
 /* Each card spans 2 of 10 columns → 5 cards per row.
-   With 9 phases the second row holds 4 cards; offsetting the first
-   card of that row by one column centers the 5+4 layout (no orphan gap). */
+   With 11 phases the third row holds a single orphan card; offsetting it
+   by 4 columns centers it under the 5-wide rows above. */
 .pipeline .phase {
   grid-column: span 2;
 }
 
-.pipeline .phase:nth-child(6) {
-  grid-column: 2 / span 2;
+.pipeline .phase:nth-child(11) {
+  grid-column: 5 / span 2;
 }
 
 .phase {
@@ -604,6 +604,10 @@ section:last-of-type { border-bottom: none; }
 .phase:nth-child(5) .phase-num { background: var(--green); }
 .phase:nth-child(6) .phase-num { background: var(--red-deep); }
 .phase:nth-child(7) .phase-num { background: var(--blue-deep); }
+.phase:nth-child(8) .phase-num { background: var(--green-deep); }
+.phase:nth-child(9) .phase-num { background: var(--blue); }
+.phase:nth-child(10) .phase-num { background: var(--red); }
+.phase:nth-child(11) .phase-num { background: var(--ink); color: var(--yellow); }
 
 .phase h3 {
   font-family: 'IBM Plex Serif', serif;
@@ -960,7 +964,7 @@ footer a {
   .kpi:last-child { border-bottom: none; }
   .compare { grid-template-columns: 1fr; }
   .pipeline { grid-template-columns: repeat(4, 1fr); }
-  .pipeline .phase:nth-child(6) { grid-column: span 2; }
+  .pipeline .phase:nth-child(11) { grid-column: span 2; }
   .cta h2 { font-size: 32px; }
   .cta { padding: 40px 24px; box-shadow: 6px 6px 0 var(--yellow); }
 }
@@ -971,7 +975,7 @@ footer a {
   .section-title { font-size: 28px; }
   .pipeline { grid-template-columns: 1fr; }
   .pipeline .phase,
-  .pipeline .phase:nth-child(6) { grid-column: auto; }
+  .pipeline .phase:nth-child(11) { grid-column: auto; }
 }
 </style>
 </head>
@@ -1099,7 +1103,7 @@ footer a {
 <!-- HOW IT WORKS -->
 <section id="how">
   <span class="section-tag" data-i18n="how.tag">§ 02 · workflow</span>
-  <h2 class="section-title" data-i18n-html="how.title">Nine phases.<br>Every one transparent.</h2>
+  <h2 class="section-title" data-i18n-html="how.title"><!--gen:count:phases-->11<!--/gen--> phases.<br>Every one transparent.</h2>
   <p class="section-intro" data-i18n-html="how.intro">
     Each phase has a defined output and a checkpoint. You confirm key decisions.
     The skill records what it chose and why in <code>plan.md</code>.
@@ -1127,14 +1131,24 @@ footer a {
       <p data-i18n="how.p35.desc">Audits available API keys. Maps subtopics to data sources. Surfaces gaps before execution.</p>
     </div>
     <div class="phase">
+      <div class="phase-num">3.7</div>
+      <h3 data-i18n="how.p37.title">Plan-review gate</h3>
+      <p data-i18n="how.p37.desc">Shows the plan — hypotheses, genre, channels — before any search fires. Deep waits for an explicit go-ahead; medium is a soft check; shallow skips it.</p>
+    </div>
+    <div class="phase">
       <div class="phase-num">4</div>
       <h3 data-i18n="how.p4.title">Search</h3>
-      <p data-i18n="how.p4.desc">Launches 2-5 parallel Explore sub-agents across <!--gen:count:channels-->29<!--/gen--> channels and <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources.</p>
+      <p data-i18n="how.p4.desc">Launches 2-5 parallel Explore sub-agents across <!--gen:count:channels-->29<!--/gen--> channels and <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources. A cheap goal-check tags progress after each round; a no-progress circuit breaker stops the loop after two stalled rounds instead of burning budget.</p>
     </div>
     <div class="phase">
       <div class="phase-num">5</div>
       <h3 data-i18n="how.p5.title">Score</h3>
       <p data-i18n="how.p5.desc">Each source rated Credibility/Recency/Bias. Every claim backed by ≥3 independent sources of different types.</p>
+    </div>
+    <div class="phase">
+      <div class="phase-num">5.5</div>
+      <h3 data-i18n="how.p55.title">Evidence filter</h3>
+      <p data-i18n="how.p55.desc">A CRAG-style relevance classifier keeps only the quotes that actually support each claim before synthesis sees them — feeding it everything found measurably hurts quality.</p>
     </div>
     <div class="phase">
       <div class="phase-num">6</div>
@@ -1144,7 +1158,7 @@ footer a {
     <div class="phase">
       <div class="phase-num">6.5</div>
       <h3 data-i18n="how.p65.title">Verify</h3>
-      <p data-i18n="how.p65.desc">Lightweight citation check before closing. Confirms every claim still resolves to a saved source quote.</p>
+      <p data-i18n="how.p65.desc">Two layers: liveness (is the source alive) and faithfulness (does it actually entail the claim it's cited for). Verdicts land in <code>.verify/faithfulness.json</code>.</p>
     </div>
     <div class="phase">
       <div class="phase-num">7</div>
@@ -1429,7 +1443,7 @@ zip -r ../deepdive.skill . \
       'demo.success': 'REPORT READY → research/postgres-replication-vs-cdc/2026-05-21_decision.md',
 
       'how.tag': '§ 02 · workflow',
-      'how.title': 'Nine phases.<br>Every one transparent.',
+      'how.title': '<!--gen:count:phases-->11<!--/gen--> phases.<br>Every one transparent.',
       'how.intro': 'Each phase has a defined output and a checkpoint. You confirm key decisions. The skill records what it chose and why in <code>plan.md</code>.',
       'how.p1.title': 'Reframing',
       'how.p1.desc': 'Restates the question. Identifies the decision it supports. Formulates 2-4 falsifiable hypotheses.',
@@ -1439,14 +1453,18 @@ zip -r ../deepdive.skill . \
       'how.p3.desc': 'Writes plan.md with 17 sections: acceptance criteria, risk register, sourcing strategy.',
       'how.p35.title': 'Capabilities',
       'how.p35.desc': 'Audits available API keys. Maps subtopics to data sources. Surfaces gaps before execution.',
+      'how.p37.title': 'Plan-review gate',
+      'how.p37.desc': "Shows the plan — hypotheses, genre, channels — before any search fires. Deep waits for an explicit go-ahead; medium is a soft check; shallow skips it.",
       'how.p4.title': 'Search',
-      'how.p4.desc': 'Launches 2-5 parallel Explore sub-agents across <!--gen:count:channels-->29<!--/gen--> channels and <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources.',
+      'how.p4.desc': 'Launches 2-5 parallel Explore sub-agents across <!--gen:count:channels-->29<!--/gen--> channels and <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources. A cheap goal-check tags progress after each round; a no-progress circuit breaker stops the loop after two stalled rounds instead of burning budget.',
       'how.p5.title': 'Score',
       'how.p5.desc': 'Each source rated Credibility/Recency/Bias. Every claim backed by ≥3 independent sources of different types.',
+      'how.p55.title': 'Evidence filter',
+      'how.p55.desc': 'A CRAG-style relevance classifier keeps only the quotes that actually support each claim before synthesis sees them — feeding it everything found measurably hurts quality.',
       'how.p6.title': 'Synthesis',
       'how.p6.desc': 'Assembles the report from blocks, then runs an adversarial pass: 4 opposition questions, steel-man counter-arguments documented.',
       'how.p65.title': 'Verify',
-      'how.p65.desc': 'Lightweight citation check before closing. Confirms every claim still resolves to a saved source quote.',
+      'how.p65.desc': "Two layers: liveness (is the source alive) and faithfulness (does it actually entail the claim it's cited for). Verdicts land in <code>.verify/faithfulness.json</code>.",
       'how.p7.title': 'Refresh',
       'how.p7.desc': 'Extracts entities, numbers, and hypotheses into refresh_targets.md — the entry point for a later delta-update without re-running everything.',
 
@@ -1574,7 +1592,7 @@ zip -r ../deepdive.skill . \
       'demo.success': 'ОТЧЁТ ГОТОВ → research/postgres-replication-vs-cdc/2026-05-21_decision.md',
 
       'how.tag': '§ 02 · workflow',
-      'how.title': 'Девять фаз.<br>Каждая прозрачна.',
+      'how.title': '<!--gen:count:phases-->11<!--/gen--> фаз.<br>Каждая прозрачна.',
       'how.intro': 'У каждой фазы — свой output и контрольная точка. Ключевые решения ты подтверждаешь сам. Что и почему выбрал — скилл записывает в <code>plan.md</code>.',
       'how.p1.title': 'Reframing',
       'how.p1.desc': 'Переформулирует вопрос. Находит решение, которое он поддерживает. Формулирует 2–4 опровергаемых гипотезы.',
@@ -1584,14 +1602,18 @@ zip -r ../deepdive.skill . \
       'how.p3.desc': 'Пишет plan.md из 17 секций: критерии приёмки, реестр рисков, стратегия сорсинга.',
       'how.p35.title': 'Capabilities',
       'how.p35.desc': 'Аудит доступных API-ключей. Подвопросы → источники. Подсвечивает пробелы до запуска.',
+      'how.p37.title': 'Plan-review gate',
+      'how.p37.desc': 'Показывает план — гипотезы, жанр, каналы — до старта поиска. Deep ждёт явного «Ок», medium — мягкая проверка, shallow — пропускается.',
       'how.p4.title': 'Search',
-      'how.p4.desc': 'Запускает 2–5 параллельных Explore-агентов по <!--gen:count:channels-->29<!--/gen--> каналам и <!--gen:count:stat_sources-->460<!--/gen-->+ стат-источникам.',
+      'how.p4.desc': 'Запускает 2–5 параллельных Explore-агентов по <!--gen:count:channels-->29<!--/gen--> каналам и <!--gen:count:stat_sources-->460<!--/gen-->+ стат-источникам. Дешёвый goal-check метит прогресс после каждого раунда; no-progress circuit breaker останавливает цикл после двух раундов без результата вместо траты бюджета.',
       'how.p5.title': 'Score',
       'how.p5.desc': 'Каждый источник оценивается по Credibility/Recency/Bias. Каждое утверждение — ≥3 независимых источника разного типа.',
+      'how.p55.title': 'Evidence-фильтр',
+      'how.p55.desc': 'CRAG-классификатор релевантности оставляет для синтеза только те цитаты, что реально подтверждают конкретный тезис — подача всего найденного измеримо снижает качество.',
       'how.p6.title': 'Synthesis',
       'how.p6.desc': 'Собирает отчёт из блоков, затем прогон adversarial: 4 контр-вопроса, steel-man контр-аргументы фиксируются в отчёте.',
       'how.p65.title': 'Verify',
-      'how.p65.desc': 'Лёгкая проверка цитат перед закрытием. Подтверждает, что каждое утверждение всё ещё ведёт к сохранённой цитате источника.',
+      'how.p65.desc': 'Два слоя: liveness (жива ли ссылка) и faithfulness (реально ли источник подтверждает тезис). Вердикты — в <code>.verify/faithfulness.json</code>.',
       'how.p7.title': 'Refresh',
       'how.p7.desc': 'Извлекает сущности, числа и гипотезы в refresh_targets.md — точку входа для дельта-обновления без перезапуска всего ресёрча.',
 

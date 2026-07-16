@@ -151,7 +151,20 @@ The skill runs **<!--gen:count:phases-->11<!--/gen--> phases** in order:
 
 Each phase runs on a model matched to its task — Opus where reasoning multiplies (1/3/6), Haiku for the parallel fan-out (4). The skill announces the routing and an estimated cost up front, once.
 
-Every phase is **transparent**: you see what's happening, you confirm key decisions, and you get a folder you can return to. Before any search fires, the **plan-review gate** (3.7) shows you the reframing, hypotheses, genre, and channels and lets you approve or edit them — strictness scales with mode (deep waits for an explicit go-ahead, medium is a soft check, shallow skips it). Want to compare models head-to-head? The [eval harness](eval/README.md) scores any run on 6 axes.
+Every phase is **transparent**: you see what's happening, you confirm key decisions, and you get a folder you can return to. Before any search fires, the **plan-review gate** (3.7) shows you the reframing, hypotheses, genre, and channels and lets you approve or edit them — strictness scales with mode (deep waits for an explicit go-ahead, medium is a soft check, shallow skips it). Editing the plan before execution is the single highest-leverage step in the whole pipeline — Gemini Deep Research calls plan review its "biggest lever over output quality," and a wrong plan executed perfectly still produces a wrong report.
+
+Phase 4 (Search) isn't a single pass — it's a bounded loop with three cheap safeguards so it doesn't quietly waste budget or silently give up:
+- **Cheap goal-check** — after each round, a Haiku pass tags every subquestion `met` / `partial` / `unmet` with a one-line reason. This is what the expensive Opus evaluation reads instead of re-deriving the gap from scratch, and it's what targets the next round's dispatch.
+- **No-progress circuit breaker** — two consecutive rounds that add nothing new to the source pool stop the loop immediately, regardless of remaining budget. The unresolved thread goes to Open Questions instead of burning tokens chasing a dead end.
+- **Least-to-most decomposition** — for layered questions ("X given Y"), subquestions are leveled `L1 → L2` instead of dispatched flat in parallel: L1 rounds run first, concrete facts they surface get carried forward, and L2 queries are launched already sharpened by that context. Independent subquestions still run flat.
+
+For medium/deep depth, the pipeline runs two more machine-checked passes most one-shot research skips entirely:
+- **Evidence filter (5.5)** — a CRAG-style relevance classifier runs on every (claim, source) pair *before* synthesis and keeps only the quotes that actually support that specific claim. Dumping every found source into synthesis measurably hurts quality (Search-o1 dropped 33%→24% doing exactly that); this is the fix, not a nice-to-have.
+- **Faithfulness verification (6.5)** — beyond checking that a cited link is alive, the skill checks that the source *entails* the claim it's attached to (RAGAS/ALCE-style claim⊨quote), and writes `SUPPORTED` / `PARTIAL` / `UNSUPPORTED` verdicts to `.verify/faithfulness.json`. Citation fabrication is common enough industry-wide — the Tow Center found a >60% error rate in AI-generated citations — that checking for it, not just for dead links, is a real differentiator.
+
+None of this is enforced by discipline alone: `scripts/validate_phases.py` reads a finished run's `mode:` and checks that every phase mandatory for that mode actually left its file artifact (`plan.md`, `claims.csv`, `evidence/`, `.verify/*.json`, the dated report, ...). A skipped phase fails the check instead of silently passing — the model can't just claim "done."
+
+Want to compare models head-to-head? The [eval harness](eval/README.md) scores any run on 6 axes.
 
 ---
 
@@ -281,6 +294,17 @@ Verification runs two layers: **liveness** (does the source exist) and **faithfu
 [Check →](eval/check_citations.py)
 
 </td>
+<td valign="top">
+
+### Phase-gate Validator
+
+`scripts/validate_phases.py` reads a finished run's `mode:` frontmatter and checks that every phase mandatory for that depth left its file artifact — `plan.md`, `claims.csv`, `evidence/`, `.verify/*.json`, the dated report.
+
+A skipped phase fails the check (`--strict` for CI) instead of the model just asserting "done." Machine insurance against the one failure mode a markdown methodology can't fix by discipline alone.
+
+[Validator →](scripts/README.md)
+
+</td>
 </tr>
 </table>
 
@@ -397,6 +421,7 @@ It's **structured methodology + curated catalog + reusable templates + automatio
 - The <!--gen:count:phases-->11<!--/gen-->-phase workflow forces discipline
 - <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources catalog is curated knowledge
 - <!--gen:count:blocks-->105<!--/gen--> reusable blocks compose any report shape
+- `scripts/validate_phases.py` machine-checks phase completeness, not just style
 - Weekly auto-validation keeps the catalog alive
 - 25+ upstream awesome-lists give infinite discovery layer
 
@@ -458,9 +483,14 @@ The methodology is portable. ~70% of content is LLM-agnostic markdown templates.
 - **<!--gen:count:stat_sources-->460<!--/gen-->+ статистических источников** в 14 cross-industry + 19 отраслевых категориях
 - **<!--gen:count:api-->39<!--/gen-->+ API endpoints** для programmatic доступа (free no-auth приоритетны)
 - **plan.md** с 17 секциями для прозрачности
+- **Plan-review gate** (фаза 3.7) — единственная human-in-the-loop точка перед дорогой Фазой 4: план (гипотезы, жанр, каналы) показывается и утверждается ДО поиска; жёсткость по режиму (deep — ждать «Ок», medium — soft, shallow — skip)
 - **Multi-angle red team** из враждебных ролей (Skeptic/Contrarian/Gap-hunter) с триажем severity (обязателен для medium/deep)
 - **Evidence-фильтр** (фаза 5.5) — CRAG-классификатор keep/drop по паре (тезис, источник) перед синтезом: наивная подача всего найденного снижает качество (Search-o1 33%→24%), в синтез идут только relevant-цитаты из `evidence/`
 - **Faithfulness-верификация** (фаза 6.5, второй слой) — помимо liveness (жива ли ссылка) проверяется entailment «источник ⊨ тезис» (RAGAS-декомпозиция + ALCE), вердикты SUPPORTED/PARTIAL/UNSUPPORTED в `.verify/faithfulness.json`
+- **No-progress circuit breaker** (фаза 4) — 2 раунда подряд без новой информации → стоп, нерешённое уходит в Open Questions вместо сжигания бюджета
+- **Дешёвый goal-check** (фаза 4) — Haiku между раундами помечает каждый подвопрос met/partial/unmet, направляя следующий раунд и удешевляя дорогую Opus-оценку
+- **Least-to-most декомпозиция** (фаза 4) — многошаговые подвопросы («X учитывая Y») раскладываются по уровням L1→L2 с накоплением контекста между ними вместо плоского параллельного запуска
+- **Phase-gate валидатор** (`scripts/validate_phases.py`) — машинная проверка, что каждая обязательная для режима фаза оставила артефакт; пропущенная фаза не проходит проверку
 - **Weekly auto-validation** через GitHub Actions
 
 ### Установка
