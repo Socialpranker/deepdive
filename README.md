@@ -153,16 +153,20 @@ Each phase runs on a model matched to its task — Opus where reasoning multipli
 
 Every phase is **transparent**: you see what's happening, you confirm key decisions, and you get a folder you can return to. Before any search fires, the **plan-review gate** (3.7) shows you the reframing, hypotheses, genre, and channels and lets you approve or edit them — strictness scales with mode (deep waits for an explicit go-ahead, medium is a soft check, shallow skips it). Editing the plan before execution is the single highest-leverage step in the whole pipeline — Gemini Deep Research calls plan review its "biggest lever over output quality," and a wrong plan executed perfectly still produces a wrong report.
 
+Reframing (1) doesn't just restate the question — a **router** classifies its profile (factual / multi-step / relational / comparative / landscape) and that classification picks the decomposition method: factual questions get flat independent subquestions, multi-step ones ("X given Y") get least-to-most leveling, comparative ones get a shared axis matrix with mandatory opposition queries per candidate. Picking the wrong decomposition for a question's shape is a silent failure mode — the router makes the choice explicit instead of defaulting to "flat parallel" for everything.
+
 Phase 4 (Search) isn't a single pass — it's a bounded loop with three cheap safeguards so it doesn't quietly waste budget or silently give up:
 - **Cheap goal-check** — after each round, a Haiku pass tags every subquestion `met` / `partial` / `unmet` with a one-line reason. This is what the expensive Opus evaluation reads instead of re-deriving the gap from scratch, and it's what targets the next round's dispatch.
 - **No-progress circuit breaker** — two consecutive rounds that add nothing new to the source pool stop the loop immediately, regardless of remaining budget. The unresolved thread goes to Open Questions instead of burning tokens chasing a dead end.
 - **Least-to-most decomposition** — for layered questions ("X given Y"), subquestions are leveled `L1 → L2` instead of dispatched flat in parallel: L1 rounds run first, concrete facts they surface get carried forward, and L2 queries are launched already sharpened by that context. Independent subquestions still run flat.
 
+Scoring (5) doesn't stop at the usual Credibility/Recency/Bias rating — it also flags **input-level skepticism**: a source that measures its own product, self-reports a benchmark, or is directly disputed by another collected source gets a strict `caveat:` marker (`vendor` / `self-reported` / `disputed:sNN`) *before* the claim reaches `claims.csv`, not after synthesis has already built on it. A claim whose key number carries that marker is capped at `confidence: medium` (or `low` for an unresolved dispute) — the same rule shape as primary-first sourcing. Vendor benchmarks are the numbers that most often get quietly repeated as fact; catching them on the way in, not in the red team pass at the end, is the point.
+
 For medium/deep depth, the pipeline runs two more machine-checked passes most one-shot research skips entirely:
 - **Evidence filter (5.5)** — a CRAG-style relevance classifier runs on every (claim, source) pair *before* synthesis and keeps only the quotes that actually support that specific claim. Dumping every found source into synthesis measurably hurts quality (Search-o1 dropped 33%→24% doing exactly that); this is the fix, not a nice-to-have.
 - **Faithfulness verification (6.5)** — beyond checking that a cited link is alive, the skill checks that the source *entails* the claim it's attached to (RAGAS/ALCE-style claim⊨quote), and writes `SUPPORTED` / `PARTIAL` / `UNSUPPORTED` verdicts to `.verify/faithfulness.json`. Citation fabrication is common enough industry-wide — the Tow Center found a >60% error rate in AI-generated citations — that checking for it, not just for dead links, is a real differentiator.
 
-None of this is enforced by discipline alone: `scripts/validate_phases.py` reads a finished run's `mode:` and checks that every phase mandatory for that mode actually left its file artifact (`plan.md`, `claims.csv`, `evidence/`, `.verify/*.json`, the dated report, ...). A skipped phase fails the check instead of silently passing — the model can't just claim "done."
+None of this is enforced by discipline alone: `scripts/validate_phases.py` reads a finished run's `mode:` and checks that every phase mandatory for that mode actually left its file artifact (`plan.md`, `claims.csv`, `evidence/`, `.verify/*.json`, the dated report, ...). A skipped phase fails the check instead of silently passing — the model can't just claim "done." As of finish-up, this check is a **blocker, not a suggestion**: the skill won't report a research as done on a red gate, symmetrically to how a report isn't "done" without its verification header. `sources.csv` itself is now built the same deterministic way — `scripts/build_sources_csv.py` generates it from `sources/NN.md` frontmatter (with a `--check` mode for CI) instead of being assembled by hand each run.
 
 Want to compare models head-to-head? The [eval harness](eval/README.md) scores any run on 6 axes.
 
@@ -300,7 +304,9 @@ Verification runs two layers: **liveness** (does the source exist) and **faithfu
 
 `scripts/validate_phases.py` reads a finished run's `mode:` frontmatter and checks that every phase mandatory for that depth left its file artifact — `plan.md`, `claims.csv`, `evidence/`, `.verify/*.json`, the dated report.
 
-A skipped phase fails the check (`--strict` for CI) instead of the model just asserting "done." Machine insurance against the one failure mode a markdown methodology can't fix by discipline alone.
+A skipped phase fails the check (`--strict` for CI) instead of the model just asserting "done" — it's a **finish-up blocker**, not advice. Machine insurance against the one failure mode a markdown methodology can't fix by discipline alone.
+
+Its own inputs are machine-built too: `scripts/build_sources_csv.py` generates `sources.csv` deterministically from `sources/NN.md` frontmatter (`--check` for CI drift), and `eval/validate_structure.py` enforces the `caveat:` field as a strict enum (`-` / `vendor` / `self-reported` / `disputed:sNN`) instead of free text, so it stays greppable.
 
 [Validator →](scripts/README.md)
 
@@ -385,6 +391,8 @@ The catalog is most valuable when **it grows**. Easy contributions:
 Those are **products** — closed UI, fixed flow, opaque source selection. This is **open methodology** — you control every step, the protocol is markdown you can fork, the source catalog is yours to extend.
 
 They also don't separate sources into files, don't do explicit triangulation, don't run adversarial passes, and don't produce reusable atomic theses. Nor do they filter evidence for relevance before synthesis (feeding a model everything you found measurably hurts quality — Search-o1 dropped from 33% to 24% accuracy doing that) or verify that a cited source actually *supports* the claim it's attached to, rather than just existing (faithfulness, not just liveness). Citation fabrication is common enough industry-wide — the Tow Center found a >60% error rate in AI-generated citations — that checking for it is a real differentiator, not a nice-to-have.
+
+Honesty about sources goes further than checking they exist: scoring flags a source that's measuring its own product, self-reporting a benchmark, or directly disputed by another collected source, and caps the confidence of any claim resting on that number — *before* it ever reaches the report. Vendor benchmarks getting quietly repeated as fact is a market-wide problem; catching it on input, not as an afterthought, is the same honesty principle as faithfulness applied one step earlier.
 
 </details>
 
