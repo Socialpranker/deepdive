@@ -11,7 +11,7 @@ two genuinely Claude-specific pieces are:
    `complete()` calls), so the methodology no longer depends on the harness.
 2. **Source-file management** — the skill relies on the agent writing `sources/NN.md`.
 
-Everything else (the <!--gen:count:phases-->10<!--/gen-->-phase methodology, <!--gen:count:blocks-->105<!--/gen--> blocks, <!--gen:count:channels-->29<!--/gen--> channels, <!--gen:count:stat_sources-->460<!--/gen-->+ sources, the
+Everything else (the <!--gen:count:phases-->11<!--/gen-->-phase methodology, <!--gen:count:blocks-->105<!--/gen--> blocks, <!--gen:count:channels-->29<!--/gen--> channels, <!--gen:count:stat_sources-->460<!--/gen-->+ sources, the
 scoring rubric) is model-agnostic markdown. If a thin runner owns the fan-out and the
 file I/O and talks to *any* model through one interface, the skill becomes
 infrastructure instead of a Claude add-on. That is the difference between "a skill"

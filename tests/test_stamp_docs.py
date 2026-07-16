@@ -58,7 +58,7 @@ def test_render_values_has_all_keys():
               "phases:table:en"):
         assert k in v
     assert v["count:blocks"] == "105"
-    assert v["count:phases"] == "10"
+    assert v["count:phases"] == "11"
 
 
 def test_check_mode_detects_drift(tmp_path):

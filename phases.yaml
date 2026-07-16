@@ -65,6 +65,18 @@ phases:
     effort: low
     depth_gate: shallow
     loop: "true"
+  # Phase 5.5 is the relevance-FILTER on the INPUT to synthesis (symmetric to
+  # 6.5, which verifies the OUTPUT). A CRAG-style evaluator classifies each
+  # (claim, source) pair keep/drop and extracts relevant-only quotes into a
+  # separate evidence/ layer — sources/NN.md stays untouched (archive/reuse).
+  # Naive "dump everything" hurts synthesis (Search-o1 33%->24%). Not a loop,
+  # so it gets its own id. See references/evidence_filter.md.
+  - id: "5.5"
+    name_ru: "Evidence-фильтр"
+    name_en: "Evidence filter"
+    model: sonnet
+    effort: low
+    depth_gate: medium
   - id: "6"
     name_ru: "Синтез + multi-angle red team"
     name_en: "Synthesis + multi-angle red team"

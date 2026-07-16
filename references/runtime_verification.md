@@ -135,7 +135,7 @@ in the same run is something no closed product offers.
 
 ## SKILL.md insert
 
-Add to the "Workflow — 10 фаз" list, after Phase 6:
+Add to the "Workflow — 11 фаз" list, after Phase 6:
 
 ```
 6.5. **Verify** [`haiku`/low] — две оси: (1) **liveness** — `check_citations.py` (URL жив?),
