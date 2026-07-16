@@ -363,18 +363,27 @@ class Orchestrator:
         )
         (s.dir / "refresh_targets.md").write_text(content, encoding="utf-8")
 
+    # Phase ids this scaffold actually drives. The methodology's source of truth is
+    # phases.yaml (currently 11 phases); this runner is a deliberately smaller subset
+    # — see runner/DESIGN.md "Scope & sync boundary". Phases 3.7 (plan gate) and 5.5
+    # (evidence filter) are NOT implemented here. test_runner_phase_sync WARNS (does
+    # not fail) when this diverges from phases.yaml, keeping the gap visible.
+    IMPLEMENTED_PHASE_IDS = ("1", "2", "3", "3.5", "4", "5", "6", "6.5", "7")
+
     def run(self, question: str, depth: str, root: Path) -> Path:
         s = RunState(question=question, depth=depth, root=root)
-        self.reframe(s)
-        self.choose_genre(s)
-        self.plan(s)
+        self.reframe(s)          # Phase 1
+        self.choose_genre(s)     # Phase 2
+        self.plan(s)             # Phase 3
         if s.depth != "shallow":
-            self.discover_capabilities(s)
-        self.search(s)
-        self.score(s)
-        self.synthesize(s)
-        self.verify(s)
-        self.refresh(s)
+            self.discover_capabilities(s)  # Phase 3.5
+        # Phase 3.7 (plan-review gate) — not implemented in runner (see DESIGN.md)
+        self.search(s)           # Phase 4
+        self.score(s)            # Phase 5
+        # Phase 5.5 (evidence filter) — not implemented in runner (see DESIGN.md)
+        self.synthesize(s)       # Phase 6
+        self.verify(s)           # Phase 6.5 (liveness only; faithfulness not implemented)
+        self.refresh(s)          # Phase 7
         return s.dir
 
 

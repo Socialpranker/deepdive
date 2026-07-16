@@ -18,11 +18,41 @@ infrastructure instead of a Claude add-on. That is the difference between "a ski
 and "something the ecosystem depends on" — which is also the bar the OSS program cares
 about.
 
+## Scope & sync boundary — READ THIS FIRST
+
+**This runner is an experiment, NOT synced with the skill.** `references/*.md` +
+`phases.yaml` are the single source of truth for the methodology. This runner implements
+an independent, deliberately smaller subset for demonstrating the model-agnostic provider
+shape. **Parity with SKILL.md is NOT a goal without a driving use case** (an external
+consumer who needs a CLI without Claude Code). Today that consumer is nobody: every real
+research run goes through a Claude Code session following `SKILL.md` — the runner is not
+referenced in any user doc and is not run end-to-end in CI.
+
+**Current gap (as of 2026-07-16) — do not re-diagnose this from scratch:**
+- `phases.yaml` defines **11 phases** (1, 2, 3, 3.5, 3.7, 4, 5, 5.5, 6, 6.5, 7); the
+  orchestrator hardcodes **8** and is missing **3.7 (plan gate)** and **5.5 (evidence
+  filter)** entirely. It does not read `phases.yaml` — the phase list is inlined in Python.
+- Runner does not parse `references/*.md`; all prompts are independently-invented inline
+  strings, not the methodology's channel/block/scoring text.
+- Artifacts NOT produced by the runner: `claims.csv` (Phase 5 ledger), `evidence/CN.md`
+  (Phase 5.5), `.verify/faithfulness.json` (Phase 6.5 Layer 2 faithfulness).
+- `OpenAICompatProvider.search()` raises `NotImplementedError` — real web search works
+  only via `ClaudeProvider`, so "model-agnostic" is aspirational for the headline feature.
+- Placeholders still in the driver: `reframe()` discards the model output (`out[:0]`),
+  `synthesize()` emits literal `"Placeholder claim A"` / `"(scaffold)"`.
+
+The `test_runner_phase_sync` canary test WARNS (does not fail) when `phases.yaml`'s count
+diverges from the orchestrator's hardcoded phases, so the gap stays visible instead of
+silent. It is a canary, not a gate — parity is not required.
+
+If a concrete external consumer ever appears, closing this gap becomes a fresh
+"grow it under demand" decision, not blind continuation of this scaffold.
+
 ## Architecture
 
 ```
 runner/
-  orchestrator.py   # drives the 9 phases; owns source-file I/O and fan-out
+  orchestrator.py   # drives its 8-phase subset; owns source-file I/O and fan-out
   providers.py      # LLMProvider protocol + adapters (Claude, OpenAI-compat, DryRun) + build_provider
   phases.py         # one function per phase; pure-ish, takes provider + state  (TODO)
   state.py          # RunState: paths, plan, sources, findings                  (TODO)

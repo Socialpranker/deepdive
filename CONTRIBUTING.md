@@ -58,6 +58,13 @@ Add a Codex/Gemini/local-LLM adapter.
 3. Document any limitations vs Claude version
 4. Submit a PR
 
+> **Note on `runner/`.** There is a Python `runner/` scaffold exploring a model-agnostic
+> CLI, but it is **experimental and not synced with the skill** — `SKILL.md` +
+> `references/*.md` + `phases.yaml` are the single source of truth, and the runner
+> implements a smaller subset (see `runner/DESIGN.md` "Scope & sync boundary"). The
+> primary way to run research is a Claude Code session following `SKILL.md`, not the
+> runner. Don't treat runner↔skill parity as a goal without a concrete use case.
+
 ## Template for new stat source
 
 ```markdown
