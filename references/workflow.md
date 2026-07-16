@@ -475,7 +475,8 @@ plan stays authoritative as the starting point; deviations are bounded and recor
      classify cheap/expensive, debit the counter, write a `deviations.md` record,
      and launch the next round. Otherwise write a `not_pursued` record.
 4. **The loop ends** when no justified trigger remains, OR both budgets are exhausted,
-   OR the depth limit is reached. Then proceed to Phase 5.
+   OR the depth limit is reached, OR the **no-progress circuit breaker** fires (see
+   below). Then proceed to Phase 5.
 
 ### Triggers (4) and their classes
 
@@ -503,11 +504,37 @@ budget. Scope-expansion departs from the approved plan → hard ceiling.*
   depth 0). A deviation from a depth-limit round cannot spawn another.
 - Debit is atomic, orchestrator-only, before launching the next round.
 
+### No-progress circuit breaker
+
+Budget/depth bound *how much* the loop may spend; the circuit breaker bounds *spinning
+in place*. A deviation round can fire a trigger, cost budget, and return nothing the
+pool didn't already have — two of those in a row means the loop is stuck, not
+progressing. Stop before it drains the rest of the budget on a phantom.
+
+**Rule:** after each deviation round the orchestrator (cheap tier) computes that round's
+**progress delta**. A round makes progress if it added ≥1 *new* source (a URL not
+already in `sources.csv`) OR resolved a triggering signal (an `empty_result` that now
+has hits, a `citation_lead` whose primary was reached, a `contradiction` now
+adjudicated). A round that adds only duplicate/near-duplicate sources and resolves
+nothing is a **no-progress round**. **Two consecutive no-progress rounds → break the
+loop immediately**, regardless of remaining budget or depth.
+
+On break: record it in `deviations.md` (`type: circuit_breaker`, which rounds stalled,
+which triggers were left unpursued) and carry the unresolved triggers into **Open
+Questions** in the report (they are genuine gaps, not silent skips). Do not keep
+re-launching the same starved subquestion hoping for a different result — one honest
+"could not resolve within budget" beats three identical empty rounds.
+
+Round 1 never counts toward the breaker (it *is* the plan, always executed). The
+counter resets on any progress round, so alternating progress/no-progress does not
+trip it — only a genuine two-round stall does.
+
 ### `deviations.md`
 
 Written beside `plan.md` / `sources/`. One record per *considered* trigger (both
 `pursued` and `not_pursued` — **exhausted budget/depth still leaves a record; never a
-silent skip**). Phase 6 audits it; Phase 7 reads `not_pursued`/`carry_forward`.
+silent skip**), plus a `type: circuit_breaker` record if the no-progress breaker fired.
+Phase 6 audits it; Phase 7 reads `not_pursued`/`carry_forward`.
 
 ### Dynamic outline revision (ScaffoldAgent)
 
