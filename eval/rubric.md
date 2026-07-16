@@ -38,7 +38,7 @@ SSoT методологии оценки. Скрипт `score_run.py` читае
 
 Тезисы отчёта проверяются против их же источников: тезис реально следует из источника (entailment) или «звучит правдоподобно»? Это FACT-ось в духе DeepResearch Bench (citation accuracy), а не только liveness URL (за неё отвечает ось 1).
 
-**Объём выборки по глубине:** medium — 3–5 случайных тезисов; **deep — ВСЕ пары claim↔source** (можно переиспользовать faithfulness-вердикты из Phase 6.5 Layer 2: SUPPORTED/PARTIAL/UNSUPPORTED, не считать заново).
+**Объём выборки по глубине:** medium — 3–5 случайных тезисов; **deep — ВСЕ пары claim↔source**. **Источник вердиктов — `.verify/faithfulness.json`** (I/O-контракт, пишется Phase 6.5 Layer 2): переиспользуй `results[].verdict` (SUPPORTED/PARTIAL/UNSUPPORTED), НЕ считай заново. Если файла нет (Layer 2 не запускался — например shallow) — ось = «not run», не 0.
 
 - **5** — все проверенные тезисы точно подкреплены (SUPPORTED), цитаты соответствуют.
 - **3** — большинство верны, 1 натяжка/преувеличение (PARTIAL/overclaim).

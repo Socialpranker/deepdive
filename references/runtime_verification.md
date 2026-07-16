@@ -70,26 +70,60 @@ literature is different: the link is live but the source **does not support** th
 claim attached to it (citation ≠ entailment; CiteGuard / CiteCheck). A live URL can
 still back a fabricated or overstated claim.
 
-Run this AFTER liveness, reusing what `sources/NN.md` already stores — the supporting
-quote(s) per source. No re-fetch in the common case.
+Run this AFTER liveness, reusing quotes already on disk. **No re-fetch in the common case.**
 
-1. For each thesis↔citation pair, take the claim and the stored quote from
-   `sources/NN.md`. Ask: **does the quote entail the claim?**
-   - SUPPORTED — quote directly backs the claim.
-   - PARTIAL — quote is related but weaker/narrower (overclaim).
+**Where the (claim, quote) pairs come from — use `evidence/` from Phase 5.5, don't rebuild it.**
+Phase 5.5 (Evidence filter) already wrote `evidence/CN.md` grouping the relevant-only
+quotes under each `claim_id`. That IS the input for faithfulness — one pass over each
+`evidence/CN.md` yields exactly the (claim, source, quote) tuples to judge, no need to
+re-scan `sources/NN.md` deciding which quote belongs to which claim (that would redo 5.5).
+- medium/deep — `evidence/` exists → read pairs from there.
+- shallow — 5.5 is skipped, no `evidence/`; faithfulness is optional. If run, pull the
+  supporting quote directly from `sources/NN.md` per the claim it backs.
+
+1. **Judge each (claim, quote) pair — does the quote entail the claim?** Decompose the
+   claim into its atomic assertions (RAGAS-style) and check the quote supports each; a
+   claim is only SUPPORTED if ALL its atomic parts are backed (ALCE citation recall).
+   - SUPPORTED — quote directly backs every atomic part of the claim.
+   - PARTIAL — quote backs the topic but is weaker/narrower than the claim (overclaim),
+     or backs some atomic parts but not all.
    - UNSUPPORTED — quote does not back the claim (citation misuse / hallucination).
-2. Model: `haiku`/low (runs on every pair); escalate disputed pairs to `sonnet`/medium
-   on deep. NOTE: this is an LLM judge with its own error rate — calibrate the prompt
-   on a small labelled set; treat one UNSUPPORTED verdict as a flag to re-check, not
-   as ground truth.
+
+   Judge prompt (per pair):
+   > Claim: "<claim text>"
+   > Source quote: "<verbatim quote from evidence/CN.md>"
+   > Does the quote support the claim? Decompose the claim into atomic assertions.
+   > Answer SUPPORTED only if the quote backs ALL of them; PARTIAL if it backs the topic
+   > but is narrower/weaker or backs only some; UNSUPPORTED if it does not back the claim.
+   > Output: {verdict, unsupported_parts: [...], reason: "<one line>"}.
+
+2. Model: `haiku`/low (runs on every pair); escalate disputed/UNSUPPORTED pairs to
+   `sonnet`/medium on deep. NOTE: this is an LLM judge with its own error rate — judge
+   against the verbatim quote (not the summary), default to PARTIAL when unsure, and
+   treat one UNSUPPORTED verdict as a flag to re-check, not as ground truth.
 3. Act, don't just score:
    - PARTIAL → soften the claim to match the source, or find a stronger source.
    - UNSUPPORTED → re-search for real support; if none, demote the thesis to Open
      Questions. A claim with no entailing source is not a finding.
-4. Output a second integrity axis — `faithfulness_integrity = SUPPORTED / total` —
-   separate from liveness. The F10 header carries both.
+4. **Write verdicts to a machine-readable artifact** — `.verify/faithfulness.json` (the
+   I/O contract, mirrors `.verify/citations.json` for liveness):
+   ```json
+   {
+     "faithfulness_integrity": 0.87,
+     "results": [
+       {"claim_id": "C1", "source_id": "07", "verdict": "SUPPORTED", "model": "haiku",
+        "unsupported_parts": [], "reason": "quote states the figure directly"},
+       {"claim_id": "C4", "source_id": "12", "verdict": "PARTIAL", "model": "haiku",
+        "unsupported_parts": ["\"fastest-growing\""], "reason": "quote shows growth, not rank"}
+     ]
+   }
+   ```
+   `faithfulness_integrity = SUPPORTED / total` — a SECOND integrity axis, separate from
+   liveness. Also render a human-readable `.verify/faithfulness.md` for the header link.
+   **This artifact is the single source of truth for faithfulness** — `rubric.md` axis 3
+   and the F10 header both READ it, neither recomputes it (see "I/O contract" below).
 5. Depth gate:
-   - `shallow` — optional.
+   - `shallow` — optional (no `evidence/` to read from).
    - `medium` — required; any UNSUPPORTED on a hypothesis-bearing claim blocks finish.
    - `deep` — required; zero UNSUPPORTED; every PARTIAL softened or re-sourced.
 
@@ -103,27 +137,52 @@ A citation counts as verified only if it passes BOTH.
 > header was actually implemented in `frame.md`. No functional change — same header,
 > same content, next free slot.
 
-Rendered at the very top of the final report:
+Rendered at the very top of the final report. **Carries BOTH axes** (liveness ×
+faithfulness) — a citation is verified only if it passes both:
 
 ```markdown
-> **Citation integrity: 21/23 verified · 0 red flags · 2 paywalled (expected)**
-> Verified <YYYY-MM-DD> via check_citations.py. Every OPEN source resolved live.
-> [verification detail](.verify/citations.md)
+> **Citation integrity: 21/23 live · faithfulness 20/22 supported · 0 red flags · 2 paywalled**
+> Verified <YYYY-MM-DD>: liveness via check_citations.py (every OPEN source resolved live);
+> faithfulness via Layer 2 judge over evidence/ (2 PARTIAL softened).
+> [liveness detail](.verify/citations.md) · [faithfulness detail](.verify/faithfulness.md)
 ```
 
-When red flags were found and resolved:
+When flags were found and resolved (either axis):
 
 ```markdown
-> **Citation integrity: 23/23 verified · 1 red flag resolved**
-> s14 (original URL dead → replaced with live source on <date>).
+> **Citation integrity: 23/23 live · faithfulness 23/23 supported · 1 red flag + 1 overclaim resolved**
+> s14 (dead URL → replaced <date>); C4 (PARTIAL → claim softened to match source).
 ```
 
-When integrity is below floor and the user chose to ship anyway (medium only):
+When an axis is below floor and the user chose to ship anyway (medium only):
 
 ```markdown
-> ⚠ **Citation integrity: 0.64 — below floor (0.70).** 3 sources unverifiable:
-> s07, s11 (transport UNKNOWN), s19 (OPEN dead, claim demoted to Open Questions).
+> ⚠ **Citation integrity: liveness 0.64 · faithfulness 0.71 — liveness below floor (0.70).**
+> s07, s11 (transport UNKNOWN), s19 (OPEN dead → claim demoted); C9 (UNSUPPORTED → Open Questions).
 ```
+
+(shallow: faithfulness line omitted — Layer 2 optional, no `evidence/`.)
+
+## I/O contract — who writes, who reads (no circular reference)
+
+Faithfulness has ONE producer and several consumers. Before this contract, both the F10
+header and `rubric.md` axis 3 *referred* to faithfulness verdicts as a ready input, but
+nothing produced them — a circular reference to a missing artifact. The contract fixes it:
+
+| Artifact | Producer | Consumers |
+|---|---|---|
+| `.verify/citations.json` | Phase 6.5 Layer 1 (`check_citations.py`) | F10 header, `rubric.md` axis "citation" |
+| `.verify/faithfulness.json` | Phase 6.5 Layer 2 (this file, step 4) | F10 header (2nd axis), `rubric.md` axis 3 "Factual accuracy" |
+| `evidence/CN.md` | **Phase 5.5** (`evidence_filter.md`) | Phase 6.5 Layer 2 INPUT (claim↔quote pairs) |
+
+Rules:
+- Layer 2 **produces** `.verify/faithfulness.json`; it is the single source of truth.
+- The F10 header and `rubric.md` axis 3 **read** it — neither recomputes verdicts. If the
+  file is absent (shallow, or Layer 2 skipped), axis 3 records "not run", not zero.
+- Layer 2 **reads** `evidence/CN.md` for pairs — it does not re-derive claim↔quote from
+  raw `sources/NN.md` (that is Phase 5.5's job; redoing it duplicates 5.5).
+- `claim_id` is the join key across all three artifacts. If synthesis (Phase 6) rephrased
+  or merged claims, keep the originating `claim_id` on each thesis so the join holds.
 
 ## Why act, not just measure
 
@@ -139,10 +198,11 @@ Add to the "Workflow — 11 фаз" list, after Phase 6:
 
 ```
 6.5. **Verify** [`haiku`/low] — две оси: (1) **liveness** — `check_citations.py` (URL жив?),
-     (2) **faithfulness** — entailment claim ⊨ цитата из `sources/NN.md` (источник реально
-     подтверждает тезис?). Вставить verification-header (F10), отработать флаги: re-search /
-     demote claim / смягчить overclaim. medium: integrity < 0.70 ИЛИ UNSUPPORTED на гипотезе
-     блокирует finish; deep: ноль red flags и ноль UNSUPPORTED. См. `references/runtime_verification.md`.
+     (2) **faithfulness** — entailment claim ⊨ цитата (пары берутся из `evidence/CN.md` Фазы 5.5;
+     источник реально подтверждает тезис?). Вердикты → `.verify/faithfulness.json` (I/O-контракт),
+     verification-header F10 несёт ОБЕ оси. Флаги: re-search / demote claim / смягчить overclaim.
+     medium: integrity < 0.70 ИЛИ UNSUPPORTED на гипотезе блокирует finish; deep: ноль red flags
+     и ноль UNSUPPORTED. См. `references/runtime_verification.md`.
 ```
 
 And to "Что НЕ делать":

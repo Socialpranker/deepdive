@@ -72,6 +72,8 @@ status: relevant | weak | data-insufficient
 
 **Синтез (Фаза 6) читает `evidence/CN.md`, а не весь пул `sources/`** — для medium/deep. Для shallow (5.5 пропущена) синтез читает `sources/NN.md` как раньше. Точечная сверка с `sources/NN.md` по спорным местам остаётся (это уже требует Фаза 6 шаг 1).
 
+**`evidence/CN.md` — ещё и вход для Фазы 6.5 Layer 2 (faithfulness).** Связка claim↔цитата, которую делает 5.5, — это ровно те пары, что нужны faithfulness-проверке («реально ли источник подтверждает тезис»). Фаза 6.5 читает `evidence/CN.md`, а не пересканирует `sources/`, решая какая цитата к какому claim (это была бы дублирующая работа 5.5). `claim_id` — общий join-ключ. Так один артефакт 5.5 обслуживает и синтез (вход), и верификацию (6.5). См. `references/runtime_verification.md` → Layer 2.
+
 ## Отношение к `findings/` (deep)
 
 Существующий `findings/` слой (deep, Фаза 6) — агрегация *выводов* (атомарные тезисы). `evidence/` — отфильтрованное *сырьё* (relevant-only цитаты) под claim. Порядок для deep: `sources/` → **5.5 evidence/** → синтез → `findings/`. Для medium: `sources/` → **5.5 evidence/** → синтез (без findings/). `evidence/` делает findings-синтез чище, не заменяет его.
