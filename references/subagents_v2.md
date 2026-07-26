@@ -159,6 +159,12 @@ TASK:
    template in `source_scoring.md`, with complete frontmatter (channel, access,
    scores, subquestion_ids) and verbatim quotes. Use ONLY ids from your assigned
    range (see YOUR SOURCE ID RANGE above).
+   Fill the `root:` field while reading (see source_scoring.md "Provenance"):
+   `own` if the source produced its material itself; a short stable id of the
+   underlying material it retells (e.g. `press-release-acme-2026-03`,
+   `study-smith-2024`) otherwise; `unclear` if you cannot tell where the data
+   comes from. Ten articles retelling one press release are ONE voice — the
+   triangulation rule counts distinct roots, so this field is not optional.
 6. For each claim/thesis this subtopic supports, note it as a candidate row for
    `claims.csv` (claim text, hypothesis id if any, which source ids back it, source
    types, whether at least one is Primary — the "primary_source" flag).
@@ -194,8 +200,16 @@ commentary outside JSON:
   ],
   "opposition_found": true,
   "opposition_summary": "<if true: what the opposition argues, otherwise null>",
-  "gaps": ["<what you searched for but did not find>"]
+  "gaps": ["<what you searched for but did not find>"],
+  "query_performance": [
+    {"query": "<exact query string>", "channel": "<channel>", "yield": "used|noise|empty"}
+  ]
 }
+
+`query_performance`: one row per distinct query you actually ran. `yield`: "used" —
+produced at least one source you kept; "noise" — hits, but nothing worth keeping;
+"empty" — no relevant hits. The orchestrator uses this to mutate next round's
+queries (language switch, operators, terminology) instead of re-running what failed.
 
 CONSTRAINTS:
 - Maximum 10 sources. Quality over quantity.

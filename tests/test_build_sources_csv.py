@@ -62,6 +62,18 @@ def test_source_without_url_skipped(tmp_path):
     assert len(rows) == 1 and rows[0]["id"] == "s01"
 
 
+def test_root_column_passthrough(tmp_path):
+    # provenance root (anti circular-reporting) must survive into the index
+    d = make_run(tmp_path, [
+        {"id": "s01", "url": "http://a", "title": "A", "root": "press-release-acme-2026-03"},
+        {"id": "s02", "url": "http://b", "title": "B"},  # root absent → empty cell
+    ])
+    bs_run(d)
+    rows = read_csv(d)
+    assert rows[0]["root"] == "press-release-acme-2026-03"
+    assert rows[1]["root"] == ""
+
+
 def test_file_column_maps_back(tmp_path):
     d = make_run(tmp_path, [{"id": "s01", "url": "http://a", "title": "A"}])
     bs_run(d)

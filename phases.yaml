@@ -95,3 +95,16 @@ phases:
     model: sonnet
     effort: medium
     depth_gate: medium
+  # Phase 8 is the Decision walkthrough: the report is not "discussed", it is
+  # EXECUTED — the agent walks the user through the Decision Spec forks one by one
+  # ("research shows X [s03][s11] — does fork A fire? your call?"). Mandatory at
+  # every depth (a research whose result changes nothing is the skill's primary
+  # failure mode); shallow runs a trimmed 1-fork version. Artifact: application.md
+  # (any status, incl. deferred — the gate requires the file, not a made decision).
+  # See references/decision_walkthrough.md.
+  - id: "8"
+    name_ru: "Decision walkthrough"
+    name_en: "Decision walkthrough"
+    model: opus
+    effort: high
+    depth_gate: shallow

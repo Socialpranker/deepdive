@@ -57,9 +57,15 @@ PHASE_ARTIFACTS: dict[str, dict[str, list[str]]] = {
     "4": {"any_of": ["sources", "sources.csv"]},
     "5": {"all_of": ["claims.csv"]},
     "5.5": {"all_of": ["evidence"]},
-    "6": {"report": []},  # the dated <YYYY-MM-DD>_<genre>.md report — matched by pattern
+    # Phase 6 emits the dated <YYYY-MM-DD>_<genre>.md report (matched by pattern)
+    # AND the one-page decision memo the consumer's process actually ingests.
+    "6": {"report": [], "all_of": ["memo.md"]},
     "6.5": {"all_of": [".verify/citations.json", ".verify/faithfulness.json"]},
     "7": {"all_of": ["refresh_targets.md"]},
+    # Phase 8 (decision walkthrough) must leave application.md with ANY status —
+    # incl. `deferred`. The gate requires the file, not a made decision, so
+    # unattended runs are never blocked on a human.
+    "8": {"all_of": ["application.md"]},
 }
 # Phases that legitimately produce no file artifact — used only by the self-check so
 # it does not flag them as an un-mapped file-emitting phase.
@@ -105,7 +111,7 @@ def check_phase(d: Path, phase_id: str, spec: dict[str, list[str]], r: Report) -
     if "report" in spec:
         if not has_report(d):
             r.err(f"phase {phase_id}: no final report <YYYY-MM-DD>_<genre>.md")
-        return
+        # no return: a phase may require the report AND fixed-name artifacts (6: memo.md)
     if "all_of" in spec:
         for rel in spec["all_of"]:
             if not artifact_present(d, rel):

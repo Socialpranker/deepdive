@@ -36,13 +36,15 @@
 | **Phase 4.3** | Save sources to files | **Haiku** | low | Пишет сам fetch-агент в свой диапазон номеров, см. `subagents_v2.md` |
 | **Phase 4.5** | Gap-волна — точечные агенты на дыры в `claims.csv` (status ≠ triangulated), максимум 2 круга | **Haiku** | low | Узкая задача «найди ещё один источник типа X на claim Y» — не нужна дорогая модель |
 | **Phase 5** | Scoring (credibility/recency/bias по rubric) | *(встроено в Phase 4.1, см. выше)* | — | Отдельный проход не запускается — скорит тот агент, который читал источник |
-| **Phase 5** | Triangulation check по `claims.csv` (механическая: ≥3 источника И ≥2 типа → triangulated) | **Haiku** | low | Правило механическое — подсчёт источников/типов по строке, не нужна дорогая модель |
-| **Phase 6** | Multi-angle red team — N враждебных ролей как суб-агенты | **Opus** | high | **Самая дорогая модель здесь обязательна.** Атака на гипотезы (Skeptic/Contrarian/Gap-hunter) требует настоящего рассуждения, не паттерн-матчинга. Medium → sonnet/high |
+| **Phase 4** | Snowball-пасс — backward/forward цепочки цитирований топ-K источников (medium/deep) | **Haiku** | low | Механическая работа с citation-API (OpenAlex/S2) + списками литературы, по суб-агенту на источник |
+| **Phase 5** | Triangulation check по `claims.csv` (механическая: ≥3 источника И ≥2 типа И ≥2 корней `root:` → triangulated) | **Haiku** | low | Правило механическое — подсчёт источников/типов/корней по строке, не нужна дорогая модель |
+| **Phase 6** | Multi-angle red team — N враждебных ролей как суб-агенты | **Opus** | high | **Самая дорогая модель здесь обязательна.** Атака на гипотезы (Skeptic/Contrarian/Gap-hunter/Исполнитель) требует настоящего рассуждения, не паттерн-матчинга. Medium → sonnet/high |
 | **Phase 6.5** | Verify — liveness + faithfulness цитат | **Haiku** | low | Механическая проверка + entailment на коротких парах claim⊨quote |
 | **Phase 7** | Synthesis — сборка отчёта из блоков | **Sonnet** | high | Длинный контекст всех источников + блоков + плана. Sonnet/high лучше чем Opus/medium здесь |
 | **Phase 7** | Final report write-up (язык, стиль, чистка) | **Sonnet** | medium | Качественное письмо |
+| **Phase 8** | Decision walkthrough — исполнение отчёта по вилкам Decision Spec с пользователем | **Opus** | high | Главный поток, не суб-агент. Качество вопросов мультиплицируется на применимость всего ресёрча — как в Phase 1, не экономить |
 
-Phase 6 red-team суб-агенты: deep → opus/high; medium → sonnet/high; shallow → R1 инлайн (sonnet/high, без суб-агента). Synthesis/chairman → sonnet/high. Cost: +3 суб-агента на deep-отчёт (≈ дёшево относительно поиска).
+Phase 6 red-team суб-агенты: deep → opus/high (R1+R2+R3+R4); medium → sonnet/high (R1+R2+R4); shallow → R1 инлайн (sonnet/high, без суб-агента). Synthesis/chairman → sonnet/high. Cost: +4 суб-агента на deep-отчёт (≈ дёшево относительно поиска).
 
 ---
 

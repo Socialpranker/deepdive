@@ -1,4 +1,4 @@
-# Workflow — детали <!--gen:count:phases-->11<!--/gen--> фаз
+# Workflow — детали <!--gen:count:phases-->12<!--/gen--> фаз
 
 Дополнение к SKILL.md. Здесь — пошаговые инструкции и шаблоны. Читать в начале medium/deep ресёрча.
 
@@ -10,10 +10,10 @@
 
 **Шаги:**
 1. Перепиши вопрос своими словами: «Я понимаю задачу так: …». Это проверка совпадения картин.
-2. Зафиксируй решение, которое поддерживает ресёрч. Если ничего не меняется от ответа — это любопытство, не ресёрч. Спроси пользователя, нужен ли вообще.
+2. Собери **Decision Spec** (3 обязательных поля: решение глагол+объект+срок / потребитель→его следующий шаг / ≥1 if-then вилка «покажет X → делаю A»). Ни одной вилки ⇒ честный даунгрейд в shallow «любопытство». Проверь `~/.claude/research/applications_ledger.csv` на паттерн непримененных прогонов. Детали — `question_reframing.md` п.2.
 3. Сформулируй 2–4 опровергаемые гипотезы. Не «изучить тему» (это не гипотеза), а «X лучше Y по Z» (опровергаемо).
 4. Сформулируй критерии остановки. Без них ресёрч уходит в бесконечность.
-5. Если есть мутность — задай ≤3 уточняющих вопроса. Если пользователь отвечает «не знаю» — двигайся с явным допущением.
+5. Если есть мутность — задай ≤3 уточняющих вопроса (пятый критерий триажа — вопрос «что ты сделаешь иначе в зависимости от ответа?» — обязателен, если вилки не выводятся). Если пользователь отвечает «не знаю» — двигайся с явным допущением.
 
 См. `question_reframing.md` для шаблонов и push-back сценариев.
 
@@ -105,10 +105,11 @@ time_box_hard: <Y hours>
 ## 2. Главный вопрос
 <после reframing — переписано своими словами>
 
-## 3. Решение, которое поддерживает
-- **Что решаем:** <конкретное решение>
-- **Что меняется от ответа:** <какие варианты действий вытекают>
-- **Если ничего не меняется:** это не ресёрч, это любопытство — снизить до shallow или отказаться
+## 3. Решение, которое поддерживает (Decision Spec)
+- **Что решаем:** <глагол + объект + срок>
+- **Потребитель → следующий шаг:** <кто читает отчёт и что физически делает после>
+- **If-then вилки:** если <X> → <A>; если <Y> → <B>  (≥1, опровергаемая)
+- **Если ни одной вилки:** это не ресёрч, это любопытство — снизить до shallow с явной пометкой или отказаться
 
 ## 4. Acceptance criteria (что считается «готово»)
 
@@ -519,12 +520,45 @@ plan stays authoritative as the starting point; deviations are bounded and recor
      backed by a real source. A round seeded by an unsupported intermediate claim
      compounds hallucination downstream (trajectory error) — drop the trigger and flag
      the originating source instead of spawning a search on a phantom.
+   - **Query mutation (cheap tier):** aggregate the sub-agents' `query_performance`
+     rows (see `subagents_v2.md`). For subquestions whose queries came back
+     noise/empty, the next round's dispatch mutates the wording deliberately —
+     RU↔EN language switch (Russian-relevant topics are invisible to English-only
+     queries and vice versa), operators (`site:`, `filetype:pdf` for reports, quoted
+     exact phrases, date ranges), practitioner vs academic terminology — instead of
+     re-running the wording that already failed.
+   - **Novelty rate (saturation signal):** share of the round's take that is
+     genuinely new to the pool — new URL AND new `root:` AND new claim. Record the
+     number in `deviations.md`. Novelty below ~20% is saturation: prefer ending the
+     loop over spawning another round even if a justified trigger remains (record it
+     as `not_pursued: saturation`). This is the graded companion to the binary
+     no-progress circuit breaker below.
    - For each justified trigger, if budget for its class remains AND depth < limit:
      classify cheap/expensive, debit the counter, write a `deviations.md` record,
      and launch the next round. Otherwise write a `not_pursued` record.
 5. **The loop ends** when no justified trigger remains, OR both budgets are exhausted,
-   OR the depth limit is reached, OR the **no-progress circuit breaker** fires (see
-   below). Then proceed to Phase 5.
+   OR the depth limit is reached, OR the novelty rate signals saturation (step 4),
+   OR the **no-progress circuit breaker** fires (see below). Then proceed to Phase 5.
+
+### Snowball pass (medium/deep — после Round 1, до deviation-раундов)
+
+Keyword-поиск находит то, что хорошо индексируется, а не то, что канонично. Цепочки
+цитирований достают источники, которые не отдаст никакой запрос. После 4.3 Round 1:
+
+1. Возьми топ-K источников по `total` (K=2 medium, K=3 deep), приоритет типам
+   Academic/Primary.
+2. Один `haiku`/low суб-агент на источник (параллельно, в одном сообщении):
+   - **backward** — список литературы/ссылки источника → канонические primary,
+     которых ещё нет в пуле (то самое исследование, которое все пересказывают);
+   - **forward** — кто цитирует источник (OpenAlex `cited_by`, Semantic Scholar
+     citations — см. `api_sources/academic/`, free no-key) → более свежие
+     репликации, развития, опровержения.
+3. Кандидаты проходят обычные 4.2 dedup → 4.3 save. У backward-находок `root:` часто
+   `own` — они и есть корень, к которому сводятся пересказы из Round 1.
+
+Это **плановый шаг цикла, не deviation** — бюджет триггеров не дебетуется. Триггер
+`citation_lead` остаётся для цепочек, вскрывающихся позже: snowball систематизирует
+то, что citation_lead ловит от случая к случаю. Shallow — скип.
 
 ### Triggers (4) and their classes
 
@@ -605,22 +639,24 @@ shape adaptive to what the evidence actually is, not what we guessed at Phase 2.
 **Claims-ledger (`claims.csv`)** — новый артефакт-ledger рядом с `sources.csv`. Схема:
 
 ```
-claim_id, claim, hypothesis, sources, source_types, status, confidence, primary_source
+claim_id, claim, hypothesis, sources, source_types, status, confidence, primary_source, as_of
 ```
 
 - `claim` — тезис одной строкой.
 - `hypothesis` — H1-H4 или `-` если не привязан к гипотезе.
 - `sources` — список id (`s01;s07;s12`).
 - `source_types` — типы источников через `;` (`primary;academic;industry`).
-- `status` — `triangulated | weak | single-type | contradicted | data-insufficient`.
+- `status` — `triangulated | weak | single-type | single-root | contradicted | data-insufficient`.
 - `confidence` — `high | medium | low`.
 - `primary_source` — `Y | N`.
+- `as_of` — для волатильных чисел (цена, доля рынка, версия, курс): дата замера `YYYY-MM` из источника; для стабильных фактов `-`. Число без даты замера — не факт, а мина для будущего `update`.
 
 **Заполнение:** главный поток собирает `claims.csv` из `claim_candidates`, которые вернул каждый fetch sub-agent (см. `subagents_v2.md`), плюс из явного чтения claims в уже записанных `sources/NN.md`. Дублирующиеся claim'ы от разных агентов — смёржить в одну строку (объединить `sources`/`source_types`).
 
-**Triangulation rule (механическая):** строка получает `status: triangulated`, если ≥3 источника **И** ≥2 разных типа. Иначе:
+**Triangulation rule (механическая):** строка получает `status: triangulated`, если ≥3 источника **И** ≥2 разных типа **И** ≥2 различных корней (`root:` из frontmatter, см. `source_scoring.md` «Provenance»). Иначе:
 - < 3 источников → `status: weak`, confidence: low
 - ≥3 источника, но один тип → `status: single-type`, confidence: medium (max)
+- ≥3 источника и ≥2 типов, но все сводятся к одному `root:` → `status: single-root`, confidence: medium (max) — десять пересказов одного пресс-релиза это один голос; правило считает корни, не URL
 - Явное противоречие между источниками → `status: contradicted` — отдельный counter-argument (Z1)
 - После gap-волны (см. выше) всё ещё не закрыто → `status: data-insufficient` (честный результат, не скрывать)
 
@@ -668,10 +704,12 @@ CL2,"CDC adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,single-t
    - **Числа с якорем сравнения.** Ключевое число без базы сравнения запрещено: «Рынок $4.5B» — недостаточно. «Рынок $4.5B — втрое меньше соседнего сегмента X, растёт втрое быстрее среднего по индустрии» — годится. Якорь: vs база / vs сосед / vs динамика во времени.
    - **Условия применимости.** Каждый вывод — с явным «когда верен, когда нет», не голое утверждение.
    - **Confidence из claims.csv.** Каждый пункт TL;DR (F1) несёт свой `confidence` (high/medium/low), взятый из соответствующей строки `claims.csv` — не придуманный на глаз при синтезе.
-   - Блок Z12 `so-what-for-you` (см. `blocks/close.md`) собирается на этом же шаге из `plan.md` секции 0 (User context) + `claims.csv` — проекция выводов на кейс пользователя, до `actionable-next-steps`.
-6. **Multi-angle red team** (см. `adversarial_pass.md`) — draft → claim ledger (внутренний список falsifiable-тезисов для red team, не путать с файлом `claims.csv`) → N враждебных ролей (Skeptic/Contrarian/Gap-hunter) как `general-purpose` суб-агенты → триаж severity → ОДИН раунд ремедиации HIGH → финал. Гейт глубины: shallow=R1 инлайн, medium=R1+R2, deep=R1+R2+R3. Дефекты → counter-arguments (`Z1`) + Open Questions; лог в `findings/redteam_<date>.md`. Не маскируй несогласие. 5-й adversarial-вопрос (см. `adversarial_pass.md`): есть ли числа без якоря сравнения, выводы без Z12-проекции, рекомендации без trade-off/kill-criteria?
-7. Если в системе есть `anthropic-skills:humanizer-ru` — прогони финальный отчёт через него.
-8. Сохрани финальный отчёт.
+   - **Запрет финала «it depends».** Ресёрч, кончающийся «зависит от обстоятельств», бесполезен по определению. Если однозначная рекомендация невозможна — обязана быть условная, замапленная на вилки Decision Spec: «приоритет — стоимость → X; скорость → Y». «It depends» без разрешённых условий = незакрытый acceptance criterion, не финал.
+   - Блок Z12 `so-what-for-you` (см. `blocks/close.md`) собирается на этом же шаге из `plan.md` секции 0 (Decision Spec + User context) + `claims.csv` — ключевые claims мапятся на вилки решения, считается applicability ratio; проекция выводов на кейс пользователя, до `actionable-next-steps`.
+6. **Multi-angle red team** (см. `adversarial_pass.md`) — draft → claim ledger (внутренний список falsifiable-тезисов для red team, не путать с файлом `claims.csv`) → N враждебных ролей (Skeptic/Contrarian/Gap-hunter/Исполнитель) как `general-purpose` суб-агенты → триаж severity → ОДИН раунд ремедиации HIGH → финал. Гейт глубины: shallow=R1 инлайн, medium=R1+R2+R4, deep=R1+R2+R3+R4. Дефекты → counter-arguments (`Z1`) + Open Questions; лог в `findings/redteam_<date>.md`. Не маскируй несогласие. 5-й adversarial-вопрос (см. `adversarial_pass.md`): есть ли числа без якоря сравнения, выводы без Z12-проекции, рекомендации без trade-off/kill-criteria?
+7. **Собери `memo.md` — decision-меморандум на одну страницу.** В процесс потребителя входит не 40-страничный отчёт, а одна страница; отчёт — доказательная база под ней. Состав: рекомендация (однозначная или условная по вилкам), разрешение if-then вилок Decision Spec, 3 ключевых числа с [sNN] и `as_of`, главный риск, next actions. Пишется ПОСЛЕ red team (ремедиация HIGH уже учтена). Обязателен всегда; в shallow — крошечный (5–10 строк). Артефакт Фазы 6, проверяется phase-gate.
+8. Если в системе есть `anthropic-skills:humanizer-ru` — прогони финальный отчёт через него.
+9. Сохрани финальный отчёт.
 
 ## Фаза 7. Refresh targets generation (medium/deep — обязательно)
 
@@ -697,7 +735,22 @@ CL2,"CDC adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,single-t
 
 **Anti-patterns:** см. блок Z11 в `blocks/close.md`.
 
-## Чек-лист после Фазы 7
+## Фаза 8. Decision walkthrough (обязательна всегда, включая shallow)
+
+**Model:** главный поток, `opus` / `high` — качество вопросов критично, как в Фазе 1.
+
+Отчёт не «обсуждается», а исполняется: агент показывает `memo.md` и ведёт
+пользователя по if-then вилкам Decision Spec по одной — «ресёрч показал X [s03][s11]
+— вилка A срабатывает? твоё решение?». Исходы на вилку: **принято** (решение + next
+action с датой) / **заблокировано данными** (одна целевая gap-волна, max 1 круг →
+повторный заход, не закрылось — честно `blocked`) / **отложено** (`deferred`, без
+дожима). Полная механика, шаблон `application.md`, глобальный ledger и анти-паттерны
+— `references/decision_walkthrough.md`.
+
+**Output:** `<slug>/application.md` (любой status — gate требует файл, не принятое
+решение) + строка в `~/.claude/research/applications_ledger.csv`.
+
+## Чек-лист после Фазы 8
 
 - [ ] **Acceptance criteria из plan.md (секция 4) ВСЕ выполнены** — перепроверь каждый чек-бокс
 - [ ] Все `sources/NN.md` имеют корректный frontmatter (scoring, channel, access заполнены)
@@ -718,4 +771,7 @@ CL2,"CDC adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,single-t
 - [ ] Если update-режим: changelog (plan.md секция 16) финализирован
 - [ ] Если есть `memory/` — предложены memory candidates
 - [ ] **`refresh_targets.md` сгенерирован** (Phase 7, для medium/deep) — entities/numbers/hypotheses/topic markers заполнены по шаблону Z11
+- [ ] **`memo.md` собран** (Phase 6, всегда) — рекомендация без «it depends», вилки, 3 числа с [sNN]+as_of, риск, next actions
+- [ ] **Decision walkthrough проведён** (Phase 8, всегда) — вилки разрешены (принято/blocked/deferred), `application.md` записан со status и applicability_ratio
+- [ ] Строка добавлена в `~/.claude/research/applications_ledger.csv`
 - [ ] Файлы сохранены, путь показан пользователю markdown-ссылкой

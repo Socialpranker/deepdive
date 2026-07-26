@@ -21,9 +21,11 @@ sys.path.insert(0, str(REPO / "runner"))
 import phases_manifest  # noqa: E402
 from orchestrator import Orchestrator  # noqa: E402
 
-# Phases intentionally absent from the runner scaffold, as of 2026-07-16.
+# Phases intentionally absent from the runner scaffold, as of 2026-07-26.
 # Update this set when the intended gap changes (see DESIGN.md).
-KNOWN_MISSING = {"3.7", "5.5"}
+# "8" (decision walkthrough) is a live user dialogue — out of the runner's scope
+# by design, same reasoning as the plan-review gate "3.7".
+KNOWN_MISSING = {"3.7", "5.5", "8"}
 
 
 def test_runner_phase_sync():

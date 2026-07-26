@@ -35,10 +35,14 @@ def make_run(root: Path, *, mode: str, phases: set[str]) -> Path:
         (vd / "faithfulness.json").write_text("{}", encoding="utf-8")
     if "7" in phases:
         (d / "refresh_targets.md").write_text("targets\n", encoding="utf-8")
+    if "memo" in phases:
+        (d / "memo.md").write_text("# Memo\nрекомендация\n", encoding="utf-8")
+    if "8" in phases:
+        (d / "application.md").write_text("---\nstatus: deferred\n---\n", encoding="utf-8")
     return d
 
 
-SHALLOW_SET = {"3", "4", "5", "report"}
+SHALLOW_SET = {"3", "4", "5", "report", "memo", "8"}
 FULL_SET = SHALLOW_SET | {"5.5", "6.5", "7"}
 
 
@@ -113,6 +117,28 @@ def test_missing_report_fails(tmp_path):
     d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET - {"report"})
     r = run_validate(d, "shallow")
     assert any("phase 6" in e and "report" in e.lower() for e in r.errors)
+
+
+def test_missing_memo_fails_even_shallow(tmp_path):
+    # memo.md is the phase 6 companion artifact, mandatory at every depth.
+    d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET - {"memo"})
+    r = run_validate(d, "shallow")
+    assert any("phase 6" in e and "memo.md" in e for e in r.errors)
+
+
+def test_missing_application_fails_even_shallow(tmp_path):
+    # phase 8 (decision walkthrough) must leave application.md at every depth.
+    d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET - {"8"})
+    r = run_validate(d, "shallow")
+    assert any("phase 8" in e and "application.md" in e for e in r.errors)
+
+
+def test_report_present_but_memo_missing_reports_only_memo(tmp_path):
+    # the report check must not short-circuit the memo check (and vice versa).
+    d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET - {"memo"})
+    r = run_validate(d, "shallow")
+    phase6 = [e for e in r.errors if e.startswith("phase 6")]
+    assert phase6 and all("memo.md" in e for e in phase6)
 
 
 def test_detect_mode_from_report(tmp_path):
