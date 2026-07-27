@@ -22,14 +22,15 @@
 ```
 You: investigate the trade-offs between Postgres logical replication and CDC tooling
 
-Claude:  ✓ Reframed your question (3 hypotheses)
+Claude:  ✓ Reframed your question (3 hypotheses) + decision spec: what you'll do with the answer
          ✓ Picked genre: decision (comparison + validation)
          ✓ Wrote plan.md (17 sections)
          ✓ Checked your env: 4 APIs available, 2 fallback to HTML
          ✓ Launched 4 sub-agents across 12 channels
-         ✓ Saved 23 sources to sources/ with quotes
-         ✓ Ran adversarial pass (3 counter-arguments)
+         ✓ Saved 23 sources to sources/ with quotes, provenance-checked
+         ✓ Ran adversarial pass (3 counter-arguments + an "execute this" role)
          ✓ Report ready: research/postgres-replication-vs-cdc/2026-05-21_decision.md
+         ✓ Walked through your decision forks — you picked CDC tooling, logged to application.md
 ```
 
 </div>
@@ -168,6 +169,14 @@ For medium/deep depth, the pipeline runs two more machine-checked passes most on
 - **Faithfulness verification (6.5)** — beyond checking that a cited link is alive, the skill checks that the source *entails* the claim it's attached to (RAGAS/ALCE-style claim⊨quote), and writes `SUPPORTED` / `PARTIAL` / `UNSUPPORTED` verdicts to `.verify/faithfulness.json`. Citation fabrication is common enough industry-wide — the Tow Center found a >60% error rate in AI-generated citations — that checking for it, not just for dead links, is a real differentiator.
 
 None of this is enforced by discipline alone: `scripts/validate_phases.py` reads a finished run's `mode:` and checks that every phase mandatory for that mode actually left its file artifact (`plan.md`, `claims.csv`, `evidence/`, `.verify/*.json`, the dated report, ...). A skipped phase fails the check instead of silently passing — the model can't just claim "done." As of finish-up, this check is a **blocker, not a suggestion**: the skill won't report a research as done on a red gate, symmetrically to how a report isn't "done" without its verification header. `sources.csv` itself is now built the same deterministic way — `scripts/build_sources_csv.py` generates it from `sources/NN.md` frontmatter (with a `--check` mode for CI) instead of being assembled by hand each run.
+
+A well-cited report that changes nothing is still a failure — the skill's answer to that is a **decision spine** running through the whole pipeline, not a bolt-on question at the end:
+
+- **Reframing (1) captures a decision spec**, not just a topic: the action you'll take, who reads the report and what they do next, and at least one falsifiable if-then fork ("if the research shows X, I do A"). No fork means the research changes nothing — the skill downgrades to shallow "curiosity mode" with an explicit label instead of quietly running a full pipeline for a dead-end doc.
+- **Sourcing (4-5) tracks provenance, not just source count.** A `root:` field on every source flags what it's actually retelling — ten articles quoting one press release are one voice, not ten, so triangulation now requires ≥2 distinct roots in addition to ≥3 sources and ≥2 types. A **snowball pass** also chains citations backward (to the primary study everyone's retelling) and forward (who's citing it since), catching sources no keyword query would surface.
+- **Synthesis (6) produces `memo.md`** — a one-page decision memo (recommendation, resolved forks, 3 key numbers with sources, the main risk, next actions) designed to be the thing that actually enters your decision process, with the full report as its evidence base. A conditional recommendation mapped to your forks is required; an unconditional "it depends" is not an acceptable ending.
+- **Red team (6) gets a fourth role — the Executor** — who plays your own decision-spec consumer and tries to actually act on the report using only its content, flagging every place a hedge phrase or a missing number blocks a real decision.
+- **Decision walkthrough (8) is mandatory at every depth, including shallow.** The report isn't discussed, it's executed: the skill walks you through each fork one at a time ("research showed X [s03][s11] — does fork A fire? your call?") and logs the outcome — decided, blocked on missing data (one bounded gap-search, then honest `blocked`), or deferred — to `application.md`. A global ledger tracks whether past research actually led anywhere, and Phase 1 reads it back on your next research to flag a pattern of dead-end runs.
 
 Want to compare models head-to-head? The [eval harness](eval/README.md) scores any run on 6 axes.
 
@@ -334,6 +343,8 @@ research/<topic-slug>/
 ├── findings/
 │   ├── F1_<atomic-thesis>.md            # confidence: high
 │   └── F2_<atomic-thesis>.md            # confidence: medium
+├── memo.md                              # One-page decision memo (always)
+├── application.md                       # Decision walkthrough verdict (always)
 └── 2026-05-21_decision.md               # Final report
 ```
 
@@ -431,10 +442,22 @@ It's **structured methodology + curated catalog + reusable templates + automatio
 - <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources catalog is curated knowledge
 - <!--gen:count:blocks-->105<!--/gen--> reusable blocks compose any report shape
 - `scripts/validate_phases.py` machine-checks phase completeness, not just style
+- A decision spec + mandatory walkthrough (phase 8) ties every research to an actual action, not just a document
 - Weekly auto-validation keeps the catalog alive
 - 25+ upstream awesome-lists give infinite discovery layer
 
 Prompts are an implementation detail, not the value.
+
+</details>
+
+<details>
+<summary><b>What stops the report from being unactionable — "well-researched but useless"?</b></summary>
+
+The most common failure mode of open-ended research isn't bad sourcing, it's a report nobody knows what to do with. Three things guard against that specifically:
+
+1. **Reframing won't accept a topic without a decision spec** — an action, a consumer, and at least one falsifiable if-then fork. No fork, no medium/deep run; it downgrades to a labeled shallow "curiosity" pass instead.
+2. **Synthesis is banned from ending on "it depends"** without mapping the condition to one of your forks, and a fourth red-team role tries to actually *execute* the recommendation using only the report, flagging every hedge and missing number that blocks a real decision.
+3. **Phase 8 (Decision walkthrough) is mandatory at every depth** — the skill walks you through your forks one at a time and logs whether each was decided, blocked on data, or deferred to `application.md`. A global ledger tracks unapplied research across sessions so the pattern doesn't repeat silently.
 
 </details>
 
@@ -500,6 +523,11 @@ The methodology is portable. ~70% of content is LLM-agnostic markdown templates.
 - **Дешёвый goal-check** (фаза 4) — Haiku между раундами помечает каждый подвопрос met/partial/unmet, направляя следующий раунд и удешевляя дорогую Opus-оценку
 - **Least-to-most декомпозиция** (фаза 4) — многошаговые подвопросы («X учитывая Y») раскладываются по уровням L1→L2 с накоплением контекста между ними вместо плоского параллельного запуска
 - **Phase-gate валидатор** (`scripts/validate_phases.py`) — машинная проверка, что каждая обязательная для режима фаза оставила артефакт; пропущенная фаза не проходит проверку
+- **Decision Spec** (фаза 1) — решение+срок / потребитель→шаг / ≥1 опровергаемая if-then вилка; без вилки ресёрч ничего не меняет — честный даунгрейд в shallow вместо мёртвого deep-отчёта
+- **Provenance-триангуляция** (фазы 4-5) — поле `root:` у каждого источника + snowball-пасс по цепочкам цитирований; триангуляция требует ≥2 разных первоисточников, не только ≥3 источников разного типа (десять пересказов одного пресс-релиза — один голос)
+- **`memo.md`** (фаза 6, всегда) — одностраничный decision-меморандум: рекомендация без «it depends», разрешённые вилки, ключевые числа со ссылками, next actions — то, что реально входит в твой процесс принятия решений
+- **Роль «Исполнитель»** в red team (фаза 6, medium/deep) — симулирует потребителя из Decision Spec и пытается исполнить решение по одному отчёту, ловя обтекаемый язык и пропущенные числа
+- **Decision walkthrough** (фаза 8, обязательна всегда) — отчёт не обсуждается, а исполняется: скилл проводит по вилкам решения одну за одной и записывает вердикт (принято / заблокировано данными / отложено) в `application.md`; глобальный ledger отслеживает, приводят ли твои ресёрчи к решениям вообще
 - **Weekly auto-validation** через GitHub Actions
 
 ### Установка
