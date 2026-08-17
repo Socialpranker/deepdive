@@ -54,8 +54,10 @@ def check_proxy_in_sync(root: Path) -> str | None:
 
 
 # Budgets in tokens. Tune as the catalog evolves; these are the guard-rails CI enforces.
-BUDGET_SKILL_MD = 7500        # SKILL.md is read on EVERY invocation — keep it lean
-BUDGET_ALWAYS_FLOOR = 56000   # the "base refs" SKILL.md says to always load for medium/deep
+BUDGET_SKILL_MD = 7500  # SKILL.md is read on EVERY invocation — keep it lean
+BUDGET_ALWAYS_FLOOR = (
+    56000  # the "base refs" SKILL.md says to always load for medium/deep
+)
 # Raised from 55000 on 2026-07-07: claims.csv artifact + gap-wave loop (Phase 5) + 2
 # new report blocks (F9 background, Z12 so-what-for-you) added durable value at a
 # modest, deliberately-trimmed floor cost (~1200 tok). See docs/2026-07-07-v2-design.md.
@@ -89,28 +91,44 @@ ALWAYS_LOAD = [
 # A profile is ALWAYS_LOAD plus whatever a typical run of that depth additionally pulls.
 PROFILES = {
     "shallow": [
-        "SKILL.md", "references/genres.md", "references/blocks/INDEX.md",
-        "references/blocks/frame.md", "references/source_scoring.md",
+        "SKILL.md",
+        "references/genres.md",
+        "references/blocks/INDEX.md",
+        "references/blocks/frame.md",
+        "references/source_scoring.md",
     ],
-    "medium": ALWAYS_LOAD + [
-        "references/blocks/frame.md", "references/blocks/explain.md",
-        "references/blocks/compare.md", "references/blocks/close.md",
-        "references/subagents_v2.md", "references/adversarial_pass.md",
+    "medium": ALWAYS_LOAD
+    + [
+        "references/blocks/frame.md",
+        "references/blocks/explain.md",
+        "references/blocks/compare.md",
+        "references/blocks/close.md",
+        "references/subagents_v2.md",
+        "references/adversarial_pass.md",
         "references/source_scoring.md",
         # off the floor, but a typical medium question has numbers
-        "references/stat_sources/INDEX.md", "references/api_sources/INDEX.md",
+        "references/stat_sources/INDEX.md",
+        "references/api_sources/INDEX.md",
     ],
-    "deep": ALWAYS_LOAD + [
-        "references/subagents_v2.md", "references/adversarial_pass.md",
+    "deep": ALWAYS_LOAD
+    + [
+        "references/subagents_v2.md",
+        "references/adversarial_pass.md",
         "references/source_scoring.md",
         # off the floor, but Phase 3.5 is mandatory on deep and Phase 4 hits registries
-        "references/capability_discovery.md", "references/awesome_lists_registry.md",
-        "references/stat_sources/INDEX.md", "references/api_sources/INDEX.md",
+        "references/capability_discovery.md",
+        "references/awesome_lists_registry.md",
+        "references/stat_sources/INDEX.md",
+        "references/api_sources/INDEX.md",
         # deep pulls several block categories + a few stat/api leaf files
-        "references/blocks/frame.md", "references/blocks/explain.md",
-        "references/blocks/compare.md", "references/blocks/map.md",
-        "references/blocks/analyze.md", "references/blocks/numbers.md",
-        "references/blocks/validate.md", "references/blocks/close.md",
+        "references/blocks/frame.md",
+        "references/blocks/explain.md",
+        "references/blocks/compare.md",
+        "references/blocks/map.md",
+        "references/blocks/analyze.md",
+        "references/blocks/numbers.md",
+        "references/blocks/validate.md",
+        "references/blocks/close.md",
         "references/stat_sources/core/gov_macro.md",
         "references/stat_sources/core/companies_public.md",
     ],
@@ -127,7 +145,11 @@ def inventory(root: Path) -> dict[str, int]:
     for p in root.rglob("*.md"):
         rel = p.relative_to(root).as_posix()
         # skip top-level project docs that are not part of the skill payload
-        if rel in {"README.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md"} or rel.startswith(("docs/", "eval/")):
+        if rel in {
+            "README.md",
+            "CONTRIBUTING.md",
+            "CODE_OF_CONDUCT.md",
+        } or rel.startswith(("docs/", "eval/")):
             continue
         out[rel] = p.stat().st_size
     return out
@@ -162,16 +184,26 @@ def profile_tokens(inv: dict[str, int], files: list[str]) -> tuple[int, list[str
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--root", type=Path, default=Path("."), help="Skill repo root")
-    ap.add_argument("--window", type=int, default=200000, help="Context window for share math")
-    ap.add_argument("--ci", action="store_true", help="Enforce budgets, exit 1 on breach")
-    ap.add_argument("--json", type=Path, help="Write machine-readable report to this path")
+    ap.add_argument(
+        "--window", type=int, default=200000, help="Context window for share math"
+    )
+    ap.add_argument(
+        "--ci", action="store_true", help="Enforce budgets, exit 1 on breach"
+    )
+    ap.add_argument(
+        "--json", type=Path, help="Write machine-readable report to this path"
+    )
     args = ap.parse_args()
 
     inv = inventory(args.root)
     if "SKILL.md" not in inv:
-        print(f"ERROR: SKILL.md not found under {args.root.resolve()} — run from repo root or pass --root")
+        print(
+            f"ERROR: SKILL.md not found under {args.root.resolve()} — run from repo root or pass --root"
+        )
         return 2
 
     total = tok(sum(inv.values()))
@@ -179,17 +211,25 @@ def main() -> int:
     skill_tok = tok(inv["SKILL.md"])
     always_tok, always_missing = profile_tokens(inv, ALWAYS_LOAD)
 
-    print(f"Deep-research context budget  (proxy: {CHARS_PER_TOKEN} chars/token, window {args.window:,})")
+    print(
+        f"Deep-research context budget  (proxy: {CHARS_PER_TOKEN} chars/token, window {args.window:,})"
+    )
     print("=" * 64)
     print(f"Catalog files: {len(inv)}")
-    print(f"WHOLE catalog if fully loaded: ~{total:,} tok  ({total/args.window*100:.1f}% of window)")
+    print(
+        f"WHOLE catalog if fully loaded: ~{total:,} tok  ({total / args.window * 100:.1f}% of window)"
+    )
     print()
     print("By group:")
     for k, v in sorted(groups.items(), key=lambda kv: -kv[1]):
-        print(f"  {k:32} ~{v:>7,} tok  ({v/args.window*100:4.1f}%)")
+        print(f"  {k:32} ~{v:>7,} tok  ({v / args.window * 100:4.1f}%)")
     print()
-    print(f"SKILL.md (loaded every call): ~{skill_tok:,} tok   budget {BUDGET_SKILL_MD:,}")
-    print(f"ALWAYS floor (base refs):     ~{always_tok:,} tok   budget {BUDGET_ALWAYS_FLOOR:,}  ({always_tok/args.window*100:.1f}% of window)")
+    print(
+        f"SKILL.md (loaded every call): ~{skill_tok:,} tok   budget {BUDGET_SKILL_MD:,}"
+    )
+    print(
+        f"ALWAYS floor (base refs):     ~{always_tok:,} tok   budget {BUDGET_ALWAYS_FLOOR:,}  ({always_tok / args.window * 100:.1f}% of window)"
+    )
     if always_missing:
         print(f"  ! not found (rename?): {', '.join(always_missing)}")
     print()
@@ -199,14 +239,25 @@ def main() -> int:
         t, miss = profile_tokens(inv, files)
         profile_report[name] = t
         warn = f"  ! missing: {', '.join(miss)}" if miss else ""
-        print(f"  {name:8} ~{t:>7,} tok  ({t/args.window*100:4.1f}% of window){warn}")
+        print(
+            f"  {name:8} ~{t:>7,} tok  ({t / args.window * 100:4.1f}% of window){warn}"
+        )
 
     if args.json:
-        args.json.write_text(json.dumps({
-            "total_tokens": total, "skill_md_tokens": skill_tok,
-            "always_floor_tokens": always_tok, "groups": groups,
-            "profiles": profile_report, "window": args.window,
-        }, indent=2), encoding="utf-8")
+        args.json.write_text(
+            json.dumps(
+                {
+                    "total_tokens": total,
+                    "skill_md_tokens": skill_tok,
+                    "always_floor_tokens": always_tok,
+                    "groups": groups,
+                    "profiles": profile_report,
+                    "window": args.window,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
         print(f"\nJSON: {args.json}")
 
     if args.ci:
@@ -218,7 +269,9 @@ def main() -> int:
         # A renamed/missing base ref silently shrinks the measured floor — treat as a breach,
         # not a printed note, so the guard can't pass while measuring a smaller-than-real floor.
         if always_missing:
-            breaches.append(f"always-floor files missing (rename?): {', '.join(always_missing)}")
+            breaches.append(
+                f"always-floor files missing (rename?): {', '.join(always_missing)}"
+            )
         # The token proxy is hand-synced with score_run.py; fail if the two have drifted.
         drift = check_proxy_in_sync(args.root)
         if drift:
