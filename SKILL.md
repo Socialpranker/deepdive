@@ -127,7 +127,9 @@ description: Meta-research под вопрос или решение. Веб-п�
 
 Прогрессивная подгрузка: файл читается когда дошёл до фазы, не превентивно.
 
-**Базовые:** `workflow.md` (детали <!--gen:count:phases-->12<!--/gen--> фаз) · `question_reframing.md` (Фаза 1 + clarification-триаж) · `plan_gate.md` (Фаза 3.7 + скаут) · `genres.md` (<!--gen:count:genres-->6<!--/gen--> жанров) · `blocks/INDEX.md` (<!--gen:count:blocks-->105<!--/gen--> блоков) · `channels.md` (<!--gen:count:channels-->29<!--/gen--> каналов, query patterns, paywall fallbacks) · `stat_sources/INDEX.md` (33 категории) · `api_sources/INDEX.md` (<!--gen:count:api-->39<!--/gen-->+ endpoints) · `capability_discovery.md` · `awesome_lists_registry.md` · `source_dispatch.md` (обязательно перед launch суб-агентов) · `model_routing.md` · `refresh_protocol.md`.
+**Базовые (читает любой medium/deep прогон):** `workflow.md` (детали <!--gen:count:phases-->12<!--/gen--> фаз) · `question_reframing.md` (Фаза 1 + clarification-триаж) · `plan_gate.md` (Фаза 3.7 + скаут) · `genres.md` (<!--gen:count:genres-->6<!--/gen--> жанров) · `blocks/INDEX.md` (<!--gen:count:blocks-->105<!--/gen--> блоков) · `channels.md` (<!--gen:count:channels-->29<!--/gen--> каналов, query patterns, paywall fallbacks) · `source_dispatch.md` (обязательно перед launch суб-агентов) · `model_routing.md`.
+
+**Условные — грузить, когда прогон дошёл до условия, а не заранее:** `capability_discovery.md` и `awesome_lists_registry.md` — Фаза 3.5 (обязательна только на deep) · `stat_sources/INDEX.md` (33 категории) и `api_sources/INDEX.md` (<!--gen:count:api-->39<!--/gen-->+ endpoints) — Фаза 4, когда подвопрос количественный или Source Dispatch ведёт в registry/API · `refresh_protocol.md` — только режим `update`.
 
 **По фазам:** `source_scoring.md` (шкалы, provenance, claims-ledger, dissent — Фаза 5) · `evidence_filter.md` (relevance × authority — 5.5) · `subagents_v2.md` (промпты и периметр суб-агентов — 4) · `adversarial_pass.md` (роли R1–R5 — 6) · `runtime_verification.md` (три оси + F10 — 6.5) · `decision_walkthrough.md` (Фаза 8).
 

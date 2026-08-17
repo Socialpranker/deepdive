@@ -60,21 +60,29 @@ BUDGET_ALWAYS_FLOOR = 56000   # the "base refs" SKILL.md says to always load for
 # new report blocks (F9 background, Z12 so-what-for-you) added durable value at a
 # modest, deliberately-trimmed floor cost (~1200 tok). See docs/2026-07-07-v2-design.md.
 
-# Files SKILL.md marks as "Базовые (всегда)" — the unavoidable floor for a medium/deep run.
+# Files SKILL.md marks as "Базовые" — the unavoidable floor for a medium/deep run.
+#
+# Trimmed 2026-08-17. These refs left the floor because no medium/deep run reads them
+# unconditionally; they still load from their own phase, and the profiles below account
+# for that:
+#   refresh_protocol.md        — `update <slug>` mode only, never on a fresh run
+#   capability_discovery.md    — Phase 3.5, mandatory on deep only
+#   awesome_lists_registry.md  — fallback inside Phase 3.5
+#   stat_sources/INDEX.md      — Phase 4, only for quantitative subquestions
+#   api_sources/INDEX.md       — Phase 4, only when a registry/API channel is dispatched
+# plan_gate.md joined the floor in the same pass: Phase 3.7 is skipped on shallow only,
+# so every medium/deep run reads it. SKILL.md already listed it as base while this list
+# did not — the floor was understated by ~3.3k tok.
 ALWAYS_LOAD = [
     "SKILL.md",
     "references/workflow.md",
     "references/question_reframing.md",
+    "references/plan_gate.md",
     "references/genres.md",
     "references/blocks/INDEX.md",
     "references/channels.md",
-    "references/stat_sources/INDEX.md",
-    "references/api_sources/INDEX.md",
-    "references/capability_discovery.md",
-    "references/awesome_lists_registry.md",
     "references/source_dispatch.md",
     "references/model_routing.md",
-    "references/refresh_protocol.md",
 ]
 
 # Named load-profiles: realistic context cost of a run at a given depth.
@@ -89,10 +97,15 @@ PROFILES = {
         "references/blocks/compare.md", "references/blocks/close.md",
         "references/subagents_v2.md", "references/adversarial_pass.md",
         "references/source_scoring.md",
+        # off the floor, but a typical medium question has numbers
+        "references/stat_sources/INDEX.md", "references/api_sources/INDEX.md",
     ],
     "deep": ALWAYS_LOAD + [
         "references/subagents_v2.md", "references/adversarial_pass.md",
         "references/source_scoring.md",
+        # off the floor, but Phase 3.5 is mandatory on deep and Phase 4 hits registries
+        "references/capability_discovery.md", "references/awesome_lists_registry.md",
+        "references/stat_sources/INDEX.md", "references/api_sources/INDEX.md",
         # deep pulls several block categories + a few stat/api leaf files
         "references/blocks/frame.md", "references/blocks/explain.md",
         "references/blocks/compare.md", "references/blocks/map.md",
