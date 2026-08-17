@@ -9,6 +9,8 @@
 3. В промпт суб-агента передаётся `channels: [список]` — агент знает где искать.
 4. В `sources/NN.md` фиксируется `channel:` поле — какой канал дал источник.
 
+Канал говорит, ГДЕ искать; конкретные проверенные адреса под сигнал лежат в `references/registry/` (см. `source_dispatch.md`, раздел «Registry»). Каналы `news-current`, `industry-specific`, `preprint-servers`, `forum-discussion`, `api-direct`, `regulatory-legal` там покрыты плотнее всего.
+
 ## Каталог <!--gen:count:channels-->29<!--/gen--> каналов
 
 ### Часть A — Web и discovery

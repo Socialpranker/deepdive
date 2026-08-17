@@ -85,9 +85,13 @@ fail-closed правило не пустит такое число в `memo.md`.
 
 ---
 
+## Registry — проверенные адреса под сигнал
+
+`references/registry/` — 1072 адреса с пометкой доступа (free / ключ / User-Agent) по типу сигнала: science, regulatory (парламентские API), markets, technology, security, climate_health, society, registries, open_source_releases. Нужен свежий поток или прямой эндпоинт, которого нет в `api_sources/` — открой ОДИН файл по теме, не INDEX. Достоверность в таблице — метка разведки, не результат Фазы 5.5; срок годности списка — месяцы, мёртвый адрес лечится обычным fallback.
+
 ## Discovery patterns — когда каталога не хватает
 
-Каталог `stat_sources/` + `api_sources/` покрывает базовые domains, но **редкие темы** (niche industries, esoteric academic fields, region-specific topics) требуют поиска *новых источников* в runtime. Алгоритм:
+Каталог `stat_sources/` + `api_sources/` + `registry/` покрывает базовые domains, но **редкие темы** (niche industries, esoteric academic fields, region-specific topics) требуют поиска *новых источников* в runtime. Алгоритм:
 
 ### 1. GitHub topic search
 ```
