@@ -3,11 +3,12 @@
 ## Overview
 
 - **Endpoint base:** `https://api.opencorporates.com/v0.4/`
-- **Auth:** None для basic (premium token для бóльшего)
-- **Free tier:** 500 req/day анонимно, 50/мин
-- **Paid:** Free для journalists/researchers, paid для commercial
+- **Auth:** ⚠️ Токен обязателен — анонимного доступа больше нет. Live-проверено 2026-08-17: `GET /companies/search?...` и `GET /companies/{jurisdiction}/{number}` без токена → HTTP 401, тело `{"error":{"message":"Invalid Api Token. Please check your OpenCorporates account"}}`
+- **Free tier:** Self-serve бесплатного тарифа нет. Официальная pricing-страница (opencorporates.com/pricing/, проверена 2026-08-17) начинается с платного плана. Отдельно есть безвозмездная программа для investigative journalists, NGO, университетов и anti-corruption research groups — но по заявке вручную, не self-serve и не автоматическая
+- **Paid:** Essentials £2 250/год (£225/мес, до 500 вызовов/мес, 200/день), Starter £6 600/год (2 500/мес, 500/день), Basic £12 000/год (5 000/мес, 1 000/день), Enterprise — custom price
 - **Docs:** https://api.opencorporates.com
 - **Coverage:** 200M+ companies из company registries 130+ countries
+- **Verified:** 2026-08-17
 
 ## What it returns
 
@@ -27,6 +28,12 @@ JSON с данные из официальных company registries — incorpor
   }
 }
 ```
+
+## Auth setup
+
+1. https://opencorporates.com/pricing/ → платный план (Essentials — от £2250/год) ИЛИ заявка на бесплатный доступ для journalists/NGO/researchers/anti-corruption groups через контакты OpenCorporates (рассматривается вручную, не мгновенно)
+2. `export OPENCORPORATES_API_KEY="..."`
+3. Передавать как `api_token={key}` query-параметр (актуальный формат не перепроверялся live — тестового токена нет; сверяться с текущей докой на api.opencorporates.com)
 
 ## Query patterns
 
@@ -58,6 +65,7 @@ GET /officers/search?q={name}&per_page=20
 
 ## Limitations
 
+- ⚠️ Больше не бесплатный API (live-подтверждено 2026-08-17) — платный тариф от £2250/год, либо заявка на грант для journalists/NGO/anti-corruption groups. Не использовать как "бесплатный fallback" по умолчанию
 - Не финансовые данные — только registry facts
 - Coverage uneven — UK/EU strong, US weaker (state-level)
 - Some jurisdictions lag

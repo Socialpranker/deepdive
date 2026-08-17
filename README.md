@@ -218,6 +218,10 @@ Categories: `gov_macro` · `companies_public` · `crypto` · `health` · `educat
 
 [Sources catalog →](references/stat_sources/INDEX.md)
 
+**Plus a signal registry:** 1072 endpoints verified live and filed by what question they answer — parliamentary APIs, advisory feeds, climate and macro endpoints. Loaded one file at a time, outside the base context budget.
+
+[Registry →](references/registry/INDEX.md)
+
 </td>
 </tr>
 <tr>
@@ -243,7 +247,9 @@ Categories: `gov_macro` · `companies_public` · `crypto` · `health` · `educat
 
 Free no-auth APIs prioritized:
 
-`Semantic Scholar` · `OpenAlex` · `CrossRef` · `arXiv` · `DefiLlama` · `CoinGecko` · `Reddit JSON` · `HN Algolia` · `World Bank` · `SEC EDGAR` · `ClinicalTrials.gov` · `PubMed` · `GDELT`
+`Semantic Scholar` · `OpenAlex` · `CrossRef` · `arXiv` · `DefiLlama` · `CoinGecko` · `HN Algolia` · `World Bank` · `SEC EDGAR` · `ClinicalTrials.gov` · `PubMed` · `GDELT` · `NSF Awards` · `NIH RePORTER` · `Grants.gov` · `EPO Linked Open Data`
+
+Patents and grants are first-class categories: `patents/` (USPTO ODP, EPO OPS, EPO LOD, WIPO) and `grants/` (NSF, NIH RePORTER, CORDIS, Grants.gov). Every entry carries a `Verified:` date — access terms rot, and a stale "free, no key" sends a run into a paywall.
 
 Auth via env vars only — skill never asks for keys inline.
 

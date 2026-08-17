@@ -62,6 +62,6 @@ GET /company/{company_number}/persons-with-significant-control
 
 ## Combine with
 
-- **OpenCorporates** — для cross-jurisdiction
+- **OpenCorporates** — для cross-jurisdiction (⚠️ платный с 2026, от £2250/год — не free fallback; см. `opencorporates.md`)
 - **Crunchbase** — для funding history
 - **HMRC** — для tax-related (separate API)

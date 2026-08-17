@@ -56,7 +56,7 @@
 
 **URL:** https://wellfound.com/ (formerly AngelList)
 **Type:** Vendor
-**Access:** OPEN (basic)
+**Access:** PARTIAL — homepage и `/jobs` листинг отдают HTTP 200 (маркетинговый шелл), но `/company/<slug>` возвращает HTTP 403 "Security Check" (Cloudflare bot-challenge, заголовок `cf-mitigated: challenge`). На `/jobs` реальные вакансии подгружаются клиентским GraphQL-запросом за тем же Cloudflare Turnstile — в исходном HTML `apolloState` пуст, без прохождения JS-челленджа данных нет.
 
 **What's inside:**
 - Startup company pages (mostly tech)
@@ -78,9 +78,20 @@
 - Credibility: B
 - Tech-startup focus
 
+**Limitations:**
+- Основные данные (company pages, реальный список вакансий) закрыты Cloudflare bot-challenge — программный доступ без прохождения JS-челленджа получает только маркетинговый шелл или 403
+- Официального публичного API нет; в вебе есть только неофициальные scraper-сервисы (Apify и т.п.), их ToS-статус и надёжность не проверялись
+- Даже при ручном браузерном доступе покрытие смещено в tech-стартапы
+
 **Combine with:**
 - LinkedIn для broader hiring
 - Crunchbase для funding
+
+**Fallback if blocked:**
+- Y Combinator's own job board `workatastartup.com/jobs` — проверено живым запросом 2026-08-17, HTTP 200, реальные листинги вакансий (без челленджа). Покрывает только YC-портфель (уже, чем весь Wellfound), но closes тот же use case — hiring signal для early-stage стартапов
+- Для funding/company basics — Crunchbase (см. выше) или SEC EDGAR при pre-IPO
+
+**Verified:** 2026-08-17
 
 ---
 

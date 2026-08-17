@@ -67,10 +67,13 @@
 
 ### Levels.fyi
 **URL:** levels.fyi
-**Access:** OPEN
+**Access:** PARTIAL — главная (`www.levels.fyi`) отдаёт HTTP 200 (маркетинговый контент, без конкретных цифр), но company/salary-страницы (`/companies/<company>/salaries/<role>`, включая `.md`-вариант) возвращают HTTP 202 с пустым телом и заголовком `x-amzn-waf-action: challenge` — это AWS WAF JS-челлендж на CloudFront, не тот 403, что называла разведка от 05.08, но по факту тот же результат: без прохождения челленджа данных нет
 **What:** Tech compensation data (self-reported)
 **When:** tech total compensation analysis
 **Quality:** B-C (self-reported but extensive coverage of tech roles)
+**Limitations:** Основной promise записи — детальные salary-таблицы по компании/роли — закрыт AWS WAF challenge на уровне запроса, программный доступ невозможен. Официального публичного API нет (подтверждено фаундером в community-треде Levels.fyi: "No API, but we have some embeds"). Платный enterprise data offering существует (`levels.fyi/offerings/data/`, проверено — HTTP 200), но это не live-доступ, а отдельный коммерческий продукт.
+**Fallback if blocked:** H1B Salary Database (h1bdata.info, см. ниже в этом файле) — проверено живым запросом 2026-08-17, HTTP 200, реальные цифры базовых зарплат по H1B-заявкам. Payscale (payscale.com/research) — тоже проверен живым запросом 2026-08-17, HTTP 200, реальный контент с медианами/средними. При этой же проверке Glassdoor и Salary.com оказались за Cloudflare-челленджем (403) — не использовать как fallback без отдельной верификации.
+**Verified:** 2026-08-17
 
 ### H1B Salary Database
 **URL:** h1bdata.info

@@ -3,11 +3,12 @@
 ## Overview
 
 - **Endpoint base:** `https://api.openalex.org`
-- **Auth:** None required (politeness pool — добавь email параметр)
-- **Free tier:** Unlimited
-- **Rate limit:** 10 req/sec, 100k/day
-- **Docs:** https://docs.openalex.org
-- **Coverage:** 250M+ scholarly works (replaced Microsoft Academic)
+- **Auth:** Ключ не обязателен для базовых запросов — live-проверено 2026-08-17: `GET /works?per-page=1` без ключа → HTTP 200. С начала 2026 официально появился опциональный бесплатный API-ключ (даёт 10× бюджет + приоритет), без ключа — более узкий "keyless"-бюджет
+- **Free tier:** НЕ unlimited — с 2026 введена credit-based система. Без ключа: live-заголовки 2026-08-17 показали `x-ratelimit-limit: 1000` кредитов с суточным сбросом (~полночь UTC), список-запрос стоит 1 кредит по наблюдению (точная цифра нигде официально не задокументирована — это прямое наблюдение, не заявленный лимит). С бесплатным ключом: официально "$1 API-бюджета в день" на аккаунт, карта не нужна (help.openalex.org/hc/en-us/articles/24397762024087-Pricing, страница обновлена 2026-08-11)
+- **Rate limit:** 100 req/sec — жёсткий потолок для всех тарифов, задокументировано официально (help.openalex.org/api/authentication). Старая цифра "10 req/sec, 100k/day" не подтвердилась ни в доке, ни в live-заголовках
+- **Docs:** https://docs.openalex.org (редиректит на https://help.openalex.org)
+- **Coverage:** 250M+ scholarly works (replaced Microsoft Academic) — live-запрос 2026-08-17 вернул `"count": 324389590` в `meta`
+- **Verified:** 2026-08-17
 
 ## What it returns
 
@@ -41,13 +42,19 @@ JSON с metadata + citations graph + author networks + institutional affiliation
 
 ## Auth setup
 
-Не нужен. Politeness:
+Ключ не обязателен для базовых/некоммерческих запросов (live-подтверждено 2026-08-17), но с 2026 официально рекомендован — 10× дневной бюджет вместо узкого keyless-лимита:
+
+1. https://openalex.org/settings/api → создать аккаунт (~30 сек), скопировать ключ
+2. `export OPENALEX_API_KEY="..."`
+3. Точный формат передачи ключа (query-параметр vs заголовок) в этой сессии live не перепроверялся — тестового ключа нет, см. текущую доку на help.openalex.org
+
+Без ключа работает politeness pool:
 
 ```
 GET /works?search={query}&mailto=your@email.com
 ```
 
-Это даёт priority access.
+Это по-прежнему даёт priority доступ внутри keyless-бюджета, но не заменяет ключ по объёму.
 
 ## Query patterns
 
@@ -141,6 +148,7 @@ abstract = " ".join(abstract_words[i] for i in sorted(abstract_words))
 - Abstract inverted_index format awkward для агента
 - ML-derived concepts иногда noisy
 - Smaller community than Semantic Scholar (меньше maintenance attention)
+- Free tier больше не unlimited (с 2026) — при интенсивном использовании без ключа можно упереться в суточный keyless-лимит (точная цифра не задокументирована официально, live-наблюдение 2026-08-17 — см. Overview); для серьёзного объёма нужен бесплатный ключ
 
 ## Combine with
 
@@ -158,5 +166,5 @@ abstract = " ".join(abstract_words[i] for i in sorted(abstract_words))
 
 - OpenAlex — самый полный citation graph в open data
 - Великолепно для research network analysis
-- API очень performant — можно делать 100k запросов в день без оплаты
+- Без ключа доступен базовый объём (live-наблюдение 2026-08-17: порядка 1000 кредитов/сутки); для существенного объёма — бесплатный ключ с $1/день бюджета, карта не нужна
 - Уникален возможностью filter по institutions / countries / concepts на массовом scale

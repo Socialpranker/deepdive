@@ -43,8 +43,8 @@ api_sources/
 │   ├── oecd.md                 OECD SDMX
 │   └── alpha_vantage.md        Stocks/forex/crypto prices
 ├── companies/                  ← company data
-│   ├── crunchbase.md           Crunchbase Basic API
-│   ├── opencorporates.md       OpenCorporates registry
+│   ├── crunchbase.md           Crunchbase Data API (⚠️ платный, цена не публикуется)
+│   ├── opencorporates.md       OpenCorporates (⚠️ платный от £2250/год)
 │   └── companies_house.md      UK Companies House
 ├── crypto/                     ← on-chain & markets
 │   ├── coingecko.md            CoinGecko Public API
@@ -57,7 +57,7 @@ api_sources/
 │   ├── pypi.md                 PyPI JSON API
 │   └── npm.md                  npm Registry API
 ├── social/                     ← community signals
-│   ├── reddit.md               Reddit JSON (no auth)
+│   ├── reddit.md               Reddit JSON (⚠️ OAuth обязателен с 2026, не free — см. файл)
 │   ├── hn_algolia.md           HN Algolia (no auth)
 │   └── lemmy.md                Lemmy ActivityPub
 ├── news/                       ← current events
@@ -95,19 +95,17 @@ api_sources/
 | API | What | When |
 |---|---|---|
 | **Semantic Scholar** | 200M papers, citations | academic search |
-| **OpenAlex** | 250M scholarly works | citation graph |
+| **OpenAlex** | 250M scholarly works (ключ опционален, но рекомендован — 10× бюджет; см. `academic/openalex.md`) | citation graph |
 | **CrossRef** | 130M DOIs | DOI metadata |
 | **arXiv** | preprints | physics/CS/math papers |
 | **DefiLlama** | DeFi TVL/protocols | crypto research |
 | **CoinGecko** | crypto prices/markets | crypto data (rate-limited) |
-| **Reddit JSON** | Reddit posts | community signals |
 | **HN Algolia** | Hacker News search | tech discussions |
 | **World Bank** | global development | macro stats |
 | **SEC EDGAR** | US public filings | company financials |
 | **ClinicalTrials.gov** | trial registry | medical research |
 | **PubMed E-utilities** | biomedical literature | medical search |
 | **GDELT** | global events | news/sentiment |
-| **OpenAlex** | scholarly graph | research network analysis |
 | **PyPI / npm** | package metadata | tech stack research |
 | **NSF Awards** | US research grants с 1969 | кто финансирует тему, суммы |
 | **NIH RePORTER** | биомед-гранты NIH с FY1985 | финансирование медицинских тем |
@@ -126,6 +124,7 @@ api_sources/
 | **NewsAPI** | 100 req/day | https://newsapi.org/register |
 | **Alpha Vantage** | 25 req/day | https://www.alphavantage.co/support/#api-key |
 | **Etherscan** | 5 req/sec | https://etherscan.io/myapikey |
+| **Reddit JSON (OAuth)** | не подтверждено на 2026-08-17 — анонимный `.json` закрыт (403, live-проверено ~05.2026); выдача новых OAuth script-приложений сузилась, реальный лимит для personal use не подтверждён | https://www.reddit.com/prefs/apps → `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET`, см. `social/reddit.md` |
 
 ### Paid (powerful but cost money)
 
@@ -135,7 +134,8 @@ api_sources/
 | **Tavily** | $0/1k free, then paid | Built for AI agents, returns answers |
 | **Exa.ai** | $5/1k searches | Semantic search, neural |
 | **SerpAPI** | $50/mo | Google/Bing/DuckDuckGo unified |
-| **Crunchbase Basic** | $99/mo | Company data, funding rounds |
+| **Crunchbase** | цена не публикуется, custom/contact-sales (старая цифра "$99/mo" не подтвердилась на 2026-08-17, см. `companies/crunchbase.md`) | Company data, funding rounds |
+| **OpenCorporates** | от £2250/год (Essentials); free-доступ по заявке для journalists/NGO/anti-corruption groups | Company registry data, 130+ countries |
 | **WIPO** | 600–2000 CHF/год SOAP, 400–19500 CHF/год bulk | программного бесплатного доступа нет вообще; веб-UI отдаёт CAPTCHA |
 
 **Мёртвое, не тратить время:** `search.patentsview.org` — сервис закрылся 20.03.2026, домен не резолвится; данные ушли в USPTO ODP bulk. Подробности — `patents/uspto_odp.md`, раздел Fallback.
