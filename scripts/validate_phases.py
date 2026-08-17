@@ -30,6 +30,7 @@ Usage:
     python scripts/validate_phases.py --research-dir research/<slug> --strict   # exit 1 on errors
     python scripts/validate_phases.py --research-dir research/<slug> --json
 """
+
 from __future__ import annotations
 
 import argparse
@@ -56,11 +57,23 @@ PHASE_ARTIFACTS: dict[str, dict[str, list[str]]] = {
     "3": {"all_of": ["plan.md"]},
     "4": {"any_of": ["sources", "sources.csv"]},
     "5": {"all_of": ["claims.csv"]},
-    "5.5": {"all_of": ["evidence"]},
+    # 5.5 filters the INPUT to synthesis on two axes: relevance (evidence/) and
+    # authority (.verify/authority.json). The authority verdicts are fail-closed —
+    # an absent file means the axis never ran, not that everything qualified.
+    "5.5": {"all_of": ["evidence", ".verify/authority.json"]},
     # Phase 6 emits the dated <YYYY-MM-DD>_<genre>.md report (matched by pattern)
     # AND the one-page decision memo the consumer's process actually ingests.
     "6": {"report": [], "all_of": ["memo.md"]},
-    "6.5": {"all_of": [".verify/citations.json", ".verify/faithfulness.json"]},
+    # Layer 1 (liveness) / Layer 2 (faithfulness) / Layer 3 (qualifier preservation).
+    # All three are required from medium up — 6.5's own depth_gate is medium, so a
+    # shallow run never reaches this entry at all.
+    "6.5": {
+        "all_of": [
+            ".verify/citations.json",
+            ".verify/faithfulness.json",
+            ".verify/qualifiers.json",
+        ]
+    },
     "7": {"all_of": ["refresh_targets.md"]},
     # Phase 8 (decision walkthrough) must leave application.md with ANY status —
     # incl. `deferred`. The gate requires the file, not a made decision, so
@@ -81,8 +94,11 @@ class Report:
         self.errors: list[str] = []
         self.warnings: list[str] = []
 
-    def err(self, m: str) -> None: self.errors.append(m)
-    def warn(self, m: str) -> None: self.warnings.append(m)
+    def err(self, m: str) -> None:
+        self.errors.append(m)
+
+    def warn(self, m: str) -> None:
+        self.warnings.append(m)
 
 
 def detect_mode(d: Path) -> str | None:
@@ -122,6 +138,56 @@ def check_phase(d: Path, phase_id: str, spec: dict[str, list[str]], r: Report) -
             r.err(f"phase {phase_id}: missing artifact (need '{joined}')")
 
 
+SOURCE_FILE_RE = re.compile(r"^(\d+)_.+\.md$")
+# Columns the triangulation / dissent / provenance rules read. Warn (not error) so
+# runs made before those rules existed stay validatable.
+LEDGER_COLUMNS = ("roots", "paths", "dissent", "as_of")
+
+
+def check_source_perimeter(d: Path, r: Report) -> None:
+    """Each fetch sub-agent owns a disjoint id range, enforced only by prompt text.
+    One number claimed by two files means an agent wrote outside its range (or two
+    collided): a source file was silently overwritten, so sources.csv no longer
+    describes what is on disk."""
+    src = d / "sources"
+    if not src.is_dir():
+        return
+    by_id: dict[str, list[str]] = {}
+    for p in sorted(src.glob("*.md")):
+        m = SOURCE_FILE_RE.match(p.name)
+        if not m:
+            r.warn(f"sources/{p.name}: name is not NN_slug.md — not indexable by id")
+            continue
+        by_id.setdefault(m.group(1).lstrip("0") or "0", []).append(p.name)
+    for num, names in sorted(by_id.items()):
+        if len(names) > 1:
+            r.err(
+                f"source id {num} claimed by {len(names)} files ({', '.join(names)}) — "
+                f"a sub-agent wrote outside its assigned range; that agent's results "
+                f"are not trustworthy, re-run it with a narrowed task"
+            )
+
+
+def check_ledger_columns(d: Path, r: Report) -> None:
+    """A missing ledger column is not a formatting nit: the rule that reads it
+    silently never fires — the 'green check, no behavior' failure mode."""
+    ledger = d / "claims.csv"
+    if not ledger.is_file():
+        return
+    lines = ledger.read_text(encoding="utf-8").splitlines()
+    if not lines:
+        r.err("claims.csv is empty")
+        return
+    cols = {c.strip() for c in lines[0].split(",")}
+    missing = [c for c in LEDGER_COLUMNS if c not in cols]
+    if missing:
+        r.warn(
+            f"claims.csv is missing column(s) {', '.join(missing)} — the rules reading "
+            f"them (triangulation by root/path, dissent protection, number provenance) "
+            f"cannot fire; see references/source_scoring.md"
+        )
+
+
 def self_check(phases: list[dict], r: Report) -> None:
     """Warn if phases.yaml gained a file-emitting phase this table does not cover."""
     known = set(PHASE_ARTIFACTS) | NO_FILE_PHASES
@@ -135,6 +201,8 @@ def self_check(phases: list[dict], r: Report) -> None:
 
 def validate(d: Path, mode: str, phases: list[dict], r: Report) -> None:
     self_check(phases, r)
+    check_source_perimeter(d, r)
+    check_ledger_columns(d, r)
     gate_of = {p["id"]: p["depth_gate"] for p in phases}
     run_rank = GATE_RANK[mode]
     for phase_id, spec in PHASE_ARTIFACTS.items():
@@ -147,9 +215,15 @@ def validate(d: Path, mode: str, phases: list[dict], r: Report) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--research-dir", required=True, type=Path)
-    ap.add_argument("--mode", choices=MODES, help="run depth; auto-detected from frontmatter if omitted")
+    ap.add_argument(
+        "--mode",
+        choices=MODES,
+        help="run depth; auto-detected from frontmatter if omitted",
+    )
     ap.add_argument("--strict", action="store_true", help="Exit 1 if any error")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
@@ -161,17 +235,30 @@ def main() -> int:
 
     mode = args.mode or detect_mode(d)
     if mode is None:
-        print("ERROR: could not determine run mode — pass --mode {shallow,medium,deep} "
-              "(no 'mode:' frontmatter found in report or plan.md)")
+        print(
+            "ERROR: could not determine run mode — pass --mode {shallow,medium,deep} "
+            "(no 'mode:' frontmatter found in report or plan.md)"
+        )
         return 2
 
-    phases = phases_manifest.load_phases(Path(__file__).resolve().parents[1] / "phases.yaml")
+    phases = phases_manifest.load_phases(
+        Path(__file__).resolve().parents[1] / "phases.yaml"
+    )
     r = Report()
     validate(d, mode, phases, r)
 
     if args.json:
-        print(json.dumps({"research_dir": str(d), "mode": mode,
-                          "errors": r.errors, "warnings": r.warnings}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "research_dir": str(d),
+                    "mode": mode,
+                    "errors": r.errors,
+                    "warnings": r.warnings,
+                },
+                indent=2,
+            )
+        )
     else:
         print(f"Validating phases: {d}   (mode: {mode})")
         for m in r.errors:

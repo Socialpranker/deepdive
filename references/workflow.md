@@ -639,25 +639,31 @@ shape adaptive to what the evidence actually is, not what we guessed at Phase 2.
 **Claims-ledger (`claims.csv`)** — новый артефакт-ledger рядом с `sources.csv`. Схема:
 
 ```
-claim_id, claim, hypothesis, sources, source_types, status, confidence, primary_source, as_of
+claim_id, claim, hypothesis, sources, source_types, roots, paths, status, confidence, primary_source, source_caveat, dissent, as_of
 ```
 
 - `claim` — тезис одной строкой.
 - `hypothesis` — H1-H4 или `-` если не привязан к гипотезе.
 - `sources` — список id (`s01;s07;s12`).
 - `source_types` — типы источников через `;` (`primary;academic;industry`).
-- `status` — `triangulated | weak | single-type | single-root | contradicted | data-insufficient`.
+- `roots` — корни через `;`, тот же порядок что `sources` (`own;study-smith-2024;own`); из `root:` во frontmatter каждого источника. Без этой колонки третье условие триангуляции нечем проверить.
+- `paths` — пути обнаружения через `;`, тот же порядок; из `discovery_path:`. Без неё нечем проверить четвёртое условие (независимость поиска, а не только источников).
+- `status` — `triangulated | contested | weak | single-type | single-root | single-path | contradicted | data-insufficient`.
 - `confidence` — `high | medium | low`.
 - `primary_source` — `Y | N`.
-- `as_of` — для волатильных чисел (цена, доля рынка, версия, курс): дата замера `YYYY-MM` из источника; для стабильных фактов `-`. Число без даты замера — не факт, а мина для будущего `update`.
+- `source_caveat` — `- | vendor | self-reported | disputed:sNN`.
+- `dissent` — id источников, ПРОТИВОРЕЧАЩИХ тезису (`s12;s19`), или `-`. Берётся из полей `dissent`/`contradictions` в JSON суб-агентов. Пустое поле в спорной теме — сигнал, что оппозицию не искали, а не что её нет.
+- `as_of` — для волатильных чисел (цена, доля рынка, версия, курс): дата ЗАМЕРА `YYYY-MM`/`YYYY-QN` из поля `data_as_of` источника; `unknown` — число есть, даты нет; `-` для нечисловых. **Источник значения — `data_as_of` во frontmatter, а не дата публикации статьи и не догадка главного потока** (он источников не читал). Число без даты замера — не факт, а мина для будущего `update`, и по fail-closed правилу оно не попадает в `memo.md`.
 
 **Заполнение:** главный поток собирает `claims.csv` из `claim_candidates`, которые вернул каждый fetch sub-agent (см. `subagents_v2.md`), плюс из явного чтения claims в уже записанных `sources/NN.md`. Дублирующиеся claim'ы от разных агентов — смёржить в одну строку (объединить `sources`/`source_types`).
 
-**Triangulation rule (механическая):** строка получает `status: triangulated`, если ≥3 источника **И** ≥2 разных типа **И** ≥2 различных корней (`root:` из frontmatter, см. `source_scoring.md` «Provenance»). Иначе:
+**Triangulation rule (механическая):** строка получает `status: triangulated`, если ≥3 источника **И** ≥2 разных типа **И** ≥2 различных корней (`root:`) **И** ≥2 различных пути обнаружения (`discovery_path:`) — см. `source_scoring.md` «Provenance» и «Четвёртое условие». Иначе:
 - < 3 источников → `status: weak`, confidence: low
 - ≥3 источника, но один тип → `status: single-type`, confidence: medium (max)
 - ≥3 источника и ≥2 типов, но все сводятся к одному `root:` → `status: single-root`, confidence: medium (max) — десять пересказов одного пресс-релиза это один голос; правило считает корни, не URL
-- Явное противоречие между источниками → `status: contradicted` — отдельный counter-argument (Z1)
+- ≥3 источника, ≥2 типов, ≥2 корней, но все найдены одним `discovery_path` → `status: single-path`, confidence: medium (max) — одна формулировка в одном канале даёт одну выборку из одного индекса, а не три независимых голоса
+- Есть непогашенный `dissent` от источника с `type: Primary` или `credibility ≥ 4` → `status: contested`, confidence: medium (max) — **правило большинства здесь не действует**; в отчёт идут обе позиции с явным основанием выбора (см. «Правило dissent» в `source_scoring.md`)
+- Явное противоречие между источниками без выраженного меньшинства → `status: contradicted` — отдельный counter-argument (Z1)
 - После gap-волны (см. выше) всё ещё не закрыто → `status: data-insufficient` (честный результат, не скрывать)
 
 **Primary-first правило:** ключевое число/факт без хотя бы одного primary-источника (`primary_source: N`) не может получить `confidence` выше `medium`, даже если формально triangulated по количеству/разнотипности. Primary здесь — filing, официальная дока, датасет, оригинальное исследование (см. Credibility=5 в `source_scoring.md`).
@@ -671,9 +677,9 @@ claim_id, claim, hypothesis, sources, source_types, status, confidence, primary_
 ```
 
 ```csv
-claim_id,claim,hypothesis,sources,source_types,status,confidence,primary_source
-CL1,"Logical replication scales to N nodes without external tooling",H1,s01;s07;s12,primary;industry;academic,triangulated,high,Y
-CL2,"CDC adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,single-type,medium,N
+claim_id,claim,hypothesis,sources,source_types,roots,paths,status,confidence,primary_source,source_caveat,dissent,as_of
+CL1,"Logical replication scales to N nodes without external tooling",H1,s01;s07;s12,primary;industry;academic,own;study-smith-2024;own,academic|logical replication N nodes|en;web-general|postgres multi-master 2026|en;forum-discussion|pgsql-hackers|en,triangulated,high,Y,-,-,-
+CL2,"CDC adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,own;own,web-general|CDC latency benchmark|en;web-general|CDC latency benchmark|en,single-type,medium,N,-,-,2026-02
 ```
 
 ### Gap-волна (Фаза 5 продолжается — не новая фаза, аналогично loop-конвенции Фазы 4)
@@ -703,11 +709,22 @@ CL2,"CDC adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,single-t
 5. Собери черновик `<date>_<genre>.md` из выбранных блоков по порядку из `plan.md`. Каждый блок — по шаблону из своего категорийного файла. Три сквозных правила синтеза (применяй ко всем блокам, не только TL;DR):
    - **Числа с якорем сравнения.** Ключевое число без базы сравнения запрещено: «Рынок $4.5B» — недостаточно. «Рынок $4.5B — втрое меньше соседнего сегмента X, растёт втрое быстрее среднего по индустрии» — годится. Якорь: vs база / vs сосед / vs динамика во времени.
    - **Условия применимости.** Каждый вывод — с явным «когда верен, когда нет», не голое утверждение.
+   - **Одиночный прогон — не различие.** Число из одного прогона собственного замера не докладывается как установленное различие («в 60 раз дороже») без доверительного интервала или явной пометки «одиночный прогон, без CI». Собственный замер, вошедший в выводы, несёт `caveat: self-reported` (потолок confidence — `medium`, см. `source_scoring.md`), а все его файлы — один общий `root` (одно измерение = один голос, не три).
    - **Confidence из claims.csv.** Каждый пункт TL;DR (F1) несёт свой `confidence` (high/medium/low), взятый из соответствующей строки `claims.csv` — не придуманный на глаз при синтезе.
    - **Запрет финала «it depends».** Ресёрч, кончающийся «зависит от обстоятельств», бесполезен по определению. Если однозначная рекомендация невозможна — обязана быть условная, замапленная на вилки Decision Spec: «приоритет — стоимость → X; скорость → Y». «It depends» без разрешённых условий = незакрытый acceptance criterion, не финал.
    - Блок Z12 `so-what-for-you` (см. `blocks/close.md`) собирается на этом же шаге из `plan.md` секции 0 (Decision Spec + User context) + `claims.csv` — ключевые claims мапятся на вилки решения, считается applicability ratio; проекция выводов на кейс пользователя, до `actionable-next-steps`.
 6. **Multi-angle red team** (см. `adversarial_pass.md`) — draft → claim ledger (внутренний список falsifiable-тезисов для red team, не путать с файлом `claims.csv`) → N враждебных ролей (Skeptic/Contrarian/Gap-hunter/Исполнитель) как `general-purpose` суб-агенты → триаж severity → ОДИН раунд ремедиации HIGH → финал. Гейт глубины: shallow=R1 инлайн, medium=R1+R2+R4, deep=R1+R2+R3+R4. Дефекты → counter-arguments (`Z1`) + Open Questions; лог в `findings/redteam_<date>.md`. Не маскируй несогласие. 5-й adversarial-вопрос (см. `adversarial_pass.md`): есть ли числа без якоря сравнения, выводы без Z12-проекции, рекомендации без trade-off/kill-criteria?
-7. **Собери `memo.md` — decision-меморандум на одну страницу.** В процесс потребителя входит не 40-страничный отчёт, а одна страница; отчёт — доказательная база под ней. Состав: рекомендация (однозначная или условная по вилкам), разрешение if-then вилок Decision Spec, 3 ключевых числа с [sNN] и `as_of`, главный риск, next actions. Пишется ПОСЛЕ red team (ремедиация HIGH уже учтена). Обязателен всегда; в shallow — крошечный (5–10 строк). Артефакт Фазы 6, проверяется phase-gate.
+7. **Собери `memo.md` — decision-меморандум на одну страницу.** В процесс потребителя входит не 40-страничный отчёт, а одна страница; отчёт — доказательная база под ней. Состав: рекомендация (однозначная или условная по вилкам), разрешение if-then вилок Decision Spec, 3 ключевых числа с [sNN] и `as_of`, главный риск, next actions, **строка «что урезали»**.
+
+   **Строка «что урезали» — обязательна, если прогон сузил сам себя.** У ресёрча есть два легальных способа тихо уменьшить задачу: даунгрейд в shallow (нет ни одной if-then вилки) и no-progress circuit breaker (2 раунда без новой информации). Оба правильные — и оба обязаны быть громкими, иначе пользователь получает более лёгкую версию своего вопроса, не зная об этом. Формат — одна строка:
+
+   ```
+   Урезано: circuit breaker на раунде 3 (Q4 «стоимость перехода» без данных) · режим остался medium.
+   ```
+
+   Ничего не урезали — так и напиши `Урезано: —`. Метрика, которую можно улучшить, перестав делать работу, — не метрика: доля `triangulated` растёт, если трудные claim сбросить в Open Questions, поэтому она читается только в паре с покрытием, а сужение объявляется вслух.
+
+   Числа в memo подчиняются fail-closed правилу провенанса: число с `origin_kind: unknown`, `chain_len ≥ 2` или без `data_as_of` сюда не попадает (см. `source_scoring.md` «Provenance числа»); `check_number_provenance.py` проверяет это машинно. Пишется ПОСЛЕ red team (ремедиация HIGH уже учтена). Обязателен всегда; в shallow — крошечный (5–10 строк). Артефакт Фазы 6, проверяется phase-gate.
 8. Если в системе есть `anthropic-skills:humanizer-ru` — прогони финальный отчёт через него.
 9. Сохрани финальный отчёт.
 

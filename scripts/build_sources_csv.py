@@ -18,6 +18,7 @@ Usage:
     python scripts/build_sources_csv.py --research-dir research/<slug>
     python scripts/build_sources_csv.py --research-dir research/<slug> --check   # CI: fail if stale
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,10 +30,30 @@ from pathlib import Path
 
 # Order matters: url,title first (validate_structure REQUIRED), then the recommended
 # and scoring columns. `file` lets a reader map a row back to its sources/NN.md.
+# signal_type/value_score/access_state are appended at the end (optional per-run
+# rubric extension, e.g. research/*/value_rubric.md) — new fields go last so existing
+# readers keyed by column name (DictReader) are unaffected; runs without a rubric
+# just emit empty strings for these three.
 COLUMNS = [
-    "id", "url", "title", "type", "channel", "access",
-    "author", "date", "credibility", "recency", "bias", "total", "caveat", "root",
-    "used", "file",
+    "id",
+    "url",
+    "title",
+    "type",
+    "channel",
+    "access",
+    "author",
+    "date",
+    "credibility",
+    "recency",
+    "bias",
+    "total",
+    "caveat",
+    "root",
+    "used",
+    "file",
+    "signal_type",
+    "value_score",
+    "access_state",
 ]
 SOURCE_FILE_RE = re.compile(r"^\d{2,}_.+\.md$")
 
@@ -73,9 +94,13 @@ def render_csv(rows: list[dict[str, str]]) -> str:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--research-dir", required=True, type=Path)
-    ap.add_argument("--check", action="store_true", help="Exit 1 if sources.csv is stale (CI); do not write")
+    ap.add_argument(
+        "--check", action="store_true", help="Exit 1 if sources.csv is stale (CI); do not write"
+    )
     args = ap.parse_args()
 
     d = args.research_dir
@@ -94,7 +119,9 @@ def main() -> int:
     if args.check:
         current = out.read_text(encoding="utf-8") if out.is_file() else ""
         if current != content:
-            print(f"sources.csv is stale — run: python scripts/build_sources_csv.py --research-dir {d}")
+            print(
+                f"sources.csv is stale — run: python scripts/build_sources_csv.py --research-dir {d}"
+            )
             return 1
         print(f"OK — sources.csv up to date ({len(rows)} sources)")
         return 0

@@ -1,4 +1,5 @@
 """Tests for scripts/validate_phases.py — phase-gate completeness validator."""
+
 import sys
 from pathlib import Path
 
@@ -15,7 +16,9 @@ def make_run(root: Path, *, mode: str, phases: set[str]) -> Path:
     d = root / "run"
     d.mkdir()
     if "report" in phases:
-        (d / "2026-07-16_landscape.md").write_text(f"---\nmode: {mode}\n---\nbody\n", encoding="utf-8")
+        (d / "2026-07-16_landscape.md").write_text(
+            f"---\nmode: {mode}\n---\nbody\n", encoding="utf-8"
+        )
     if "3" in phases:
         (d / "plan.md").write_text(f"---\nmode: {mode}\n---\nplan\n", encoding="utf-8")
     if "4" in phases:
@@ -23,22 +26,34 @@ def make_run(root: Path, *, mode: str, phases: set[str]) -> Path:
         sd.mkdir()
         (sd / "01_x.md").write_text("---\nurl: http://x\n---\n", encoding="utf-8")
     if "5" in phases:
-        (d / "claims.csv").write_text("claim_id,status\nc1,triangulated\n", encoding="utf-8")
+        (d / "claims.csv").write_text(
+            "claim_id,claim,roots,paths,status,confidence,dissent,as_of\n"
+            "c1,a claim,own;study-x,academic|q|en;web-general|q2|en,triangulated,high,-,-\n",
+            encoding="utf-8",
+        )
     if "5.5" in phases:
         ed = d / "evidence"
         ed.mkdir()
         (ed / "C1.md").write_text("quote\n", encoding="utf-8")
+        vd = d / ".verify"
+        vd.mkdir(exist_ok=True)
+        (vd / "authority.json").write_text(
+            '{"pairs": [], "quarantined": []}', encoding="utf-8"
+        )
     if "6.5" in phases:
         vd = d / ".verify"
-        vd.mkdir()
+        vd.mkdir(exist_ok=True)
         (vd / "citations.json").write_text("{}", encoding="utf-8")
         (vd / "faithfulness.json").write_text("{}", encoding="utf-8")
+        (vd / "qualifiers.json").write_text("{}", encoding="utf-8")
     if "7" in phases:
         (d / "refresh_targets.md").write_text("targets\n", encoding="utf-8")
     if "memo" in phases:
         (d / "memo.md").write_text("# Memo\nрекомендация\n", encoding="utf-8")
     if "8" in phases:
-        (d / "application.md").write_text("---\nstatus: deferred\n---\n", encoding="utf-8")
+        (d / "application.md").write_text(
+            "---\nstatus: deferred\n---\n", encoding="utf-8"
+        )
     return d
 
 
@@ -78,11 +93,23 @@ def test_deep_run_missing_evidence_fails(tmp_path):
     assert any("phase 5.5" in e for e in r.errors)
 
 
-def test_deep_run_missing_verify_reports_both_json(tmp_path):
+def test_deep_run_missing_verify_reports_all_three_json(tmp_path):
     d = make_run(tmp_path, mode="deep", phases=FULL_SET - {"6.5"})
     r = run_validate(d, "deep")
     joined = " ".join(r.errors)
     assert "citations.json" in joined and "faithfulness.json" in joined
+    assert "qualifiers.json" in joined
+
+
+def test_deep_run_missing_only_qualifiers_still_blocks(tmp_path):
+    # Layer 3 is not optional at deep: liveness+faithfulness passing is not enough
+    # if nothing checked that the report still says what the ledger said.
+    d = make_run(tmp_path, mode="deep", phases=FULL_SET)
+    (d / ".verify" / "qualifiers.json").unlink()
+    r = run_validate(d, "deep")
+    joined = " ".join(r.errors)
+    assert "qualifiers.json" in joined
+    assert "citations.json" not in joined and "faithfulness.json" not in joined
 
 
 def test_medium_requires_same_files_as_deep(tmp_path):
@@ -167,12 +194,59 @@ def test_self_check_clean_for_current_phases():
 
 def test_self_check_warns_on_unmapped_phase():
     phases = [
-        {"id": "9.9", "name_en": "Ghost", "depth_gate": "medium",
-         "name_ru": "x", "model": "haiku", "effort": "low"},
+        {
+            "id": "9.9",
+            "name_en": "Ghost",
+            "depth_gate": "medium",
+            "name_ru": "x",
+            "model": "haiku",
+            "effort": "low",
+        },
     ]
     r = vp.Report()
     vp.self_check(phases, r)
     assert any("9.9" in w for w in r.warnings)
+
+
+def test_deep_run_missing_authority_json_fails(tmp_path):
+    # The authority axis of 5.5 is fail-closed: an absent verdict file means the
+    # axis never ran, not that every source qualified.
+    d = make_run(tmp_path, mode="deep", phases=FULL_SET)
+    (d / ".verify" / "authority.json").unlink()
+    r = run_validate(d, "deep")
+    assert any("authority.json" in e for e in r.errors)
+
+
+def test_duplicate_source_id_is_an_error(tmp_path):
+    # Two files claiming one id == a sub-agent wrote outside its assigned range.
+    d = make_run(tmp_path, mode="deep", phases=FULL_SET)
+    (d / "sources" / "01_y.md").write_text(
+        "---\nurl: http://y\n---\n", encoding="utf-8"
+    )
+    r = run_validate(d, "deep")
+    assert any("source id 1 claimed by 2 files" in e for e in r.errors)
+
+
+def test_distinct_source_ids_are_not_flagged(tmp_path):
+    # Control group: without this the duplicate check could be passing for the
+    # wrong reason (e.g. flagging every run).
+    d = make_run(tmp_path, mode="deep", phases=FULL_SET)
+    (d / "sources" / "02_y.md").write_text(
+        "---\nurl: http://y\n---\n", encoding="utf-8"
+    )
+    r = run_validate(d, "deep")
+    assert not any("claimed by" in e for e in r.errors)
+
+
+def test_ledger_missing_new_columns_warns(tmp_path):
+    d = make_run(tmp_path, mode="deep", phases=FULL_SET)
+    (d / "claims.csv").write_text(
+        "claim_id,status\nc1,triangulated\n", encoding="utf-8"
+    )
+    r = run_validate(d, "deep")
+    joined = " ".join(r.warnings)
+    assert "dissent" in joined and "paths" in joined
+    assert not any("claims.csv" in e for e in r.errors)  # warning, never a blocker
 
 
 def test_real_research_dir_flagged_incomplete_for_deep():

@@ -130,6 +130,115 @@ re-scan `sources/NN.md` deciding which quote belongs to which claim (that would 
 **Two axes, one verdict:** liveness (URL alive) × faithfulness (source backs claim).
 A citation counts as verified only if it passes BOTH.
 
+## Layer 3 — Qualifier preservation (does the REPORT still say what the claim said?)
+
+Layers 1 and 2 both stop at `claims.csv`. Neither looks at what synthesis then WROTE.
+That is where the dominant class of errors actually happens: the ledger row is correct,
+and the qualifier is dropped on the way into the TL;DR.
+
+Two real examples, both from a run that passed Layers 1-2 cleanly:
+
+| In `claims.csv` (correct) | In the TL;DR (broken) | Defect |
+|---|---|---|
+| "F1 = 1.000 **on fixtures with embedded structured state**" | "F1 = 1.000 everywhere" | scope qualifier dropped — the real SPA figure was 0.014 |
+| "54% **of pages** contain ≥1 dead link" | "54% of links are dead" | per-page prevalence silently became per-link rate |
+
+Both would pass Layer 2: the source genuinely backs the ledger row. The distortion is
+downstream of the pair Layer 2 judges. **This is a different question, so it needs a
+different pass** — not a stricter version of Layer 2.
+
+Run AFTER Layer 2, on the written report. No re-fetch, no source reading: this pass
+compares two artifacts you already have on disk.
+
+**Scope — the highest-risk short texts, not the whole report.** Distortion costs most
+where the text is read first and quoted onward, and short texts are cheap to check:
+- block F1 (TL;DR),
+- `memo.md`,
+- block Z12 (`so-what-for-you`).
+
+Everything else is out of scope for this layer — the adversarial pass (Phase 6) covers
+the body. Checking the full report here would swap a cheap mechanical pass for an
+expensive one and duplicate red team.
+
+1. **Pair each statement with its ledger row.** `claim_id` is the join key (see "I/O
+   contract" below — synthesis is already required to keep it on each thesis). A
+   statement in F1/`memo.md`/Z12 carrying a number, a comparison, or a hypothesis
+   verdict but NO resolvable `claim_id` is itself a finding: `UNTRACEABLE`. It means
+   synthesis asserted something the ledger does not carry.
+
+2. **Judge each (ledger claim, report statement) pair.** The question is NOT "is it
+   true" (Layer 2) and NOT "is it shorter" — compression is legitimate and expected.
+   The question is whether a limit on scope was removed.
+
+   Judge prompt (per pair):
+   > Ledger claim: "<claim text from claims.csv>"
+   > Report statement: "<statement as written in the report>"
+   >
+   > Does the report statement stay within the scope of the ledger claim?
+   > List every qualifier in the ledger claim — conditions ("on fixtures with X"),
+   > units of measure ("of pages" vs "of links"), populations ("in the EU"), time
+   > bounds ("as of 2026-02"), hedges ("up to", "in our single run").
+   > For each: is it preserved, or dropped/widened in the report statement?
+   > Shortening is NOT a defect. Removing a limit IS.
+   > Answer PRESERVED only if every qualifier survives or the statement is narrower.
+   > Output: {verdict, dropped_qualifiers: [...], reason: "<one line>"}.
+
+   - `PRESERVED` — every scope limit survives, or the statement is narrower than the claim.
+   - `BROADENED` — a hedge, bound, or condition was removed; the statement now asserts
+     more than the ledger supports (the "F1 = 1.000 everywhere" case).
+   - `SCOPE-DROPPED` — unit, population, or measured entity silently changed (the
+     "54% of pages" → "54% of links" case). Worse than BROADENED: the statement is not
+     an overreach of the claim, it is a different claim.
+   - `UNTRACEABLE` — no resolvable `claim_id` for a load-bearing statement.
+
+3. **Default to PRESERVED when unsure.** Symmetric to Layer 2's default-to-PARTIAL:
+   this pass must not punish normal editing. A false BROADENED on every compressed
+   sentence makes the layer noise and it will be switched off. Judge the removal of a
+   LIMIT, not the loss of words.
+
+4. Model: `haiku`/low — comparing two short texts. Escalate `BROADENED` and
+   `SCOPE-DROPPED` to `sonnet`/medium on deep.
+
+5. **Act, don't just score** (same discipline as Layers 1-2):
+   - `BROADENED` → restore the qualifier in the report. Do NOT weaken the ledger row to
+     match the report — the ledger is upstream and was verified; the report is what drifted.
+   - `SCOPE-DROPPED` → rewrite the statement to the claim's actual unit/population.
+   - `UNTRACEABLE` → either point the statement at a real `claim_id`, or delete it. An
+     assertion with no ledger row behind it did not pass Layers 1-2 at all.
+
+6. **Write `.verify/qualifiers.json`** (mirrors `faithfulness.json`):
+   ```json
+   {
+     "qualifier_integrity": 0.91,
+     "results": [
+       {"claim_id": "CL2", "location": "F1", "verdict": "PRESERVED", "model": "haiku",
+        "dropped_qualifiers": [], "reason": "statement narrower than claim"},
+       {"claim_id": "CL7", "location": "memo.md", "verdict": "BROADENED", "model": "haiku",
+        "dropped_qualifiers": ["\"on fixtures with embedded structured state\""],
+        "reason": "claim scoped to fixtures, statement says everywhere"},
+       {"claim_id": "CL9", "location": "F1", "verdict": "SCOPE-DROPPED", "model": "haiku",
+        "dropped_qualifiers": ["\"of pages\""],
+        "reason": "per-page prevalence restated as per-link rate"}
+     ]
+   }
+   ```
+   `qualifier_integrity = PRESERVED / total`. Also render `.verify/qualifiers.md` for the
+   header link. **Single source of truth for this axis** — the F10 header READS it.
+
+7. Depth gate:
+   - `shallow` — optional; if run, informational (F1 is tiny, `memo.md` is 5-10 lines).
+   - `medium` — required; any `SCOPE-DROPPED`, or `BROADENED` on a hypothesis-bearing
+     claim, blocks finish.
+   - `deep` — required; zero `SCOPE-DROPPED`, zero `UNTRACEABLE`; every `BROADENED`
+     restored.
+
+**Why a separate pass and not a synthesis instruction.** Phase 6 already tells synthesis
+to carry conditions of applicability and to take `confidence` from `claims.csv`. That
+instruction did not prevent either example above — because it asks the writing model to
+audit its own text, which is the one thing the red team lesson says does not work
+("не ловятся перечитыванием черновика"). Layer 3 is an external mechanical comparison of
+two artifacts, by a different model, after the fact. That is the class of check that does.
+
 ## Block F10 — Verification header (add to `references/blocks/frame.md`)
 
 > Renumbered from F9 to F10 (2026-07-07): F9 was claimed by the `background` block
@@ -137,31 +246,65 @@ A citation counts as verified only if it passes BOTH.
 > header was actually implemented in `frame.md`. No functional change — same header,
 > same content, next free slot.
 
-Rendered at the very top of the final report. **Carries BOTH axes** (liveness ×
-faithfulness) — a citation is verified only if it passes both:
+Rendered at the very top of the final report. **Carries ALL THREE axes** (liveness ×
+faithfulness × qualifiers) — the chain is source → claim → report, and a break anywhere
+in it means the statement is not verified:
 
 ```markdown
-> **Citation integrity: 21/23 live · faithfulness 20/22 supported · 0 red flags · 2 paywalled**
+> **Citation integrity: 21/23 live · faithfulness 20/22 supported · qualifiers 22/22 preserved · 0 red flags · 2 paywalled**
 > Verified <YYYY-MM-DD>: liveness via check_citations.py (every OPEN source resolved live);
-> faithfulness via Layer 2 judge over evidence/ (2 PARTIAL softened).
-> [liveness detail](.verify/citations.md) · [faithfulness detail](.verify/faithfulness.md)
+> faithfulness via Layer 2 judge over evidence/ (2 PARTIAL softened); qualifiers via Layer 3
+> over F1/memo.md/Z12 (no scope drift).
+> [liveness detail](.verify/citations.md) · [faithfulness detail](.verify/faithfulness.md) · [qualifier detail](.verify/qualifiers.md)
 ```
 
-When flags were found and resolved (either axis):
+When flags were found and resolved (any axis):
 
 ```markdown
-> **Citation integrity: 23/23 live · faithfulness 23/23 supported · 1 red flag + 1 overclaim resolved**
-> s14 (dead URL → replaced <date>); C4 (PARTIAL → claim softened to match source).
+> **Citation integrity: 23/23 live · faithfulness 23/23 supported · qualifiers 21/23 preserved · 1 red flag + 1 overclaim + 2 qualifiers restored**
+> s14 (dead URL → replaced <date>); C4 (PARTIAL → claim softened to match source);
+> CL7 (BROADENED → "on fixtures with embedded state" restored in TL;DR).
 ```
 
 When an axis is below floor and the user chose to ship anyway (medium only):
 
 ```markdown
-> ⚠ **Citation integrity: liveness 0.64 · faithfulness 0.71 — liveness below floor (0.70).**
+> ⚠ **Citation integrity: liveness 0.64 · faithfulness 0.71 · qualifiers 0.88 — liveness below floor (0.70).**
 > s07, s11 (transport UNKNOWN), s19 (OPEN dead → claim demoted); C9 (UNSUPPORTED → Open Questions).
 ```
 
-(shallow: faithfulness line omitted — Layer 2 optional, no `evidence/`.)
+(shallow: faithfulness line omitted — Layer 2 optional, no `evidence/`. Qualifier line
+omitted unless Layer 3 was run.)
+
+### Second line — source independence (medium/deep)
+
+The three axes above answer "did the source say this, and does the report still say
+what the ledger said". They say nothing about **who the sources are and whether their
+agreement is real**. That is a separate line, computed from `.verify/authority.json`,
+`claims.csv` and the round notes in `plan.md` §15 — never recomputed by hand:
+
+```markdown
+> **Source independence: authority 12/14 qualified (2 quarantined) · numbers 9/9 dated ·
+> overlap 0.12 · 0 circulation flags · 1 contested claim**
+> s11, s23 quarantined (no author, origin unknown) — neither is a sole support.
+> CL6 contested: minority s60 (regulator filing) vs 3 secondary — both positions in §4.
+```
+
+Read each figure as a failure signal, not a score:
+
+| Figure | Source | What a bad value means |
+|---|---|---|
+| `authority N/M qualified` | `.verify/authority.json` | несущие пары, прошедшие чек-лист; низкая доля = выводы стоят на источниках, чьё право утверждать не подтверждено |
+| `quarantined` | там же | `unknown`-вердикты; каждый обязан иметь второй источник под claim |
+| `numbers N/N dated` | `claims.csv` `as_of` | числа без даты замера; неполнота = fail-closed, число не идёт в memo |
+| `overlap` | `plan.md` §15, `overlap_rate` | > 0.3 = агенты искали одинаково, разнообразие источников фиктивное |
+| `circulation flags` | `check_number_provenance.py` | одно значение при разных корнях = ложная независимость или неверный `root` |
+| `contested claims` | `claims.csv` status | claim, где меньшинство не погашено; **ноль в спорной теме подозрителен**, а не хорош |
+
+Последняя строка таблицы — важнейшая: отчёт без единого `contested` по конфликтной
+теме обычно означает не согласие источников, а то, что несогласных не искали.
+Метрика, которую можно улучшить, перестав делать работу, — не метрика; поэтому
+`contested` читается в паре с покрытием, а не как «чем меньше, тем лучше».
 
 ## I/O contract — who writes, who reads (no circular reference)
 
@@ -173,16 +316,30 @@ nothing produced them — a circular reference to a missing artifact. The contra
 |---|---|---|
 | `.verify/citations.json` | Phase 6.5 Layer 1 (`check_citations.py`) | F10 header, `rubric.md` axis "citation" |
 | `.verify/faithfulness.json` | Phase 6.5 Layer 2 (this file, step 4) | F10 header (2nd axis), `rubric.md` axis 3 "Factual accuracy" |
+| `.verify/qualifiers.json` | Phase 6.5 Layer 3 (this file, step 6) | F10 header (3rd axis) |
 | `evidence/CN.md` | **Phase 5.5** (`evidence_filter.md`) | Phase 6.5 Layer 2 INPUT (claim↔quote pairs) |
+| `.verify/authority.json` | **Phase 5.5** authority axis (`evidence_filter.md`) | F10 second line, phase-gate. Absent ⇒ axis never ran (fail-closed), NOT "all qualified" |
+| `claims.csv` + written report | Phase 5 / Phase 6 | Phase 6.5 Layer 3 INPUT (claim↔statement pairs) |
 
 Rules:
 - Layer 2 **produces** `.verify/faithfulness.json`; it is the single source of truth.
+- Layer 3 **produces** `.verify/qualifiers.json`; likewise. The F10 header reads it and
+  does not recompute. Absent (shallow, or Layer 3 skipped) → "not run", not zero.
 - The F10 header and `rubric.md` axis 3 **read** it — neither recomputes verdicts. If the
   file is absent (shallow, or Layer 2 skipped), axis 3 records "not run", not zero.
 - Layer 2 **reads** `evidence/CN.md` for pairs — it does not re-derive claim↔quote from
   raw `sources/NN.md` (that is Phase 5.5's job; redoing it duplicates 5.5).
-- `claim_id` is the join key across all three artifacts. If synthesis (Phase 6) rephrased
+- Layer 3 **reads** `claims.csv` and the written report — never `sources/`. Whether the
+  source backs the claim is Layer 2's question, already answered upstream.
+- `claim_id` is the join key across all artifacts. If synthesis (Phase 6) rephrased
   or merged claims, keep the originating `claim_id` on each thesis so the join holds.
+  **Layer 3 depends on this directly**: a statement whose `claim_id` was dropped in
+  synthesis is not "unchecked", it is `UNTRACEABLE` and blocks finish on deep.
+
+**Three axes, one chain:** source → claim → report. Layer 1 proves the source resolves,
+Layer 2 that it backs the claim, Layer 3 that the report still says what the claim said.
+A statement is verified only if all three hold — and each layer is checked by a different
+pass over different inputs, so a defect that hides from one is visible to another.
 
 ## Why act, not just measure
 

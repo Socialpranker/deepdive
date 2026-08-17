@@ -86,10 +86,66 @@ H7-принцип, что и скоринг: маркирует тот, кто �
 анализом — `own`. Не оставлять пустым: непонятно откуда данные — тоже сигнал, пиши
 `unclear` и снижай credibility.
 
+**`own` — класс, а не идентификатор.** Два независимых исследования оба честно
+получают `own`, и при подсчёте корней это ДВА разных корня, не один. Поэтому при
+сравнении корней `own` у разных источников считается различными корнями — если
+только это не один и тот же материал (см. правило собственных замеров ниже).
+`unclear` при подсчёте не засчитывается за корень вовсе: неизвестное происхождение
+не подтверждает независимость.
+
+**Собственные замеры: один эксперимент = один корень.** Результаты собственного
+стенда, прогона или эксперимента получают общий root вида `own-lab-<slug>` —
+**одинаковую строку для всех файлов одного эксперимента**, на сколько бы файлов
+ни были разложены результаты (латентность, инъекции, извлечение — это один
+стенд, не три источника). Правило симметрично правилу про пересказ пресс-релиза:
+три среза одного прогона — один голос, не три.
+
+Следствие, которое надо применять сознательно: **собственный замер не может дать
+`triangulated` в одиночку** — сколько бы файлов он ни занял, корень один, и
+строка получает `single-root` (потолок confidence `medium`) до появления
+внешнего подтверждения. Замер, вошедший в выводы без внешнего корня, обязан
+нести `caveat: self-reported` (см. «Скепсис на входе» выше).
+
 Поле уходит в `sources.csv` (колонка `root`) и работает в правиле триангуляции Фазы 5:
 статус `triangulated` требует **≥2 различных корней** среди подтверждающих источников
 (см. `workflow.md`). Иначе — `single-root`: формально источников много, фактически
 голос один.
+
+## Provenance числа — `origin_kind` / `origin_url` / `data_as_of` / `chain_len`
+
+`root` отвечает на вопрос «чей это материал». Для **чисел** этого мало: скилл
+проверяет, что источник процитирован верно (Фаза 6.5 faithfulness), но нигде не
+проверяет, **откуда источник взял цифру и вправе ли он её называть**. Мусорный сайт
+с дословной цитатой проходит faithfulness идеально. Отсюда четыре поля, обязательные
+для любого источника, чьё число ты собираешься использовать:
+
+| Поле | Что значит | Как ошибаются |
+|---|---|---|
+| `origin_kind` | КАКОЙ акт произвёл число | пересказ отчёта помечают `measurement` |
+| `origin_url` | документ-производитель | ставят URL страницы, где прочитали |
+| `data_as_of` | дата ДАННЫХ | ставят дату публикации статьи |
+| `chain_len` | длина цепочки пересказов | ставят 0 «по умолчанию» |
+
+**Fail-closed правило.** `origin_kind: unknown` **или** `chain_len ≥ 2` **или**
+`data_as_of: unknown` ⇒ число **не входит** в `memo.md`, TL;DR (F1) и блок F9, и
+тезис на нём не получает `confidence: high`. Не «модель решит» — проверяется
+скриптом `scripts/check_number_provenance.py` по `claims.csv` и `sources/`.
+
+Неизвестное происхождение — это карантин, а не пропуск. Симметрично правилу
+primary-first: скилл уже отказывается давать `high` без первичного источника; здесь
+он отказывается давать трибуну числу без прослеживаемого производителя.
+
+Это бьёт по классу, который не ловят ни `recency`, ни `bias`: **цифра-зомби** —
+число, которое годами ходит по сети, а первоисточник мёртв или не существовал. У
+перепечатки 2026 года честная `recency: 5`, честный `bias: 4` и содержательная
+цитата; единственное, что её выдаёт, — невозможность назвать документ, который это
+число произвёл, и дату замера.
+
+**Не ходи за числами в веб, если есть реестр.** Если метрика покрыта каталогом
+(`stat_sources/`, `api_sources/`), веб-статья с этой цифрой не может быть корнем —
+она указатель на корень. Правило исполняется на Фазе 4.0 (`source_dispatch.md`):
+количественный подвопрос → primary-канал обязан быть registry/API. Дешевле не
+фильтровать мусор на выходе, чем порождать его на входе.
 
 ## Триангуляция
 
@@ -118,15 +174,56 @@ H7-принцип, что и скоринг: маркирует тот, кто �
 | `hypothesis` | `H1`-`H4` или `-` если тезис не привязан к гипотезе плана |
 | `sources` | id источников через `;` (`s01;s07;s12`) |
 | `source_types` | типы через `;`, тот же порядок что `sources` (`primary;academic;industry`) |
-| `status` | `triangulated` \| `weak` \| `single-type` \| `contradicted` \| `data-insufficient` |
+| `roots` | корни через `;`, тот же порядок что `sources` (`own;study-smith-2024;own`) — берутся из `root:` во frontmatter каждого источника; нужны для третьего условия триангуляции |
+| `paths` | пути обнаружения через `;`, тот же порядок что `sources` — берутся из `discovery_path:`; нужны для четвёртого условия |
+| `status` | `triangulated` \| `contested` \| `weak` \| `single-type` \| `single-root` \| `single-path` \| `contradicted` \| `data-insufficient` |
 | `confidence` | `high` \| `medium` \| `low` |
 | `primary_source` | `Y` \| `N` — есть ли среди sources хотя бы один Credibility=5 первичный |
 | `source_caveat` | `-` \| `vendor` \| `self-reported` \| `disputed:sNN` — маркер скепсиса на входе (см. выше); не-`-` понижает потолок confidence |
+| `dissent` | id источников, ПРОТИВОРЕЧАЩИХ этому тезису, через `;` (`s12;s19`), или `-`. Заполняется из `dissent`/`contradictions` в JSON суб-агентов |
+| `as_of` | дата ДАННЫХ ключевого числа тезиса (`2025-Q3`), `unknown` если число есть, а даты нет, `-` если тезис не количественный |
 
 **Механическая триангуляция:** `status: triangulated` ⟺ ≥3 источника **И** ≥2 разных
-типа в строке. Это проверяется подсчётом полей `sources`/`source_types`, не
-повторным чтением содержания — отсюда `haiku`/low модель на этом шаге в
-`model_routing.md`.
+типа **И** ≥2 различных корня (`root:`) **И** ≥2 различных пути обнаружения
+(`discovery_path:`). Это проверяется подсчётом полей `sources`/`source_types`/`roots`/`paths`,
+не повторным чтением содержания — отсюда `haiku`/low модель на этом шаге в `model_routing.md`.
+
+Третье условие (корни) — не факультативное: без него десять URL, пересказывающих один
+пресс-релиз, проходят как десять голосов.
+
+**Четвёртое условие (пути обнаружения) — против конформизма поиска.** Первые три
+считают, насколько различны сами источники; ни одно не смотрит, насколько различно
+их *искали*. Суб-агенты получают один шаблон промпта, одну модель и один поисковый
+индекс — их траектории коррелированы по конструкции (Anthropic Frontier Red Team,
+13.08.2026: агенты «низкодисперсны», при совпадении контекста/скаффолда/модели
+совпадают и действия — 18 из 30 выбрали одинаковое имя ветки). Три источника разных
+типов и корней, вытащенные одной формулировкой из одного канала, — это одна выборка
+из одного распределения, а не три голоса. Все источники с одним `discovery_path` ⇒
+`single-path`, потолок confidence `medium`.
+
+Полный разбор статусов при невыполнении условий — `workflow.md` «Triangulation rule»;
+здесь и там формулировка обязана совпадать дословно по всем четырём условиям.
+
+**Правило dissent (защита меньшинства).** Триангуляция по построению — правило
+большинства: три источника бьют один. В ресёрче это часто неверно — одинокий
+regulatory filing прав против трёх пересказов отраслевой прессы. Второй
+эпистемический сбой ровно противоположен первому: доверчивость наказывается
+триангуляцией, а вот **скрытый профиль** (решающая информация есть только у
+одного участника, а группа сходится на общем знании) триангуляцией *создаётся*.
+Один регулятор скептицизма не чинит оба — нужен явный носитель несогласия:
+
+- `dissent` ≠ `-` и среди противоречащих есть источник с `type: Primary` **или**
+  `credibility ≥ 4` ⇒ статус **`contested`**, а не `triangulated`, каким бы ни было
+  большинство. Потолок confidence — `medium`.
+- `contested` обязан попасть в отчёт **обеими** позициями, с явным основанием
+  выбора («принята позиция A, потому что s07 — первичный filing, а s03/s11/s14
+  сводятся к пресс-релизу s02»), а не усредниться в одну формулировку.
+- Погасить dissent можно только содержательно: показать методологическую ошибку
+  несогласного источника или найти независимое подтверждение большинства
+  (другой корень И другой путь). Понизить `credibility` несогласному, чтобы
+  правило не срабатывало, — подгонка ledger'а под желаемый вывод.
+- Пустой `dissent` у claim в спорной теме — сам по себе подозрителен: значит
+  оппозицию не искали. Это вход в gap-волну, а не признак прочности.
 
 **Primary-first правило:** `confidence: high` разрешён ТОЛЬКО если `primary_source: Y`.
 Без первичного источника — потолок `medium`, даже если формально triangulated по
@@ -142,12 +239,19 @@ vendor/self-reported/оспоренной цифре недостоверен п
 **Пример:**
 
 ```csv
-claim_id,claim,hypothesis,sources,source_types,status,confidence,primary_source,source_caveat
-CL1,"Postgres logical replication handles N nodes without external tooling",H1,s01;s07;s12,primary;industry;academic,triangulated,high,Y,-
-CL2,"CDC tooling adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,single-type,medium,N,-
-CL3,"Vendor X claims zero-downtime migration",-,s22,industry,weak,low,N,vendor
-CL4,"Product Z beats competitors 3.4x on benchmark",H3,s31,industry,weak,low,N,disputed:s33
+claim_id,claim,hypothesis,sources,source_types,roots,paths,status,confidence,primary_source,source_caveat,dissent,as_of
+CL1,"Postgres logical replication handles N nodes without external tooling",H1,s01;s07;s12,primary;industry;academic,own;study-smith-2024;own,academic|logical replication N nodes|en;web-general|postgres multi-master 2026|en;forum-discussion|pgsql-hackers replication|en,triangulated,high,Y,-,-,-
+CL2,"CDC tooling adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,own;own,web-general|CDC latency benchmark|en;web-general|CDC latency benchmark|en,single-type,medium,N,-,-,2025-Q2
+CL3,"Vendor X claims zero-downtime migration",-,s22,industry,own,web-general|vendor X migration|en,weak,low,N,vendor,-,-
+CL4,"Product Z beats competitors 3.4x on benchmark",H3,s31,industry,own,web-general|product Z benchmark|en,weak,low,N,disputed:s33,s33,2025-Q4
+CL5,"Adoption of X doubled year over year",H1,s18;s19;s27,industry;general-media;industry,press-release-acme-2026-03;press-release-acme-2026-03;press-release-acme-2026-03,web-general|X adoption growth|en;news-current|X adoption|en;web-general|X adoption growth|en,single-root,medium,N,-,-,2026-Q1
+CL6,"Регулятор допускает практику Y без ограничений",H2,s41;s44;s52,industry;general-media;industry,assoc-brief-2026;assoc-brief-2026;own,web-general|Y regulation|ru;news-current|Y разрешено|ru;web-general|Y практика|ru,contested,medium,N,-,s60,2026-Q2
 ```
+
+`CL6` — работа правила dissent: три источника, два типа, формально почти
+triangulated, но `s60` (первичный документ регулятора) им противоречит ⇒
+`contested`, обе позиции в отчёт. `CL2` — все источники найдены одним запросом в
+одном канале: `paths` совпадают, независимость мнимая.
 
 **Дыры (status ≠ triangulated) → gap-волна.** См. `workflow.md` Фаза 4.5: точечный
 haiku/low агент на конкретную дыру, максимум 2 круга, иначе честно
@@ -166,14 +270,19 @@ url: https://example.com/article
 title: <Title>
 author: <Author Name>
 date: 2024-03-15
-type: Primary | Academic | Industry-media | General-media | Expert-blog | Forum | Other
+type: Primary                    # СТРОГИЙ enum, ровно одно: Primary | Academic | Industry-media | General-media | Expert-blog | Forum | Other. Свободная форма ломает подсчёт «≥2 разных типа» в триангуляции
 channel: <channel-name>          # из channels.md (web-general | academic | preprint-servers | code-github | forum-discussion | etc)
 credibility: 5
 recency: 4
-bias: 4
+bias: 4                          # шкала Bias = НЕЙТРАЛЬНОСТЬ: 5 = независимый/научный, 1 = пропаганда. Больше = лучше, как и две оси выше
 total: 13
 caveat: -                        # СТРОГИЙ enum, ровно одно: - | vendor | self-reported | disputed:sNN. Пояснение — в тело файла, НЕ сюда
 root: own                        # первоисточник, на котором основан материал: own | <короткий id корня, напр. "press-release-acme-2026-03" | "study-smith-2024" | "gartner-mq-2025">
+discovery_path: web-general|EU vertical farming yield 2025|en   # КАК найден: <канал>|<точный запрос>|<язык>. Четвёртое условие триангуляции — копипаста этого поля надувает независимость
+origin_kind: -                   # только для источников с числами. СТРОГИЙ enum: measurement | registry | filing | survey | model-estimate | secondary | unknown | -
+origin_url: -                    # URL документа, ПРОИЗВЁДШЕГО число (filing / датасет / статья с методологией), не страницы, где ты его прочитал. `-` если не нашёл — выдуманный URL хуже честного прочерка
+data_as_of: -                    # дата ДАННЫХ (2025-Q3), НЕ публикации. `unknown` если число есть, а даты замера нет; `-` для нечисловых источников
+chain_len: 0                     # 0 — источник сам произвёл число, 1 — пересказ первички, 2+ — пересказ пересказа
 used: Y                          # Y — попал в основу выводов, N — только для контекста
 hypothesis_evidence:
   H1: supports                   # supports | contradicts | partial | neutral

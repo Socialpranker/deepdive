@@ -138,13 +138,25 @@ STAT-SOURCES TO USE (if relevant):
 
 Direct these sources for quantitative claims. Use the URLs/queries from those files.
 
+STANCE (read before you start):
+A source can be unreliable, and every source has interests of its own. Popularity
+is not evidence and agreement between sources is not evidence either — ten pages
+can agree because they copied one press release. As you read, actively look for
+CONTRADICTIONS between sources and ask of each: who produced this material, who
+paid for it, and would they publish the opposite finding? Record what you find in
+the fields below; do not silently pick a winner.
+
 TASK:
 1. Search using the channels above. For 5-10 sources total across all channels.
    Different source types: Primary, Academic, Industry-media, General-media,
    Expert-blog, Forum, Opposition.
 2. For each source — read it (WebFetch) and extract:
    - 2-4 key direct quotes (verbatim, with location/page if possible)
-   - Author, publication date, source type
+   - Author, publication date, source type. `type` is a STRICT enum — copy ONE
+     of these seven verbatim, never invent a label or a variant spelling:
+     Primary | Academic | Industry-media | General-media | Expert-blog | Forum | Other.
+     Triangulation counts DISTINCT types, so a free-form label silently inflates
+     type diversity and turns a one-type claim into a "triangulated" one.
    - How it relates to each hypothesis (supports / contradicts / neutral)
 3. Score each source YOURSELF on three axes 1-5 (no separate scoring pass follows —
    you are the one who read it, you score it):
@@ -165,6 +177,34 @@ TASK:
    `study-smith-2024`) otherwise; `unclear` if you cannot tell where the data
    comes from. Ten articles retelling one press release are ONE voice — the
    triangulation rule counts distinct roots, so this field is not optional.
+   If several sources retell the SAME underlying material, they must carry the
+   BYTE-IDENTICAL root string — otherwise root dedup silently fails.
+   Own measurements (a lab run, benchmark, or experiment you executed) all share
+   ONE root `own-lab-<slug>`, however many files the results are split across —
+   three slices of one run are one voice, not three.
+
+   Also fill `discovery_path:` — HOW you reached this source: `<channel>|<exact
+   query string>|<language>` (e.g. `web-general|EU vertical farming yield 2025|en`,
+   or `api-direct|FRED:CPIAUCSL|-` for a registry pull). Two sources found by the
+   same query in the same channel are ONE sampling of one index, however different
+   they look; triangulation counts distinct discovery paths as its fourth
+   condition, so a copy-pasted value here inflates independence.
+
+   For any source carrying a NUMBER you expect to use, also fill:
+   - `origin_kind:` — one of `measurement` | `registry` | `filing` | `survey` |
+     `model-estimate` | `secondary` | `unknown`. What KIND of act produced the
+     number, not who republished it.
+   - `origin_url:` — URL of the document that PRODUCED the number (the filing, the
+     dataset, the paper with methodology). Not the page you read it on, unless
+     that page is itself the producer. `-` if you could not find it.
+   - `data_as_of:` — the date of the DATA (`2025-Q3`, `2024-12`), not the
+     publication date of the article. A number whose data date you cannot
+     establish is a number you must mark `unknown`.
+   - `chain_len:` — `0` if this source produced the number itself, `1` if it
+     retells the producer directly, `2+` if it retells a retelling.
+   Do not guess these to look complete: `unknown` / `-` is a valid, useful answer
+   and is treated as a quarantine flag downstream. A fabricated `origin_url` is
+   far worse than an honest `-`.
 6. For each claim/thesis this subtopic supports, note it as a candidate row for
    `claims.csv` (claim text, hypothesis id if any, which source ids back it, source
    types, whether at least one is Primary — the "primary_source" flag).
@@ -185,6 +225,13 @@ commentary outside JSON:
       "channel": "<channel-name-from-channels.md>",
       "date": "YYYY-MM-DD or YYYY",
       "credibility": 5, "recency": 4, "bias": 4, "total": 13,
+      "root": "own | <root-id> | unclear",
+      "discovery_path": "<channel>|<exact query>|<lang>",
+      "caveat": "- | vendor | self-reported | disputed:sNN",
+      "origin_kind": "measurement|registry|filing|survey|model-estimate|secondary|unknown",
+      "origin_url": "https://... or -",
+      "data_as_of": "YYYY-QN or YYYY-MM or -",
+      "chain_len": 0,
       "subquestion_ids": ["Q2"],
       "file": "sources/07_<slug>.md"
     }
@@ -195,7 +242,17 @@ commentary outside JSON:
       "hypothesis": "H1",
       "sources": ["s07", "s09"],
       "source_types": ["Primary", "Industry-media"],
-      "primary_source": true
+      "primary_source": true,
+      "as_of": "2025-Q3 or -",
+      "dissent": ["s12"]
+    }
+  ],
+  "contradictions": [
+    {
+      "about": "<what the sources disagree on, one line>",
+      "sides": {"sNN": "<what this source claims>", "sMM": "<what that one claims>"},
+      "resolvable": "yes|no|unclear",
+      "note": "<if one side is primary/methodologically stronger, say which and why>"
     }
   ],
   "opposition_found": true,
@@ -210,6 +267,16 @@ commentary outside JSON:
 produced at least one source you kept; "noise" — hits, but nothing worth keeping;
 "empty" — no relevant hits. The orchestrator uses this to mutate next round's
 queries (language switch, operators, terminology) instead of re-running what failed.
+
+`contradictions`: report every disagreement you found, INCLUDING ones where a single
+source contradicts several others. Do NOT resolve a disagreement by majority and
+report only the winner — a lone regulatory filing outranks three articles retelling
+each other, and the ledger, not you, decides. If you found no contradictions at all
+in a contested topic, say so explicitly in `gaps` — it usually means you only read
+one side.
+
+`dissent` (inside `claim_candidates`): ids of sources you read that CONTRADICT this
+claim. Leave `[]` only if you actually looked for opposing sources under this claim.
 
 CONSTRAINTS:
 - Maximum 10 sources. Quality over quantity.
@@ -236,6 +303,14 @@ CONSTRAINTS:
 - H1: <опровергаемое утверждение>
 - H2: ...
 
+ПОЗИЦИЯ (прочитай до начала):
+Источник может быть недостоверным, и у каждого источника есть свой интерес.
+Популярность — не доказательство, согласие источников между собой — тоже: десять
+страниц могут совпадать потому, что переписали один пресс-релиз. По ходу чтения
+специально ищи ПРОТИВОРЕЧИЯ между источниками и спрашивай о каждом: кто произвёл
+этот материал, кто за него платил и опубликовал бы он обратный результат.
+Найденное фиксируй в полях ниже; не выбирай молча «правильную» сторону.
+
 ЗАДАЧА:
 1. Найти 5-10 источников разных типов: первичные, академические, отраслевая медиа,
    общая пресса, экспертные блоги, обсуждения, противоположная позиция.
@@ -254,6 +329,12 @@ CONSTRAINTS:
    доминирующего взгляда. Если не нашёл — сказать прямо.
 5. ЗАПИСАТЬ полные файлы `sources/<id>_<slug>.md` самому (шаблон в
    `source_scoring.md`), используя только номера из своего диапазона.
+   Обязательно заполнить: `root:` (первоисточник материала), `discovery_path:`
+   (`<канал>|<точный запрос>|<язык>` — как ты дошёл до источника), `caveat:`.
+   Для источников с ЧИСЛАМИ — ещё `origin_kind:` / `origin_url:` / `data_as_of:`
+   (дата ДАННЫХ, не публикации) / `chain_len:`. Не выдумывай значения ради
+   заполненности: `unknown` и `-` — валидные ответы, они уводят число в карантин,
+   а придуманный `origin_url` отравляет весь вывод.
 6. Для каждого тезиса, который подтверждает эта подтема, — кандидат-строка для
    `claims.csv` (текст тезиса, гипотеза, какие sources подтверждают, их типы,
    есть ли среди них primary source).
@@ -276,13 +357,34 @@ CONSTRAINTS:
 
 1. **Парсинг JSON.** Если суб-агент вернул мусор — попроси переслать в JSON, не интерпретируй сам. Ожидай `source_index` (компактные строки) + `claim_candidates` — НЕ полные тексты источников (их агент уже записал сам, см. выше).
 
-2. **Дедупликация по URL.** Если два суб-агента нашли один и тот же URL под разными id (не должно случиться при непересекающихся диапазонах, но проверяй) — это ОДИН источник, оставить файл с лучшим scoring, вторую запись пометить дублем в `sources.csv`.
+2. **Дедупликация по URL — и замер `overlap_rate` (не выбрасывай дубль молча).** Если два суб-агента нашли один и тот же URL — это ОДИН источник: оставить файл с лучшим scoring, вторую запись пометить дублем в `sources.csv`. Но сам факт совпадения — **самая ценная диагностика раунда, и она пропадает, если дубль просто удалить**.
+
+   Агенты низкодисперсны: их различают только контекст, скаффолд и модель. Совпали все три — совпадут и действия (Anthropic Frontier Red Team, 13.08.2026: 18 из 30 агентов создали ветку с одинаковым именем, ни одному этого не задавали). Твои fetch-агенты получают один шаблон промпта, одну модель и один поисковый индекс — различаются только подтемой. Поэтому:
+
+   ```
+   overlap_rate = (URL, найденные >1 агентом) / (уникальные URL раунда)
+   ```
+
+   Запиши его в `plan.md` секцию 15 (notes) за каждый раунд и трактуй так:
+   - **overlap_rate > 0.3** — агенты искали одинаково, разнообразие источников фиктивное. **Обязательна query-мутация** в следующем раунде (RU↔EN, смена канала, другая терминология) плюс разведение агентов по осям поиска, а не только по подтемам.
+   - **overlap_rate < 0.05 при высоком novelty** — здоровое разведение, продолжай как есть.
+   - **overlap_rate = 0 на всех раундах** — проверь, что агенты вообще ищут в пересекающихся областях; ноль пересечений при широкой теме чаще означает, что каждый агент нашёл случайную выборку, а не что они хорошо разведены.
+
+   Совпадение URL между агентами — сигнал конформизма, а не «удачная валидация находки».
 
 3. **Мёрж `sources.csv`** из всех `source_index` — файлы уже на диске (агенты сами их записали в своих диапазонах), главный поток здесь только сводит индекс, не переписывает `sources/NN.md`.
 
 4. **Заполнение `claims.csv`** из всех `claim_candidates` (Phase 5 — см. `source_scoring.md` раздел claims-ledger). Смёржить дублирующиеся claim'ы от разных агентов (если тезис один и тот же — объединить sources/source_types в одну строку).
 
-5. **Проверка покрытия:**
+5. **Проверка периметра записи (машинная, не на доверии).** Диапазон номеров держится только текстом промпта — у агента есть `Write` и изолированный контекст. После возврата суб-агентов сверь фактическое содержимое `sources/` с выданными диапазонами:
+
+   ```bash
+   ls research/<slug>/sources/ | grep -oE '^[0-9]+' | sort -n | uniq
+   ```
+
+   Файл с номером вне всех выданных диапазонов ⇒ агент вышел за периметр ⇒ его результат невалиден: файл не принимается в `sources.csv`, строка помечается в `plan.md` §15, при повторе — агент перезапускается с сужённой задачей. Это проверяется и на finish-up (`validate_phases.py`). Границу должен держать механизм, а не вежливость модели.
+
+6. **Проверка покрытия:**
    - Сколько типов источников? (нужно ≥4)
    - Найдена ли оппозиция? (нужна минимум одна)
    - Все ли гипотезы получили evidence? (нужно ≥3 источника на гипотезу)
@@ -298,6 +400,9 @@ CONSTRAINTS:
 - ❌ Не назначить агенту диапазон номеров ПЕРЕД launch — без этого параллельная запись рискует коллизией id.
 - ❌ Просить суб-агента вернуть полные тексты/цитаты источников в JSON-ответе — раздувает контекст главного потока. Полный текст живёт в файле, в главный поток идёт только index-строка.
 - ❌ Пропустить требование «найди оппозицию» — суб-агенты по умолчанию ищут confirmation, не contradiction.
+- ❌ **Разводить агентов ТОЛЬКО по подтемам.** Одинаковый шаблон + одна модель + один язык = одна поисковая траектория, и триангуляция получает коррелированные голоса. Разводи ещё и по оси поиска: агент A — англоязычная академия и препринты, B — RU-сегмент, локальные регуляторы и отраслевые ассоциации, C — практики (форумы, issue-трекеры, обсуждения), D — первичные реестры и отчётность. Тогда пересечение находок — сигнал настоящей независимости, а не артефакт одинакового промпта.
+- ❌ **Передавать во второй раунд находки соседей.** Соблазн понятен, но наблюдаемость чужих действий сама по себе канал координации: в эксперименте Anthropic агенты продолжили сговор после удаления всех каналов связи, синхронизируясь через публичную доску. Дать агентам видеть находки друг друга — построить такую доску своими руками и добить остатки независимости. Делись только ДЫРАМИ: «подвопросы Q3, Q7 не закрыты; по Q5 не найдено ни одной оппозиции».
+- ❌ Молча выбрасывать дубликаты URL между агентами (см. `overlap_rate` ниже) — это стирает единственный прямой замер конформизма.
 
 ## Когда НЕ запускать суб-агентов
 
