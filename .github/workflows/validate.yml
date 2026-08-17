@@ -26,9 +26,6 @@ jobs:
           pip install ruff==0.15.1
           ruff check .
 
-      - name: Context budget (fail if SKILL.md / always-floor over budget)
-        run: python scripts/context_budget.py --ci
-
       - name: Run unit tests
         run: python -m pytest tests/ -q
 
@@ -39,6 +36,15 @@ jobs:
         run: python eval/validate_structure.py --research-dir eval/questions/_fixture --strict || true
         # _fixture has only sources.csv (control URLs) — structure check is informational here;
         # drop the `|| true` once a full fixture run (plan.md + report) is committed.
+
+      # Runs LAST on purpose. SKILL.md has been over budget since 2026-07-16, and while
+      # this step sat above the others every run stopped here — tests, doc-sync and the
+      # structure check were reported as skipped and effectively went unchecked for a
+      # month. A guard that hides the results of every other guard is worse than the
+      # breach it reports, so the correctness checks now run first and this one still
+      # fails the job. Reducing SKILL.md to budget stays the actual fix.
+      - name: Context budget (fail if SKILL.md / always-floor over budget)
+        run: python scripts/context_budget.py --ci
 
   citation-fixture:
     runs-on: ubuntu-latest
