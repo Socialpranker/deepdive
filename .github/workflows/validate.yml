@@ -37,12 +37,12 @@ jobs:
         # _fixture has only sources.csv (control URLs) — structure check is informational here;
         # drop the `|| true` once a full fixture run (plan.md + report) is committed.
 
-      # Runs LAST on purpose. SKILL.md has been over budget since 2026-07-16, and while
-      # this step sat above the others every run stopped here — tests, doc-sync and the
+      # Runs LAST on purpose. This step was red from 2026-07-16 to 2026-08-17, and while
+      # it sat above the others every run stopped here — tests, doc-sync and the
       # structure check were reported as skipped and effectively went unchecked for a
       # month. A guard that hides the results of every other guard is worse than the
-      # breach it reports, so the correctness checks now run first and this one still
-      # fails the job. Reducing SKILL.md to budget stays the actual fix.
+      # breach it reports, so the correctness checks run first and this one still fails
+      # the job. Both budgets are green as of 2026-08-17; it stays last regardless.
       - name: Context budget (fail if SKILL.md / always-floor over budget)
         run: python scripts/context_budget.py --ci
 
