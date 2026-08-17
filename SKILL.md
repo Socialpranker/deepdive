@@ -5,304 +5,132 @@ description: Meta-research под вопрос или решение. Веб-п�
 
 # Deepdive — meta-research с дисциплиной
 
-Серьёзное многошаговое исследование под вопрос или решение. Каждый источник = файл, отчёт построен как Q&A, тезисы атомарны и пере-используемы.
+Многошаговое исследование под вопрос или решение. Каждый источник = файл, отчёт построен как Q&A, тезисы атомарны и пере-используемы.
 
 ## Когда применять
 
-- Прямо просит «deep research / глубокое исследование / проведи ресёрч / изучи тему / разбери».
-- Сравнить N институций, продуктов, методологий, рынков (НО: если N конкурентов по фиксированной матрице — это competitive-teardown, не сюда).
-- Подготовить материал для стратегии, бизнес-плана, доклада, статьи.
-- Проверить гипотезу или валидировать решение через внешние данные.
-- Meta-research — «понять как устроен X», «карта области Y», ответить на серию вопросов.
+Прямая просьба о ресёрче; сравнение N институций/продуктов/методологий/рынков; материал под стратегию, доклад, статью; проверка гипотезы внешними данными; «как устроен X», «карта области Y».
 
-## Когда НЕ применять
+**НЕ применять:** быстрая фактоверка → отвечай напрямую · N конкурентов по фиксированной матрице → `competitive-teardown` · Anthropic SDK / Claude API → `claude-api` · брейншторм без данных → `brainstorming`/`grill-me` · ответ уже в проекте → сначала grep.
 
-- Быстрая фактоверка («когда родился Моцарт») — отвечай напрямую, без скилла.
-- Сравнение N конкурентов по структурированной 12-dimension матрице → `competitive-teardown`.
-- Research под Anthropic SDK / Claude API → `claude-api`.
-- Brainstorm без поиска данных → `brainstorming` / `grill-me`.
-- Ответ уже в проекте — сначала grep/чтение, потом решай нужен ли веб-поиск.
-
-## Глубина — определяется по теме
-
-**Жёсткого дефолта нет.** Выбирай каждый раз по сложности вопроса и стоимости решения, которое поддерживаешь.
+## Глубина — по теме, жёсткого дефолта нет
 
 | Режим | Источников | Суб-агентов | Когда |
 |---|---|---|---|
-| shallow | 5–7 | 0 | первичная навигация, тема знакома, low-stakes решение |
+| shallow | 5–7 | 0 | первичная навигация, тема знакома, low-stakes |
 | medium | 12–18 | 2–3 | нетривиальная тема, среднее решение |
-| deep | 25–35+ | 4–5 | high-stakes решение, стратегия, серьёзный анализ |
+| deep | 25–35+ | 4–5 | high-stakes решение, стратегия |
 
-Объяви выбранный режим в начале и обоснуй: «делаю medium — тема нетривиальна, решение middle-stakes».
-
-**Заодно объяви model routing** (один раз, после Genre+Plan): какие фазы на какой модели, estimated cost. Пример:
-
-```
-Routing: Phase 1/3/6 на Opus/high (reframing+plan+adversarial),
-Phase 4 sub-agents на Haiku/Sonnet, Phase 7 synthesis на Sonnet/high.
-Estimated ~$2 (vs ~$8 если бы всё на Opus). Скажи если нужно по-другому —
-"всё на opus" / "cheap mode" / "default".
-```
-
-Детали — `references/model_routing.md`.
+Объяви режим в начале с обоснованием. После Genre+Plan объяви **model routing** одной строкой (какие фазы на какой модели + estimated cost + как перебить: «всё на opus» / «cheap mode»). Детали — `references/model_routing.md`.
 
 ## Перед стартом — discover existing
 
-ДО фазы reframing проверь что уже есть в проекте. Опциональное — если файлов/папок нет, иди дальше.
+До reframing (опционально — нет файлов, иди дальше): определи целевую папку → если она есть, перечисли содержимое, похожий slug ⇒ спроси «это update?» → прочитай `CLAUDE.md`/`CLAUDE.local.md` и `memory/MEMORY.md`, учти в reframing. Цель: не дублировать сделанное.
 
-1. **Куда сохранять** (см. секцию ниже) — определи целевую папку.
-2. **Существующие ресёрчи**: если целевая папка уже есть, перечисли содержимое. Если есть похожий slug → спроси «это update?». Если да — режим update (см. ниже).
-3. **CLAUDE.md / CLAUDE.local.md**: если есть — прочитай, учти в reframing (терминология проекта, workflow, кросс-референсы).
-4. **memory/MEMORY.md**: если есть — прочитай индекс, поищи упоминания темы. Учти в reframing («в памяти X зафиксировано — мы это подтверждаем или пересматриваем?»).
+**Куда сохранять** (не хардкодь): (1) research-папка из CLAUDE.md или существующая `research/` · `06_Деск-ресёрч/` · `docs/research/` · `notes/research/`; (2) иначе по типу проекта — есть манифест (`pyproject.toml`/`package.json`/`Cargo.toml`/`go.mod`) → `research/`, только документы → `06_Деск-ресёрч/`; (3) не git-репо или пусто → `~/deep-research/<slug>/`. Путь покажи ОДИН раз, дальше пиши молча.
 
-Цель: не дублировать сделанное. Не из любопытства, не «на всякий случай ещё раз».
-
-## Куда сохранять — 3-уровневая логика
-
-Папка-цель определяется автоматически. Не хардкодь.
-
-```
-Уровень 1 — явный сигнал:
-  CLAUDE.md / CLAUDE.local.md упоминают research-папку → используй её
-  Существует одна из: research/, 06_Деск-ресёрч/, docs/research/, notes/research/
-  → используй существующую
-
-Уровень 2 — автодетекция типа проекта:
-  pyproject.toml / package.json / Cargo.toml / go.mod / mix.exs → tech → research/
-  Только .md / .pdf / .docx без манифестов → notes/гуманитарный → 06_Деск-ресёрч/
-
-Уровень 3 — фоллбэк:
-  Не git-репо или пустая папка → ~/deep-research/<slug>/ (глобальная домашняя)
-```
-
-Покажи выбранный путь ОДИН раз: «Сохраню в `research/<slug>/`. Ок?» Дальше пиши молча.
-
-## Режим update
-
-Если пользователь говорит `update <slug>` или «обнови ресёрч <тема>»:
-
-**Цель update:** **дельта**, не replay. Найти что изменилось с last_research_date, написать diff-файл. Старый отчёт остаётся как есть; новый создаётся **только если** изменения существенные (после прочтения diff'а — решение пользователя).
-
-**Детальный протокол:** `references/refresh_protocol.md`. Ниже — high-level порядок:
-
-1. **Pre-flight check** — прочитай:
-   - `<targetfolder>/<slug>/plan.md` (last_research_date, гипотезы, подвопросы)
-   - `<targetfolder>/<slug>/refresh_targets.md` (что отслеживать — entities, numbers, hypotheses)
-   - Последний `<date>_<genre>.md` (что было сказано — чтобы видеть что изменилось)
-2. **Если `refresh_targets.md` нет** (старый ресёрч до этого протокола) — сначала сгенерируй его из final report + plan.md, используя шаблон Z11 (см. `blocks/close.md`).
-3. **4 категории дельты** в targeted поиске (date filters от last_research_date):
-   - **New entrants** — Crunchbase, GitHub topics, HuggingFace, news (новые компании/проекты)
-   - **Entity diff** — fingerprinting tracked entities (pricing, careers, funding)
-   - **Numbers refresh** — re-fetch FRED/WB/industry numbers, compare
-   - **Adversarial trigger** — OpenAlex/arXiv/Retraction Watch на новые публикации
-4. **Verified-no-change секция** — что перепроверили и ничего не изменилось. Это **тоже результат**.
-5. **Output: `diffs/<YYYY-MM-DD>_delta.md`** — компактный список изменений + recommended actions (см. шаблон в `refresh_protocol.md`).
-6. **Adversarial trigger HIGH** → re-run Phase 6 (только эту часть) на Opus с новой публикацией как input.
-7. **Новый отчёт `<новая_дата>_<genre>.md`** — **только если** delta существенный (HIGH severity или несколько MEDIUM). Решает пользователь после прочтения delta. Старый отчёт в frontmatter получает `status: superseded by <новая_дата>_<genre>.md`. Старый `plan.md` копируется как `plan.md` (новая версия), `version: update-N`, `parent: <дата>_<genre>.md`, секция 16 changelog заполнена.
-
-**Cost для типового update:** ~$0.40 (vs ~$2 за полный medium ресёрч).
-
-**Model routing для update:** Pre-flight `sonnet`/low, search-этапы (1-4) `haiku`/low с `sonnet` для academic, synthesis delta — `sonnet`/medium, adversarial re-run — `opus`/high.
+**Slug:** латиница, цифры, дефисы («Postgres logical replication vs CDC» → `postgres-replication-vs-cdc`). Неочевиден — покажи в начале фазы 2.
 
 ## Workflow — <!--gen:count:phases-->12<!--/gen--> фаз (1–8, включая 3.5, 3.7, 5.5 и 6.5)
 
-Детали каждой фазы — в `references/workflow.md`. **Модель и effort на каждую фазу** — в `references/model_routing.md` (Opus/Sonnet/Haiku matrix). Здесь high-level.
+Детали фаз — `references/workflow.md`, модель на фазу — `references/model_routing.md`. Здесь — что фаза обязана оставить после себя.
 
-1. **Reframing** [`opus`/high] — переписать вопрос, собрать **Decision Spec** (решение глагол+объект+срок / потребитель→его следующий шаг / ≥1 if-then вилка «покажет X → делаю A»; ни одной вилки ⇒ честный даунгрейд в shallow «любопытство»), сформулировать 2–4 опровергаемые гипотезы + (medium/deep) multi-perspective персоны для охвата (STORM) + **router по профилю вопроса** (классифицировать тип: фактологический→плоско / многошаговый→least-to-most L1→L2 / реляционный→графы / сравнительный→матрица — тип направляет декомпозицию и подсказывает режим глубины). См. `references/question_reframing.md`.
-2. **Genre & block selection** [`sonnet`/medium] — определить жанр отчёта (qa/explainer/decision/landscape/validation/custom) и набор блоков. Подтвердить пользователю одной строкой. См. `references/genres.md` и `references/blocks/INDEX.md`.
-3. **Plan** [`opus`/medium] — записать `plan.md` (5 секций: HEADER → SCOPE → STRUCTURE → EXECUTION → TRACKING). Включает: user context, time-box, acceptance criteria, discovered existing, glossary, жанр + blocks + rationale, гипотезы, risk register, subtopic↔blocks mapping (+ **least-to-most level** — для многошаговых вопросов «X учитывая Y»: подвопросы по уровням L1→L2 с накоплением контекста между ними, а не плоский параллельный список; для независимых подвопросов остаётся плоско), information sourcing strategy (каналы + stat-источники + API endpoints), opposition queries, stop-criteria, notes для tracking. См. `workflow.md` → Фаза 3 для полного шаблона.
-3.5. **Capability Discovery** [`sonnet`/low] (опциональная для shallow, рекомендуется для medium, обязательна для deep) — audit env vars для API ключей, map подтемы → доступные APIs, fallback на upstream awesome-lists для unknown gaps, сводный отчёт пользователю. См. `references/capability_discovery.md`.
-3.7. **Plan-review gate** [`sonnet`/low] (shallow — skip; medium — обязательна) — единственная human-in-the-loop контрольная точка ПЕРЕД дорогой Фазой 4. Включает **скаут-пасс** (medium — опц., deep — рекомендуется): 3–4 `Explore`-агента на `haiku`, задача не «найти источники», а «какие подвопросы мы не задали»; выход — правки `plan.md`, ноль записей в `sources/`. Фаза 4 ищет ровно там, куда указал план, — скаут покрывает эту слепоту до фиксации плана. Показать сжатый план (вопрос как понял + решение + жанр + гипотезы + персоны + каналы + стоп-критерий + routing) и дать утвердить/поправить. Жёсткость по режиму: **deep — показать и ЖДАТЬ явного «Ок»** перед запуском суб-агентов; **medium — soft** (показать, продолжить если нет возражений); **shallow — skip**. Правка плана ДО исполнения — самый дешёвый рычаг качества (Gemini: «biggest lever over output quality»). Заодно enforcement-точка: пустой план-блок = пропущенная фаза. Clarification-триаж (нужны ли уточняющие вопросы) наследуется из Фазы 1. См. `references/plan_gate.md`.
-4. **Поиск** [main `sonnet`/medium; sub-agents per-task: `haiku` для web/api, `sonnet` для academic/long-source, `opus` для heavy reasoning subtask] — 4 шага: (4.0) **Source Dispatch** — прогнать каждый подвопрос через `source_dispatch.md` matrix, заполнить plan.md секцию 12. (4.1) Launch — для medium/deep: суб-агенты `subagent_type=general-purpose` (нужен Write) в параллель, каждому свой диапазон номеров источников (`s01-s09`, `s10-s19`, ...); для shallow — главный поток сам. (4.2) Fetch & dedup. (4.3) Save в `sources/NN_slug.md` — пишет сам агент, в главный поток возвращаются только index-строки. После Round 1 (medium/deep) — **snowball-пасс**: топ-K источников по total → backward (их ссылки → канонический primary) + forward (кто цитирует, OpenAlex/S2) — цепочки цитирований достают то, что не отдаст keyword-поиск. Loop: **cheap goal-check** (Haiku после раунда — per-subquestion `goal_status` met/partial/unmet + чего не хватает, направляет следующий раунд и удешевляет Opus-evaluation) → bounded deviation между раундами (trajectory-чек claims, ревизия outline, **query-мутации** по `query_performance` — RU↔EN, операторы, терминология — вместо повтора провалившихся формулировок, **novelty rate** как сигнал насыщения) + **no-progress circuit breaker** (2 раунда подряд без новой информации → стоп, нерешённое в Open Questions — не жечь бюджет на фантом). См. `references/source_dispatch.md`, `references/subagents_v2.md`, `references/workflow.md` → Фаза 4.
-5. **Claims-ledger + триангуляция** [`haiku`/low] — из index-строк собирается `claims.csv` (claim_id, sources, roots, **paths**, status, confidence, primary_source, **source_caveat**, **dissent**, as_of). Механическая триангуляция: ≥3 источника И ≥2 типа И ≥2 различных корней (`root:` — десять пересказов одного пресс-релиза это один голос) И **≥2 различных путей обнаружения** (`discovery_path:` — одна формулировка в одном канале даёт одну выборку, а не три голоса) → `triangulated`; один корень → `single-root`, один путь → `single-path`, потолок medium; primary-first — confidence не выше `medium` без primary. **Защита меньшинства:** непогашенный `dissent` от `Primary`/`credibility ≥ 4` → `contested` независимо от большинства, обе позиции в отчёт с основанием выбора («≥3 источника» — правило большинства, а одинокий filing обычно прав против трёх пересказов). **Скепсис на входе**: помечай источник `vendor`/`self-reported`/`disputed:sNN` при скоринге — тезис на такой цифре не получает `high` (симметрично primary-first), чтобы синтез не доверял величине vendor-бенчмарка (red team ловит это поздно). Loop: gap-волна на строки не-triangulated, максимум 2 круга, иначе `data-insufficient`. См. `references/source_scoring.md` и `references/workflow.md` → Фаза 5.
-5.5. **Evidence-фильтр (relevance × authority)** [`sonnet`/low] (shallow — skip; medium/deep — обязательно) — фильтр на ВХОДЕ синтеза (симметрично 6.5, что проверяет выход), две оси. **Relevance:** по каждой паре (claim, source) CRAG-классификатор Correct/Ambiguous/Incorrect по дословным цитатам → drop нерелевантных под этот claim → relevant-only цитаты в слой `evidence/CN.md`. **Authority** (только несущие пары — claim в memo/F1/F9, ИЛИ с числом, ИЛИ источник единственный корень, ИЛИ `caveat` ≠ `-`): «вправе ли ЭТОТ источник утверждать ЭТО» по чек-листу признаков → `qualified` / `unqualified-for-this-claim` / `unknown` → `.verify/authority.json`. **`unknown` — карантин, не пропуск:** не единственная опора, не `high`. Три слоя 6.5 проверяют, что источник СКАЗАЛ процитированное, и ни один — кто он и откуда взял; content-farm с дословной цитатой проходит faithfulness идеально. `sources/NN.md` НЕ трогаются (архив). Наивная подача всего найденного в синтез *снижает* качество (Search-o1 33%→24%). Claim без единого relevant-источника → `data-insufficient` или до-поиск. Синтез (Фаза 6) читает `evidence/`, а не весь пул. См. `references/evidence_filter.md`.
-6. **Синтез + multi-angle red team** [red-team суб-агенты `opus`/high **обязательно** для deep, `sonnet`/high для medium; synthesis `sonnet`/high] — собрать `<date>_<genre>.md` из блоков (запрет финала «it depends» — невозможна однозначная рекомендация ⇒ обязательна условная по вилкам Decision Spec), затем: draft → claim ledger → N параллельных враждебных ролей (Skeptic / Contrarian / Gap-hunter / **Исполнитель** — симулирует потребителя из Decision Spec: исполняет решение только по отчёту + hedge-линт / **Адвокат меньшинства** — защищает одинокий источник против консенсуса по строкам с `dissent`, директива «консенсус группы не аргумент») как `general-purpose` суб-агенты → триаж по severity → ОДИН раунд ремедиации HIGH (точечный до-поиск или caveat) → **`memo.md`** (одностраничный decision-меморандум: рекомендация, вилки, 3 числа с [sNN]+as_of, риск, next actions, **строка `Урезано:`** — если сработал circuit breaker или даунгрейд режима, это объявляется вслух, иначе пользователь получает более лёгкую версию своего вопроса и не знает об этом; ничего не урезали → `Урезано: —`. Обязателен всегда) → финал. Finder ≠ fixer. Гейт: shallow=R1 инлайн, medium=R1+R2+R4 (+R5 при `dissent`/`contested`), deep=R1+R2+R3+R4+R5 обязательно. Ценность даёт разность ролей и изоляция контекстов, а не класс модели. См. `references/adversarial_pass.md` и `references/blocks/`.
-6.5. **Verify** [`haiku`/low] (medium/deep — обязательно) — runtime-проверка цитат по двум осям: (1) **liveness** — ссылка жива (`check_citations.py` → `.verify/citations.json`); (2) **faithfulness** — источник реально подтверждает тезис (entailment claim ⊨ цитата; пары берутся из `evidence/CN.md` Фазы 5.5, RAGAS-декомпозиция + ALCE claim⊨quote → SUPPORTED/PARTIAL/UNSUPPORTED). Вердикты пишутся в `.verify/faithfulness.json` (I/O-контракт — единый источник истины, его читают F10-header и rubric axis 3, никто не пересчитывает); (3) **qualifier preservation** — отчёт всё ещё говорит то же, что строка `claims.csv`, из которой он собран (Layer 3: пары (claim, утверждение) по F1/`memo.md`/Z12 → PRESERVED/BROADENED/SCOPE-DROPPED/UNTRACEABLE → `.verify/qualifiers.json`). Слои 1-2 останавливаются на ledger'е и не смотрят, что синтез НАПИСАЛ, — а именно там теряются оговорки («F1=1.000 на фикстурах со структурированным состоянием» → «F1=1.000 везде»; «54% страниц с мёртвой ссылкой» → «54% ссылок мертвы»). Битые/неподтверждающие источники чинятся (re-search), смягчаются (overclaim → слабее) или тезис уходит в Open Questions; снятая оговорка возвращается в отчёт (ledger не ослабляют под отчёт — дрейфует отчёт). Verification-header F10 несёт ВСЕ ТРИ оси; отчёт не «готов» без него. Per-source faithfulness — defensible-фича против закрытых DR-продуктов (рынок массово врёт цитатами: Tow Center >60% error rate). См. `references/runtime_verification.md`.
-7. **Refresh targets** [`sonnet`/medium] (medium/deep — обязательно) — извлечь entities/numbers/hypotheses/topic-markers из финального отчёта в `refresh_targets.md`. Это точка входа для будущих `update <slug>` — без неё каждый update тратит время на re-discovery «что отслеживать». См. блок Z11 в `references/blocks/close.md` и `references/refresh_protocol.md`.
-8. **Decision walkthrough** [`opus`/high, главный поток] (**обязательна ВСЕГДА, включая shallow** — там усечённая, 1 вилка) — отчёт не обсуждается, а исполняется: показать `memo.md`, провести пользователя по if-then вилкам Decision Spec по одной («ресёрч показал X [s03][s11] — вилка A срабатывает? твоё решение?»). Исходы: принято (решение + next action + дата) / заблокировано данными (1 целевая gap-волна → повторный заход, иначе `blocked`) / отложено (`deferred`, без дожима — но это диагностика формального Decision Spec). Артефакт `application.md` (любой status — gate требует файл, не решение) + строка в глобальный `~/.claude/research/applications_ledger.csv` (читается Фазой 1 следующих ресёрчей: паттерн непримененных прогонов). См. `references/decision_walkthrough.md`.
+1. **Reframing** [`opus`/high] — переписать вопрос; собрать **Decision Spec** (решение глагол+объект+срок / потребитель→его следующий шаг / ≥1 if-then вилка «покажет X → делаю A»; ни одной вилки ⇒ честный даунгрейд в shallow); 2–4 опровергаемые гипотезы; для medium/deep — персоны охвата (STORM) и router по типу вопроса (фактологический→плоско / многошаговый→least-to-most / реляционный→графы / сравнительный→матрица). См. `question_reframing.md`.
+2. **Genre & blocks** [`sonnet`/medium] — жанр (qa/explainer/decision/landscape/validation/custom) + набор блоков, подтвердить одной строкой. См. `genres.md`, `blocks/INDEX.md`.
+3. **Plan** [`opus`/medium] — `plan.md`: HEADER → SCOPE → STRUCTURE → EXECUTION → TRACKING (user context, time-box, acceptance criteria, discovered existing, glossary, жанр+блоки, гипотезы, risk register, subtopic↔blocks mapping с least-to-most уровнями для многошаговых вопросов, sourcing strategy, opposition queries, stop-criteria, notes).
+3.5. **Capability Discovery** [`sonnet`/low] (deep — обязательна) — audit env vars, подтемы → доступные API, fallback на awesome-lists. См. `capability_discovery.md`.
+3.7. **Plan-review gate** [`sonnet`/low] (shallow — skip) — единственная human-in-the-loop точка ПЕРЕД дорогой Фазой 4: показать сжатый план (вопрос, решение, жанр, гипотезы, каналы, стоп-критерий, routing). **deep — ЖДАТЬ явного «Ок»; medium — soft.** Включает **скаут-пасс** (deep — рекомендуется): 3–4 `Explore`-агента на `haiku` ищут не источники, а непокрытые подвопросы; выход — правки `plan.md`, ноль записей в `sources/`. См. `plan_gate.md`.
+4. **Поиск** [main `sonnet`/medium; sub-agents: `haiku` web/api, `sonnet` academic/long-source] — (4.0) Source Dispatch по матрице → `plan.md` §12; количественный подвопрос ⇒ primary-канал registry/API. (4.1) Launch: medium/deep — `general-purpose` суб-агенты параллельно, каждому свой диапазон id (`s01-s09`, `s10-s19`…) и своя ось поиска, не только подтема; shallow — главный поток. (4.2) Fetch, дедуп с замером `overlap_rate`. (4.3) Агент сам пишет `sources/NN_slug.md`, в главный поток — только index-строки. После раунда 1 — snowball (backward/forward цитирования). Loop: goal-check (haiku) → bounded deviation с query-мутациями → circuit breaker (2 раунда без нового ⇒ стоп, остаток в Open Questions). См. `source_dispatch.md`, `subagents_v2.md`.
+5. **Claims-ledger + триангуляция** [`haiku`/low] — `claims.csv` (claim_id, sources, source_types, roots, paths, status, confidence, primary_source, source_caveat, dissent, as_of). `triangulated` ⟺ ≥3 источника И ≥2 типа И ≥2 корня (`root:`) И ≥2 пути (`discovery_path:`); иначе `single-type`/`single-root`/`single-path`, потолок medium. Primary-first: без primary — потолок medium. Caveat (`vendor`/`self-reported`/`disputed:sNN`) — потолок medium, `disputed` без арбитра → low. **Защита меньшинства:** непогашенный `dissent` от `Primary`/`credibility ≥ 4` ⇒ `contested` независимо от большинства, обе позиции в отчёт с основанием выбора. Loop: gap-волна на не-triangulated, max 2 круга, иначе `data-insufficient`. См. `source_scoring.md`.
+5.5. **Evidence-фильтр: relevance × authority** [`sonnet`/low] (medium/deep — обязательно) — фильтр на ВХОДЕ синтеза. **Relevance:** по паре (claim, source) классификатор Correct/Ambiguous/Incorrect по дословным цитатам → relevant-only цитаты в `evidence/CN.md`; claim без единого relevant-источника → `data-insufficient` или до-поиск. **Authority** (несущие пары: claim в memo/F1/F9, ИЛИ с числом, ИЛИ источник единственный корень, ИЛИ `caveat` ≠ `-`): «вправе ли ЭТОТ источник утверждать ЭТО» по чек-листу признаков → `qualified`/`unqualified-for-this-claim`/`unknown` → `.verify/authority.json`. **`unknown` — карантин:** не единственная опора, не `high`. `sources/NN.md` не трогаются. См. `evidence_filter.md`.
+6. **Синтез + multi-angle red team** [red team `opus`/high для deep, `sonnet`/high для medium] — собрать `<date>_<genre>.md` из блоков (финал «it depends» запрещён: рекомендация однозначная или условная по вилкам) → claim ledger → параллельные враждебные роли как `general-purpose`: R1 Skeptic, R2 Contrarian, R3 Gap-hunter, R4 Исполнитель (исполняет решение только по отчёту + hedge-линт), R5 Адвокат меньшинства (защищает одинокий источник, директива «консенсус не аргумент») → триаж severity → ОДИН раунд ремедиации HIGH → **`memo.md`** (рекомендация, вилки, 3 числа с [sNN]+`as_of`, риск, next actions, строка `Урезано:` — сработавший circuit breaker или даунгрейд объявляется вслух; иначе `Урезано: —`) → финал. Finder ≠ fixer. Гейт: shallow=R1 инлайн, medium=R1+R2+R4 (+R5 при `dissent`), deep=все пять. Ценность даёт разность ролей и изоляция контекстов, не класс модели. См. `adversarial_pass.md`.
+6.5. **Verify** [`haiku`/low] (medium/deep — обязательно) — три оси: **liveness** (`check_citations.py` → `.verify/citations.json`); **faithfulness** (entailment claim⊨цитата по парам из `evidence/CN.md` → SUPPORTED/PARTIAL/UNSUPPORTED → `.verify/faithfulness.json`); **qualifier preservation** (утверждения F1/`memo.md`/Z12 против строк `claims.csv` → PRESERVED/BROADENED/SCOPE-DROPPED/UNTRACEABLE → `.verify/qualifiers.json`). Битое чинится re-search'ем, overclaim смягчается, неподтверждённое уходит в Open Questions, снятая оговорка возвращается — дрейфует отчёт, не ledger. Header F10 несёт все три оси плюс строку независимости источников; без него отчёт не «готов». См. `runtime_verification.md`.
+7. **Refresh targets** [`sonnet`/medium] (medium/deep) — entities/numbers/hypotheses/topic-markers из отчёта в `refresh_targets.md`: точка входа для будущих `update`. Блок Z11 в `blocks/close.md`.
+8. **Decision walkthrough** [`opus`/high, главный поток] (**всегда**, в shallow — 1 вилка) — отчёт не обсуждается, а исполняется: показать `memo.md` и провести пользователя по вилкам по одной. Исходы: принято (решение + next action + дата) / `blocked` (после 1 целевой gap-волны) / `deferred`. Артефакт `application.md` (любой status) + строка в `~/.claude/research/applications_ledger.csv`. См. `decision_walkthrough.md`.
 
 ## Stop-criteria — по содержанию, не по бюджету
 
-Бюджета на количество WebSearch/WebFetch **нет**. Качество > скорость.
+Лимита на WebSearch/WebFetch нет.
 
-**Останавливайся когда:**
-- Все 2–4 гипотезы либо подтверждены ≥3 разнотипными источниками, либо опровергнуты ≥3, либо явно отмечены как «данных мало».
-- Прошёл целевой поиск противоположной позиции (≥1 запрос вида «X criticism / counter-evidence / against X / problems with X») и проанализировал результаты.
-- Покрыты 4+ типа источников: первичные / академические / отраслевые медиа / обсуждения или противники.
-- НЕТ роста новой информации — последние 3–5 источников повторяют то же, что уже есть.
+**Стоп когда:** все гипотезы подтверждены/опровергнуты ≥3 разнотипными источниками либо помечены «данных мало» · прошёл ≥1 целевой поиск оппозиции («X criticism / counter-evidence / problems with X») и разобран · покрыты 4+ типа источников · последние 3–5 источников не дают нового.
 
-**Не останавливайся:**
-- Источники друг другу противоречат → копай за причиной противоречия.
-- Все источники одного типа → добей разнообразие целевым поиском.
-- Есть сильный контр-аргумент без своего опровержения/подтверждения → найди.
-- Не было ни одного целевого поиска оппозиции → сделай.
+**Не стоп когда:** источники противоречат (копай за причиной) · все одного типа · есть сильный контр-аргумент без разбора · оппозицию не искали.
 
-**Тупик:**
-- Третий подряд поиск возвращает источники total < 8 → тема плохо исследована или плохо ищем. Останавливайся, фиксируй в Open Questions «литература слабая», предлагай альтернативные пути (интервью, эксперимент).
+**Тупик:** третий подряд поиск даёт источники `total < 8` ⇒ стоп, в Open Questions «литература слабая», предложи интервью/эксперимент.
 
 ## Output structure
 
-Целевая папка `<root>/<slug>/`:
-
 ```
 <slug>/
-├── plan.md                          # Фаза 3 — план + changelog (секция 16) + notes (секция 15)
-├── sources.csv                      # индекс всех источников с оценками
-├── claims.csv                       # Фаза 5 — claim-ledger (claim/sources/status/confidence)
-├── sources/                         # один файл = один источник (с метаданными + цитаты)
-│   ├── 01_<short-slug>.md
-│   ├── 02_<short-slug>.md
-│   └── ...
-├── evidence/                        # Фаза 5.5 — relevant-only цитаты под claim (medium/deep); sources/ не трогаются
-│   ├── C1.md
-│   └── ...
-├── findings/                        # атомарные тезисы (опционально, для крупных)
-│   ├── F1_<short>.md
-│   └── ...
-├── refresh_targets.md               # Фаза 7 — что отслеживать при будущих update (medium/deep)
-├── memo.md                          # Фаза 6 — одностраничный decision-меморандум (всегда)
-├── application.md                   # Фаза 8 — вердикт по вилкам + status + applicability_ratio (всегда)
-├── .verify/                         # артефакты верификации (I/O-контракт: один producer, много consumers)
-│   ├── authority.json               #   Фаза 5.5 — qualified/unqualified-for-this-claim/unknown + карантины
-│   ├── citations.json               #   Фаза 6.5 liveness (check_citations.py)
-│   ├── faithfulness.json            #   Фаза 6.5 faithfulness SUPPORTED/PARTIAL/UNSUPPORTED
-│   └── qualifiers.json              #   Фаза 6.5 qualifier PRESERVED/BROADENED/SCOPE-DROPPED
-├── diffs/                           # дельта-файлы от update <slug> (если были update'ы)
-│   ├── 2026-08-15_delta.md
-│   └── 2026-11-20_delta.md
-└── <YYYY-MM-DD>_<genre>.md          # финальный отчёт — суффикс по жанру
+├── plan.md              # Фаза 3 (+ changelog §16, notes §15)
+├── sources.csv          # индекс источников с оценками
+├── claims.csv           # Фаза 5 — claim-ledger
+├── sources/NN_slug.md   # один файл = один источник (метаданные + дословные цитаты)
+├── evidence/CN.md       # Фаза 5.5 — relevant-only цитаты под claim (medium/deep)
+├── findings/FN_*.md     # атомарные тезисы (опц., для крупных)
+├── refresh_targets.md   # Фаза 7 (medium/deep)
+├── memo.md              # Фаза 6 — decision-меморандум (всегда)
+├── application.md       # Фаза 8 — вердикт по вилкам + status (всегда)
+├── .verify/             # I/O-контракт: один producer, много consumers
+│   ├── authority.json   #   Фаза 5.5 — qualified/unqualified/unknown + карантины
+│   ├── citations.json   #   Фаза 6.5 liveness
+│   ├── faithfulness.json#   Фаза 6.5 faithfulness
+│   └── qualifiers.json  #   Фаза 6.5 qualifier preservation
+├── diffs/<date>_delta.md# дельты режима update
+└── <YYYY-MM-DD>_<genre>.md   # финал: qa|explainer|decision|landscape|validation|custom
 ```
 
-**Note:** отдельный `_changelog.md` не создаётся — changelog встроен в `plan.md` секцию 16 (заполняется только для update-режима).
-
-**Имя финального отчёта:** суффикс по жанру
-- Q&A: `<date>_qa.md`
-- Explainer: `<date>_explainer.md`
-- Decision: `<date>_decision.md`
-- Landscape: `<date>_landscape.md`
-- Validation: `<date>_validation.md`
-- Custom: `<date>_custom.md`
-
-**Шаблоны:**
-- `sources/NN.md` — см. `references/source_scoring.md`
-- `claims.csv` — claim-ledger, см. `references/source_scoring.md` (раздел «Claims-ledger»)
-- `<date>_<genre>.md` — собирается из блоков, см. `references/genres.md` (пресеты) и `references/blocks/` (шаблоны блоков)
-- `findings/FN.md` — атомарный тезис, см. `references/blocks/close.md` (блок Z6)
+Отдельный `_changelog.md` не создаётся — он в `plan.md` §16. Шаблоны: `sources/NN.md` и `claims.csv` — `source_scoring.md`; отчёт — `genres.md` + `blocks/`; `findings/FN.md` — блок Z6 в `blocks/close.md`.
 
 ## После завершения — finish-up
 
-0. **Собери детерминированные артефакты** (не руками):
-   - `sources.csv` из `sources/NN.md`: `python scripts/build_sources_csv.py --research-dir <root>/<slug>`. Это единый источник колонок (`url,title,type,channel,...`) — не собирай CSV вручную grep'ом, схема разъедется.
-   - Liveness-верификация Фазы 6.5 пишется **прямо в `.verify/`** (не в `eval/output/`): `python eval/check_citations.py --research-dir <root>/<slug> --json --out <root>/<slug>/.verify/citations`. Без `--out` файл уйдёт в `eval/output/` и phase-gate его не найдёт. Faithfulness (`.verify/faithfulness.json`) пишется на шаге Фазы 6.5 Layer 2.
-0.5. **Проверь провенанс чисел:** `python scripts/check_number_provenance.py --research-dir <root>/<slug> --strict`. Ловит два класса, невидимых для 6.5: число без прослеживаемого производителя (fail-closed — такое число не должно быть в `memo.md`) и одно и то же значение у источников с РАЗНЫМИ корнями (либо `root` проставлен неверно, либо цифра циркулирует, создавая видимость независимого подтверждения). Детерминированно, без модели в цикле.
-1. **Phase-gate — БЛОКЕР, не совет.** Прогони `python scripts/validate_phases.py --research-dir <root>/<slug> --strict`. Он читает `mode:` из frontmatter и проверяет, что каждая обязательная для режима фаза оставила свой артефакт (`plan.md`, `sources/` или `sources.csv`, `claims.csv`, `memo.md`, `application.md`, для medium/deep — `evidence/`, `.verify/*.json`, `refresh_targets.md`, финальный отчёт). **Ресёрч НЕ «готов», пока gate красный** — ровно как отчёт не «готов» без verification-header F10 (см. `runtime_verification.md`). Красный exit ⇒ фаза пропущена ⇒ **вернись к пропущенной фазе, доделай, перезапусти gate — и только после зелёного переходи к шагу 2**. Не показывай путь, не пиши резюме, не рапортуй «готово» с красным gate. Это машинная страховка против «методология исполняется только дисциплиной модели» — сам enforcement тоже должен быть enforced, иначе gate — просто ещё один неисполняемый абзац.
-2. Покажи пути markdown-ссылками: `[research/<slug>/memo.md](research/<slug>/memo.md)` (первым — это вход потребителя) и `[research/<slug>/2026-XX-XX_<genre>.md](research/<slug>/2026-XX-XX_<genre>.md)`.
-3. Краткое резюме в чат: 3 ключевых ответа + 1 главный контр-аргумент + что не нашли + итог walkthrough (решения/blocked/deferred из `application.md`) (5–8 строк).
-4. Предложи 2–3 следующих ресёрча, которые логически следуют.
-5. **Если в проекте есть `memory/`** — предложи 1–3 memory candidates:
-   ```
-   По итогам — кандидаты в memory:
-   - [project] Тезис X (confidence: high, 3 источника) → файл memory/<topic>.md
-   - [reference] Авторитетный источник Y по теме Z
-
-   Сохранить?
-   ```
-6. **Humanizer.** Если в системе есть `anthropic-skills:humanizer-ru` — вызови его на финальный `<date>_<genre>.md` для чистки канцелярита. Опциональное.
+0. **Детерминированные артефакты, не руками:** `python scripts/build_sources_csv.py --research-dir <root>/<slug>` (единый источник колонок) · `python eval/check_citations.py --research-dir <root>/<slug> --json --out <root>/<slug>/.verify/citations` (без `--out` файл уйдёт в `eval/output/` и gate его не найдёт).
+0.5. **Провенанс чисел:** `python scripts/check_number_provenance.py --research-dir <root>/<slug> --strict` — ловит число без прослеживаемого производителя и одно значение у источников с разными корнями (ложная независимость).
+1. **Phase-gate — БЛОКЕР:** `python scripts/validate_phases.py --research-dir <root>/<slug> --strict`. Красный ⇒ фаза пропущена ⇒ вернись, доделай, перезапусти. Не показывать путь, не писать резюме, не рапортовать «готово» с красным gate.
+2. Пути markdown-ссылками: сначала `memo.md` (вход потребителя), затем отчёт.
+3. Резюме в чат 5–8 строк: 3 ключевых ответа + главный контр-аргумент + чего не нашли + итог walkthrough из `application.md`.
+4. Предложи 2–3 следующих ресёрча.
+5. Есть `memory/` — предложи 1–3 кандидата (тезис + confidence + источники; авторитетный источник как `[reference]`).
+6. Есть `anthropic-skills:humanizer-ru` — прогони им финальный отчёт (опционально).
 
 ## Что НЕ делать
 
-- Не пропускать `discover existing` — рискуешь дублировать готовый ресёрч.
-- Не пропускать reframing — даже если запрос «вроде понятен».
-- Не запускать medium/deep без единой if-then вилки Decision Spec — нет вилки, значит ресёрч ничего не изменит: честный shallow дешевле мёртвого deep-отчёта.
-- Не пропускать Фазу 8 (Decision walkthrough) «потому что и так ясно» — ясно значит займёт две минуты и подтвердит это в application.md. И не отвечать на вилки ЗА пользователя: додуманное агентом применение — тот же мёртвый отчёт.
-- Не завершать синтез финалом «it depends» без разрешённых условий — рекомендация обязана быть однозначной или условной по вилкам Decision Spec.
-- Не оставлять `root:` пустым при сохранении источника — триангуляция считает корни; десять пересказов одного пресс-релиза не должны проходить как triangulated.
-- Не копировать `discovery_path:` между источниками и не оставлять пустым — это четвёртое условие триангуляции (иначе `single-path`).
-- Не разводить fetch-агентов только по подтемам — ещё и по осям поиска (EN-академия / RU + регуляторы / практики / реестры). Один шаблон + одна модель + один язык = одна траектория и коррелированные голоса в ledger.
-- Не выбрасывать дубли URL между агентами молча — считать `overlap_rate` в `plan.md` §15: совпадение находок это замер конформизма, а не подтверждение.
-- Не передавать во второй раунд находки соседей — только дыры. Наблюдаемость чужих действий сама по себе канал координации.
-- Не выдавать числу трибуну без прослеживаемого производителя: `origin_kind: unknown` / `chain_len ≥ 2` / нет `data_as_of` ⇒ не в `memo.md`/TL;DR/F9 и не `high`. Проверяет `check_number_provenance.py`.
-- Не искать числа в вебе при наличии покрывающего endpoint в `stat_sources/`/`api_sources/` (registry-first).
-- Не давать `triangulated` строке с непогашенным `dissent` от Primary/`credibility ≥ 4` — это `contested`. И не гасить dissent понижением credibility несогласного: это подгонка ledger'а.
-- Не трактовать `unknown` в authority как «сойдёт» — карантин. Защита, молча пропускающая при нехватке признаков, эквивалентна её отсутствию.
-- Не поднимать fetch-агентов Фазы 4 на opus «для качества»: у них Write и изолированный контекст, на сильной модели растёт не качество поиска, а уверенность ошибки.
-- Не пропускать Plan-review gate (Фаза 3.7) в medium/deep; для deep — не запускать суб-агентов Фазы 4, пока пользователь не подтвердил план. Гейт без ожидания ответа (для deep) = не гейт.
-- Не выводить только в чат — всегда сохраняй файлы.
-- Не обходить ограничения WebFetch через bash/curl.
-- Не использовать источники с total < 8 как основу для выводов.
-- Не пропускать multi-angle red team в medium/deep.
-- Для fetch+save (Фаза 4.1) и red team (Фаза 6) — `general-purpose` с явным диапазоном номеров, не `Explore` (read-only, только для разведки).
-- Не пропускать gap-волну (нетриангулированные строки `claims.csv`, max 2 круга) и не давать confidence выше `medium` без primary-источника.
-- Не оставлять «висящие» утверждения без ссылки на конкретный `sources/NN.md`.
-- **Не рапортовать «готово» с красным phase-gate.** `validate_phases.py --strict` красный ⇒ фаза пропущена ⇒ доделать и перезапустить, а не показывать результат. Gate — блокер finish, как verification-header F10, а не необязательная проверка.
+- Не пропускать `discover existing` и reframing.
+- Не запускать medium/deep без единой if-then вилки Decision Spec — честный shallow дешевле мёртвого deep-отчёта.
+- Не пропускать Фазу 8 «потому что и так ясно» и не отвечать на вилки ЗА пользователя.
+- Не пропускать Plan-review gate в medium/deep; для deep гейт без ожидания ответа = не гейт.
+- Не завершать синтез финалом «it depends» без разрешённых условий.
+- Не оставлять `root:` пустым и не копировать `discovery_path:` между источниками — это 3-е и 4-е условия триангуляции.
+- Не разводить fetch-агентов только по подтемам — ещё и по осям поиска (EN-академия / RU + регуляторы / практики / реестры): один шаблон + одна модель + один язык = одна траектория и коррелированные голоса.
+- Не выбрасывать дубли URL между агентами молча — считать `overlap_rate` в `plan.md` §15: совпадение это замер конформизма, а не подтверждение.
+- Не передавать во второй раунд находки соседей — только дыры.
+- Не давать `triangulated` строке с непогашенным `dissent` от Primary/`credibility ≥ 4` (это `contested`) и не гасить dissent понижением credibility несогласного.
+- Не трактовать `unknown` в authority как «сойдёт» — карантин.
+- Не выдавать числу трибуну без производителя: `origin_kind: unknown` / `chain_len ≥ 2` / нет `data_as_of` ⇒ не в `memo.md`/TL;DR/F9 и не `high`.
+- Не искать числа в вебе при наличии покрывающего endpoint в `stat_sources/`/`api_sources/`.
+- Не поднимать fetch-агентов Фазы 4 на opus «для качества»: у них Write и изолированный контекст, растёт не качество поиска, а уверенность ошибки.
+- Не пропускать gap-волну и не давать confidence выше `medium` без primary-источника.
+- Не пропускать multi-angle red team и Фазу 5.5 в medium/deep.
+- Фаза 5.5: не переписывать `sources/NN.md` (архив), не фильтровать по `total` вместо релевантности фрагмента к claim.
+- Фаза 6.5: не доверять наличию ссылки — проверять entailment по дословной цитате; вердикты писать в `.verify/*.json` и не пересчитывать в rubric/F10; пары брать из `evidence/`, не пересканировать `sources/`. Layer 3 судит снятие ОГРАНИЧИТЕЛЯ, не сокращение текста; при сомнении PRESERVED; чинить отчёт, а не ledger; потерянный `claim_id` ⇒ `UNTRACEABLE`.
+- Не использовать источники с `total < 8` как основу выводов и не оставлять утверждений без ссылки на `sources/NN.md`.
+- Для fetch+save и red team — `general-purpose` с явным диапазоном номеров, не `Explore` (read-only, только разведка).
 - Не запускать суб-агентов последовательно — только параллельно в одном сообщении.
-- Не сжимать sources/ в один файл — теряется поиск и переиспользование между ресёрчами.
-- Фаза 5.5: не переписывать/обрезать `sources/NN.md` (архив) — фильтр пишет только в `evidence/`. Не пропускать 5.5 в medium/deep и не фильтровать по credibility/`total` вместо релевантности фрагмента к claim.
-- Фаза 6.5 faithfulness: не доверять факту наличия ссылки — проверять entailment claim⊨quote явно (даже сильные системы врут цитатами в ~50% случаев). Вердикты писать в `.verify/faithfulness.json` (единый источник) и не пересчитывать их в rubric/F10. Пары брать из `evidence/CN.md`, не пересканировать `sources/` (дублирует 5.5). Судить по дословной цитате, не по summary.
-- Фаза 6.5 Layer 3: проверенный ledger НЕ означает верный отчёт — оговорка теряется при написании TL;DR, и обе проверенные оси этого не видят. Сверять утверждения F1/`memo.md`/Z12 против строк `claims.csv` отдельным проходом. Судить снятие ОГРАНИЧИТЕЛЯ, не сокращение текста (сжатие законно; при сомнении — PRESERVED, иначе слой утонет в ложных срабатываниях и его выключат). Чинить отчёт, а не ledger. `claim_id` — join-ключ: если синтез его потерял, утверждение `UNTRACEABLE`, а не «не проверено».
+- Не сжимать `sources/` в один файл, не выводить результат только в чат, не обходить WebFetch через bash/curl.
+- Не рапортовать «готово» с красным phase-gate.
 
-## Slug format
+## Режим update
 
-URL-friendly: латиница, цифры, дефисы. Пример:
-- «Postgres logical replication vs CDC tooling» → `postgres-replication-vs-cdc`
-- «What's the market for vertical farming in EU» → `vertical-farming-eu-market`
-- «How does WebAssembly work under the hood» → `webassembly-under-the-hood`
-
-Если slug не очевиден — сгенерируй и покажи в начале фазы 2 для подтверждения.
+`update <slug>` / «обнови ресёрч X» — **дельта, не replay**. Pre-flight: `plan.md`, `refresh_targets.md`, последний отчёт (нет `refresh_targets.md` — сгенерируй по Z11). Четыре категории дельты с date-фильтром от last_research_date: new entrants · entity diff · numbers refresh · adversarial trigger. Verified-no-change — тоже результат. Выход: `diffs/<date>_delta.md`; новый отчёт — только если дельта существенна (решает пользователь), старый получает `status: superseded by …`. Adversarial trigger HIGH ⇒ повторить только Фазу 6 на opus. Типовой update ~$0.40 против ~$2 за medium. Протокол — `references/refresh_protocol.md`.
 
 ## References — когда читать
 
-Прогрессивная подгрузка: загружай файл когда дошёл до фазы — не превентивно. При большой block library это критично для контекста.
+Прогрессивная подгрузка: файл читается когда дошёл до фазы, не превентивно.
 
-**Базовые (всегда):**
-- `references/workflow.md` — детали <!--gen:count:phases-->12<!--/gen--> фаз (включая опц. 3.5) (читать в начале medium/deep).
-- `references/question_reframing.md` — шаблоны Фазы 1 + clarification-триаж.
-- `references/plan_gate.md` — **Plan-review gate** (Фаза 3.7): единый checkpoint перед поиском, жёсткость по режиму (deep — ждать «Ок», medium — soft, shallow — skip), шаблон план-блока.
-- `references/genres.md` — пресеты блоков <!--gen:count:genres-->6<!--/gen--> жанров + эвристика выбора (Фаза 2) + каналы по жанрам.
-- `references/blocks/INDEX.md` — индекс <!--gen:count:blocks-->105<!--/gen--> блоков по 10 категориям (после выбора жанра).
-- `references/channels.md` — <!--gen:count:channels-->29<!--/gen--> каналов поиска (включая api-direct) с query patterns, paywall fallbacks (Фаза 3-4).
-- `references/stat_sources/INDEX.md` — навигационная карта 33 категорий статистических источников (Фаза 3-4).
-- `references/api_sources/INDEX.md` — каталог <!--gen:count:api-->39<!--/gen-->+ API endpoints (10 категорий) для programmatic доступа (Фаза 3-4).
-- `references/capability_discovery.md` — workflow фазы 3.5: env vars audit + capability mapping + discovery (medium/deep).
-- `references/awesome_lists_registry.md` — upstream awesome-lists для discovery когда мой каталог не покрыл (Фаза 3.5).
-- `references/source_dispatch.md` — **recommendation engine** для Phase 4.0: matrix «сигнал в подвопросе → primary/secondary/fallback каналы», decomposition recipes для типовых тем, discovery patterns когда каталог не покрыл. Обязательное чтение перед launch sub-agents.
-- `references/model_routing.md` — **выбор модели и effort** (Opus/Sonnet/Haiku × low/medium/high) на каждую фазу и тип sub-agent'а. Matrix экономики и качества: где не экономить (Phase 1/6), где наоборот не переплачивать (Phase 4.1 sub-agents). Override-механики для пользователя.
-- `references/refresh_protocol.md` — **протокол update**: 4 категории дельты (new entrants, entity diff, numbers refresh, adversarial trigger), шаблон `diffs/<date>_delta.md`. Используется в режиме `update <slug>`. Дополняется блоком Z11 `refresh-targets` из `blocks/close.md`.
+**Базовые:** `workflow.md` (детали <!--gen:count:phases-->12<!--/gen--> фаз) · `question_reframing.md` (Фаза 1 + clarification-триаж) · `plan_gate.md` (Фаза 3.7 + скаут) · `genres.md` (<!--gen:count:genres-->6<!--/gen--> жанров) · `blocks/INDEX.md` (<!--gen:count:blocks-->105<!--/gen--> блоков) · `channels.md` (<!--gen:count:channels-->29<!--/gen--> каналов, query patterns, paywall fallbacks) · `stat_sources/INDEX.md` (33 категории) · `api_sources/INDEX.md` (<!--gen:count:api-->39<!--/gen-->+ endpoints) · `capability_discovery.md` · `awesome_lists_registry.md` · `source_dispatch.md` (обязательно перед launch суб-агентов) · `model_routing.md` · `refresh_protocol.md`.
 
-**Категорийные файлы (только нужные для выбранного жанра/blocks):**
-- `references/blocks/frame.md` — F1-F10: TL;DR, scope, background, claim, metadata, verification header.
-- `references/blocks/explain.md` — E1-E14: mental-model, glossary, mechanism.
-- `references/blocks/compare.md` — C1-C13: matrices, scoring, trade-offs.
-- `references/blocks/map.md` — M1-M12: profiles, positioning, trends.
-- `references/blocks/validate.md` — V1-V10: falsification, evidence grades.
-- `references/blocks/analyze.md` — A1-A13: data tables, SWOT, root cause.
-- `references/blocks/close.md` — Z1-Z12: counter-args, open Q, next research, so-what-for-you.
-- `references/blocks/people.md` — P1-P7: persona, journey, incentives.
-- `references/blocks/numbers.md` — N1-N8: metrics, market sizing, forecasts.
-- `references/blocks/context.md` — X1-X7: regulatory, geo, culture.
+**По фазам:** `source_scoring.md` (шкалы, provenance, claims-ledger, dissent — Фаза 5) · `evidence_filter.md` (relevance × authority — 5.5) · `subagents_v2.md` (промпты и периметр суб-агентов — 4) · `adversarial_pass.md` (роли R1–R5 — 6) · `runtime_verification.md` (три оси + F10 — 6.5) · `decision_walkthrough.md` (Фаза 8).
 
-**По фазам:**
-- `references/source_scoring.md` — оценка источников + шаблон `sources/NN.md` с `channel:` и `access:`; claims-ledger (`claims.csv`) и правило primary-first (Фаза 5).
-- `references/evidence_filter.md` — **Evidence-фильтр** (Фаза 5.5), две оси: CRAG-relevance по паре (claim, source) → relevant-only цитаты в слой `evidence/`; authority по несущим парам → `.verify/authority.json` (fail-closed карантин). Correction-триггер (medium/deep).
-- `references/subagents_v2.md` — паттерн суб-агентов с CHANNELS TO USE (Фаза 4, medium/deep).
-- `references/adversarial_pass.md` — multi-angle red team: роли, триаж severity, ограниченный цикл ремедиации (Фаза 6, medium/deep).
-- `references/runtime_verification.md` — runtime-проверка цитат: резолв тезисов к sources/NN.md, verification-header (Фаза 6.5, medium/deep).
-- `references/decision_walkthrough.md` — **Decision walkthrough** (Фаза 8, всегда): исполнение отчёта по вилкам Decision Spec, шаблон `application.md`, глобальный applications-ledger, анти-паттерны.
+**Блоки (по выбранному жанру):** `frame.md` F1-F10 (TL;DR, scope, claim, verification header) · `explain.md` E1-E14 · `compare.md` C1-C13 · `map.md` M1-M12 · `validate.md` V1-V10 · `analyze.md` A1-A13 · `close.md` Z1-Z12 (counter-args, open questions, so-what-for-you) · `people.md` P1-P7 · `numbers.md` N1-N8 · `context.md` X1-X7.
 
-**Stat sources (Фаза 4 — точечно по теме):**
-- `references/stat_sources/core/*.md` — 14 cross-industry категорий (gov_macro, companies_public/private, consulting_industry, consumer_digital, crypto, data_aggregators, media_entertainment, health, education, climate_env, science, transport_travel, sports_fitness).
-- `references/stat_sources/industries/*.md` — 19 отраслевых файлов (energy, auto, pharma, retail, manufacturing, real_estate, insurance, banking, telecom, logistics, agriculture, defense, it_services, cybersecurity, advertising, hr_workforce, gig_economy, esg_sustainability, infrastructure).
-- Progressive loading: читай INDEX.md, потом только нужные категории под подтему.
-
-**API sources (Фаза 4 — для programmatic data access):**
-- `references/api_sources/search/` — Brave, Tavily, Exa, SerpAPI, You.com (поисковые APIs).
-- `references/api_sources/academic/` — Semantic Scholar, OpenAlex, CrossRef, arXiv (free, no key).
-- `references/api_sources/financial/` — FRED, World Bank, SEC EDGAR, OECD, Alpha Vantage.
-- `references/api_sources/companies/` — Crunchbase, OpenCorporates, Companies House.
-- `references/api_sources/crypto/` — CoinGecko, DefiLlama, Etherscan, Dune.
-- `references/api_sources/code/` — GitHub, Stack Exchange, PyPI, npm.
-- `references/api_sources/social/` — Reddit JSON, HN Algolia, Lemmy.
-- `references/api_sources/news/` — NewsAPI, GDELT, Currents.
-- `references/api_sources/stats/` — Eurostat, Census US, UN Data.
-- `references/api_sources/domain_specific/` — PubMed, ClinicalTrials, EMA, NASA, OpenWeather.
-- Auth через environment variables — скилл сам не хранит ключи. Free no-key APIs приоритетны.
+**Stat/API источники (Фаза 4, точечно):** `stat_sources/core/*.md` — 14 cross-industry категорий; `stat_sources/industries/*.md` — 19 отраслевых; `api_sources/` — search, academic (free, no key), financial, companies, crypto, code, social, news, stats, domain_specific. Читай INDEX, потом нужную категорию. Auth через env vars, ключи скилл не хранит; приоритет — free no-key API.
