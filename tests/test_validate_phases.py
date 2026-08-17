@@ -25,6 +25,12 @@ def make_run(root: Path, *, mode: str, phases: set[str]) -> Path:
         sd = d / "sources"
         sd.mkdir()
         (sd / "01_x.md").write_text("---\nurl: http://x\n---\n", encoding="utf-8")
+    if "state" in phases:
+        (d / "state.md").write_text(
+            "---\nround: 2\n---\n"
+            "## Known\n- Q1 closed: c1\n## Gaps\n- Q2 no primary\n## Next\n- registry pass\n",
+            encoding="utf-8",
+        )
     if "5" in phases:
         (d / "claims.csv").write_text(
             "claim_id,claim,roots,paths,status,confidence,dissent,as_of\n"
@@ -46,10 +52,27 @@ def make_run(root: Path, *, mode: str, phases: set[str]) -> Path:
         (vd / "citations.json").write_text("{}", encoding="utf-8")
         (vd / "faithfulness.json").write_text("{}", encoding="utf-8")
         (vd / "qualifiers.json").write_text("{}", encoding="utf-8")
+        (vd / "constructs.json").write_text(
+            '{"construct_integrity": 1.0, "results": [{"name": "IterResearch", '
+            '"status": "sourced", "sources": ["s01"], "locations": ["E3"]}]}',
+            encoding="utf-8",
+        )
     if "7" in phases:
         (d / "refresh_targets.md").write_text("targets\n", encoding="utf-8")
     if "memo" in phases:
         (d / "memo.md").write_text("# Memo\nрекомендация\n", encoding="utf-8")
+    if "outline" in phases:
+        (d / "outline.md").write_text(
+            "# Outline\n\n| section | block | claims |\n|---|---|---|\n"
+            "| TL;DR | F1 | c1 |\n",
+            encoding="utf-8",
+        )
+    if "numbers" in phases:
+        (d / "numbers.csv").write_text(
+            "num_id,value,unit,kind,formula,inputs,group,claim_id,sources,as_of\n"
+            "N1,4.5,$B,verbatim,-,-,-,c1,s01,2026-Q1\n",
+            encoding="utf-8",
+        )
     if "8" in phases:
         (d / "application.md").write_text(
             "---\nstatus: deferred\n---\n", encoding="utf-8"
@@ -58,7 +81,9 @@ def make_run(root: Path, *, mode: str, phases: set[str]) -> Path:
 
 
 SHALLOW_SET = {"3", "4", "5", "report", "memo", "8"}
-FULL_SET = SHALLOW_SET | {"5.5", "6.5", "7"}
+# From medium up the run also keeps the machine-checkable bookkeeping: the round
+# workspace (state.md), the section->claim map (outline.md) and the number registry.
+FULL_SET = SHALLOW_SET | {"5.5", "6.5", "7", "state", "outline", "numbers"}
 
 
 def run_validate(d: Path, mode: str):
@@ -257,3 +282,205 @@ def test_real_research_dir_flagged_incomplete_for_deep():
         pytest.skip("sample research dir not present")
     r = run_validate(real, "deep")
     assert r.errors  # missing evidence/.verify/refresh_targets
+
+
+# --- state.md: the round workspace --------------------------------------------
+
+
+def test_medium_run_without_state_window_fails(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET - {"state"})
+    r = run_validate(d, "medium")
+    assert any("state.md" in e for e in r.errors)
+
+
+def test_shallow_run_needs_no_state_window(tmp_path):
+    """Control: the workspace rebuild is medium+ bookkeeping, not a universal rule."""
+    d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET)
+    r = run_validate(d, "shallow")
+    assert r.errors == []
+
+
+def test_state_window_without_gaps_section_fails(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / "state.md").write_text(
+        "---\nround: 2\n---\n## Known\n- Q1 closed\n## Next\n- registry\n",
+        encoding="utf-8",
+    )
+    r = run_validate(d, "medium")
+    assert any("## Gaps" in e for e in r.errors)
+
+
+def test_state_window_over_hard_limit_fails(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / "state.md").write_text(
+        "---\nround: 2\n---\n## Known\n## Gaps\n## Next\n" + "x" * (13 * 1024),
+        encoding="utf-8",
+    )
+    r = run_validate(d, "medium")
+    assert any("appended to, not rebuilt" in e for e in r.errors)
+
+
+def test_state_window_within_budget_is_silent(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    r = run_validate(d, "medium")
+    assert not any("state.md" in m for m in r.errors + r.warnings)
+
+
+# --- outline.md: the section -> claim map --------------------------------------
+
+
+def test_medium_run_without_outline_fails(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET - {"outline"})
+    r = run_validate(d, "medium")
+    assert any("outline.md" in e for e in r.errors)
+
+
+def test_outline_without_table_rows_fails(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / "outline.md").write_text("# Outline\n\nразделы будут позже\n", encoding="utf-8")
+    r = run_validate(d, "medium")
+    assert any("no `| section | block | claims |` table" in e for e in r.errors)
+
+
+def test_outline_section_without_claims_fails(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / "outline.md").write_text(
+        "| section | block | claims |\n|---|---|---|\n| TL;DR | F1 | c1 |\n"
+        "| Контекст | X1 | - |\n",
+        encoding="utf-8",
+    )
+    r = run_validate(d, "medium")
+    assert any("maps to no claim_id" in e for e in r.errors)
+
+
+def test_outline_citing_unknown_claim_fails(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / "outline.md").write_text(
+        "| section | block | claims |\n|---|---|---|\n| TL;DR | F1 | c1; c9 |\n",
+        encoding="utf-8",
+    )
+    r = run_validate(d, "medium")
+    assert any("c9" in e and "absent from claims.csv" in e for e in r.errors)
+
+
+def test_triangulated_claim_left_out_of_report_blocks_deep(tmp_path):
+    """The synthesis gap: found and triangulated, never written down."""
+    d = make_run(tmp_path, mode="deep", phases=FULL_SET)
+    (d / "claims.csv").write_text(
+        "claim_id,claim,roots,paths,status,confidence,dissent,as_of\n"
+        "c1,a claim,own;study-x,a|q|en;b|q2|en,triangulated,high,-,-\n"
+        "c2,orphan claim,own;study-y,a|q3|en;b|q4|en,triangulated,high,-,-\n",
+        encoding="utf-8",
+    )
+    r = run_validate(d, "deep")
+    assert any("never placed in the report" in e and "c2" in e for e in r.errors)
+
+
+def test_same_gap_is_a_warning_on_medium(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / "claims.csv").write_text(
+        "claim_id,claim,roots,paths,status,confidence,dissent,as_of\n"
+        "c1,a claim,own;study-x,a|q|en;b|q2|en,triangulated,high,-,-\n"
+        "c2,orphan claim,own;study-y,a|q3|en;b|q4|en,triangulated,high,-,-\n",
+        encoding="utf-8",
+    )
+    r = run_validate(d, "medium")
+    assert any("never placed in the report" in w for w in r.warnings)
+    assert not any("never placed in the report" in e for e in r.errors)
+
+
+def test_weak_claim_left_out_is_not_flagged(tmp_path):
+    """Control: only carrying claims (triangulated/contested) must be placed."""
+    d = make_run(tmp_path, mode="deep", phases=FULL_SET)
+    (d / "claims.csv").write_text(
+        "claim_id,claim,roots,paths,status,confidence,dissent,as_of\n"
+        "c1,a claim,own;study-x,a|q|en;b|q2|en,triangulated,high,-,-\n"
+        "c2,thin claim,own,a|q3|en,data-insufficient,low,-,-\n",
+        encoding="utf-8",
+    )
+    r = run_validate(d, "deep")
+    assert not any("never placed" in e for e in r.errors)
+
+
+# --- constructs.json: Layer 4 -------------------------------------------------
+
+
+def test_medium_run_without_constructs_json_fails(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / ".verify" / "constructs.json").unlink()
+    r = run_validate(d, "medium")
+    assert any("constructs.json" in e for e in r.errors)
+
+
+def test_unsourced_construct_in_memo_blocks(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / ".verify" / "constructs.json").write_text(
+        '{"results": [{"name": "закон Кэмпбелла для агентов", "status": "unsourced", '
+        '"sources": [], "locations": ["memo.md"]}]}',
+        encoding="utf-8",
+    )
+    r = run_validate(d, "medium")
+    assert any("закон Кэмпбелла" in e and "unsourced" in e for e in r.errors)
+
+
+def test_unsourced_construct_outside_memo_only_warns(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / ".verify" / "constructs.json").write_text(
+        '{"results": [{"name": "cold-start decay", "status": "unsourced", '
+        '"sources": [], "locations": ["E7"]}]}',
+        encoding="utf-8",
+    )
+    r = run_validate(d, "medium")
+    assert any("cold-start decay" in w for w in r.warnings)
+    assert not any("cold-start decay" in e for e in r.errors)
+
+
+def test_author_construct_is_accepted(tmp_path):
+    """Control: our own label, marked as ours, is legal — not every name needs a source."""
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / ".verify" / "constructs.json").write_text(
+        '{"results": [{"name": "провенанс-разрыв", "status": "author-construct", '
+        '"sources": [], "locations": ["memo.md"]}]}',
+        encoding="utf-8",
+    )
+    r = run_validate(d, "medium")
+    assert r.errors == []
+
+
+def test_unknown_construct_status_warns(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / ".verify" / "constructs.json").write_text(
+        '{"results": [{"name": "X", "status": "probably-fine", "locations": ["F1"]}]}',
+        encoding="utf-8",
+    )
+    r = run_validate(d, "medium")
+    assert any("not one of" in w for w in r.warnings)
+
+
+def test_malformed_constructs_json_is_an_error(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / ".verify" / "constructs.json").write_text("{not json", encoding="utf-8")
+    r = run_validate(d, "medium")
+    assert any("not valid JSON" in e for e in r.errors)
+
+
+def test_constructs_json_without_results_is_an_error(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    (d / ".verify" / "constructs.json").write_text('{"integrity": 1.0}', encoding="utf-8")
+    r = run_validate(d, "medium")
+    assert any("no `results` list" in e for e in r.errors)
+
+
+# --- numbers.csv --------------------------------------------------------------
+
+
+def test_medium_run_without_numbers_csv_fails(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET - {"numbers"})
+    r = run_validate(d, "medium")
+    assert any("numbers.csv" in e for e in r.errors)
+
+
+def test_shallow_run_needs_no_numbers_csv(tmp_path):
+    d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET)
+    r = run_validate(d, "shallow")
+    assert not any("numbers.csv" in e for e in r.errors)

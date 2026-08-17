@@ -239,6 +239,65 @@ audit its own text, which is the one thing the red team lesson says does not wor
 ("не ловятся перечитыванием черновика"). Layer 3 is an external mechanical comparison of
 two artifacts, by a different model, after the fact. That is the class of check that does.
 
+## Layer 4 — Construct provenance (does the NAME in the report exist outside it?)
+
+Layers 1-3 all join on `claim_id`: they verify statements that have a ledger row. A
+report says more than its claims. It says *"по фреймворку RACE"*, *"это классический
+trade-off Хофштадтера"*, *"в литературе это называют cold-start decay"* — named
+frameworks, taxonomies, laws, effects, metrics, patterns. Such a name has no
+`claim_id`, carries no number, quotes no source, and therefore passes every layer
+above untouched — including when nothing by that name exists.
+
+This is the single most frequent generation failure measured on deep-research agents:
+**strategic content fabrication — 18.95% of all errors** (FINDER/DEFT taxonomy,
+[arXiv 2512.01948](https://arxiv.org/abs/2512.01948); generation failures 38.76%
+total, the largest of the three groups). It is not a hallucinated citation — the
+citations may all resolve. It is a plausible construct presented as established.
+
+**Procedure** (`haiku`/low; medium/deep required, shallow optional):
+
+1. **Collect candidates from the final report + `memo.md`.** A candidate is any
+   *named* abstraction: capitalized multi-word names (`Research-Synthesis
+   framework`), quoted terms introduced as known (`«эффект храповика»`), acronyms
+   (`RACE`, `FACT`, `DEFT`), «правило/закон/эффект/паттерн/индекс <имя>», «методология
+   <имя>». NOT candidates: numbers (Layer 4 does not duplicate arithmetic), product
+   and organization names present in `sources.csv`, common domain vocabulary.
+2. **For each candidate, look for the name in `evidence/` and `sources/NN.md`** —
+   the same body of quotes Layer 2 works over. Verdict:
+   - `sourced` — a source uses this name for this thing; record the `[sNN]`.
+   - `author-construct` — it is OUR generalization (we coined it to organize the
+     report). Legal, but the report must mark it as ours in the text: «назовём это
+     …», «наша рамка», «в этом отчёте — …».
+   - `unsourced` — presented as if established in the field, no source uses it.
+3. **Act:** `unsourced` is not softened, it is resolved — find the source, restate it
+   as `author-construct` with an explicit marker, or delete it. An `unsourced`
+   construct in `memo.md` / F1 / F9 **blocks finish** (medium/deep): the memo is what
+   the consumer's process ingests, and an invented framework there travels further
+   than any single wrong number.
+4. **Write `.verify/constructs.json`:**
+   ```json
+   {
+     "construct_integrity": 0.86,
+     "results": [
+       {"name": "IterResearch", "status": "sourced", "sources": ["s07"],
+        "locations": ["E3"], "reason": "s07 uses the name for this paradigm"},
+       {"name": "провенанс-разрыв", "status": "author-construct", "sources": [],
+        "locations": ["memo.md"], "reason": "our label; marked «назовём это» in text"},
+       {"name": "закон Кэмпбелла для агентов", "status": "unsourced", "sources": [],
+        "locations": ["F1"], "reason": "no source names this; presented as established"}
+     ]
+   }
+   ```
+   `construct_integrity = (sourced + author-construct) / total`. An
+   `author-construct` counts as integrity ONLY if the text marks it — an unmarked one
+   is `unsourced` by definition, since the reader cannot tell them apart.
+
+**Why not the red team.** R1 attacks whether an argument holds, R3 whether coverage
+has holes, R5 whether the minority was crushed. None of them checks that a *name*
+refers to something outside this document — they argue with the content as given.
+Layer 4 is the same species of check as Layer 3: mechanical comparison of the report
+against a corpus, by a model that did not write it.
+
 ## Block F10 — Verification header (add to `references/blocks/frame.md`)
 
 > Renumbered from F9 to F10 (2026-07-07): F9 was claimed by the `background` block
@@ -246,16 +305,16 @@ two artifacts, by a different model, after the fact. That is the class of check 
 > header was actually implemented in `frame.md`. No functional change — same header,
 > same content, next free slot.
 
-Rendered at the very top of the final report. **Carries ALL THREE axes** (liveness ×
-faithfulness × qualifiers) — the chain is source → claim → report, and a break anywhere
-in it means the statement is not verified:
+Rendered at the very top of the final report. **Carries ALL FOUR axes** (liveness ×
+faithfulness × qualifiers × constructs) — the chain is source → claim → report, and a
+break anywhere in it means the statement is not verified:
 
 ```markdown
-> **Citation integrity: 21/23 live · faithfulness 20/22 supported · qualifiers 22/22 preserved · 0 red flags · 2 paywalled**
+> **Citation integrity: 21/23 live · faithfulness 20/22 supported · qualifiers 22/22 preserved · constructs 7/7 sourced · 0 red flags · 2 paywalled**
 > Verified <YYYY-MM-DD>: liveness via check_citations.py (every OPEN source resolved live);
 > faithfulness via Layer 2 judge over evidence/ (2 PARTIAL softened); qualifiers via Layer 3
-> over F1/memo.md/Z12 (no scope drift).
-> [liveness detail](.verify/citations.md) · [faithfulness detail](.verify/faithfulness.md) · [qualifier detail](.verify/qualifiers.md)
+> over F1/memo.md/Z12 (no scope drift); constructs via Layer 4 (1 marked as ours).
+> [liveness detail](.verify/citations.md) · [faithfulness detail](.verify/faithfulness.md) · [qualifier detail](.verify/qualifiers.md) · [construct detail](.verify/constructs.md)
 ```
 
 When flags were found and resolved (any axis):
@@ -273,8 +332,8 @@ When an axis is below floor and the user chose to ship anyway (medium only):
 > s07, s11 (transport UNKNOWN), s19 (OPEN dead → claim demoted); C9 (UNSUPPORTED → Open Questions).
 ```
 
-(shallow: faithfulness line omitted — Layer 2 optional, no `evidence/`. Qualifier line
-omitted unless Layer 3 was run.)
+(shallow: faithfulness line omitted — Layer 2 optional, no `evidence/`. Qualifier and
+construct lines omitted unless Layers 3-4 were run.)
 
 ### Second line — source independence (medium/deep)
 
@@ -317,6 +376,8 @@ nothing produced them — a circular reference to a missing artifact. The contra
 | `.verify/citations.json` | Phase 6.5 Layer 1 (`check_citations.py`) | F10 header, `rubric.md` axis "citation" |
 | `.verify/faithfulness.json` | Phase 6.5 Layer 2 (this file, step 4) | F10 header (2nd axis), `rubric.md` axis 3 "Factual accuracy" |
 | `.verify/qualifiers.json` | Phase 6.5 Layer 3 (this file, step 6) | F10 header (3rd axis) |
+| `.verify/constructs.json` | Phase 6.5 Layer 4 (this file, step 4) | F10 header (4th axis), phase-gate. Absent ⇒ axis never ran, NOT "nothing fabricated" |
+| `numbers.csv` | Phase 6 (synthesis, `source_scoring.md`) | `check_number_arithmetic.py`, F10 second line (`numbers dated`) |
 | `evidence/CN.md` | **Phase 5.5** (`evidence_filter.md`) | Phase 6.5 Layer 2 INPUT (claim↔quote pairs) |
 | `.verify/authority.json` | **Phase 5.5** authority axis (`evidence_filter.md`) | F10 second line, phase-gate. Absent ⇒ axis never ran (fail-closed), NOT "all qualified" |
 | `claims.csv` + written report | Phase 5 / Phase 6 | Phase 6.5 Layer 3 INPUT (claim↔statement pairs) |
@@ -336,10 +397,16 @@ Rules:
   **Layer 3 depends on this directly**: a statement whose `claim_id` was dropped in
   synthesis is not "unchecked", it is `UNTRACEABLE` and blocks finish on deep.
 
-**Three axes, one chain:** source → claim → report. Layer 1 proves the source resolves,
-Layer 2 that it backs the claim, Layer 3 that the report still says what the claim said.
-A statement is verified only if all three hold — and each layer is checked by a different
-pass over different inputs, so a defect that hides from one is visible to another.
+**Four axes, one chain:** source → claim → report → its own vocabulary. Layer 1 proves
+the source resolves, Layer 2 that it backs the claim, Layer 3 that the report still says
+what the claim said, Layer 4 that the names the report uses exist outside it. A statement
+is verified only if all four hold — and each layer is checked by a different pass over
+different inputs, so a defect that hides from one is visible to another.
+
+Layers 1-3 all join on `claim_id`, which is exactly why Layer 4 is needed: everything
+a report asserts *without* a ledger row — a framework, a taxonomy, a named effect —
+is invisible to a join-based check, and that is the largest measured class of
+generation defect.
 
 ## Why act, not just measure
 

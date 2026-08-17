@@ -303,7 +303,11 @@ Weighted sum with a **citation floor** — hallucinated sources can't win on dep
 
 Ignores env proxies (`trust_env=False`). `--strict` for CI.
 
-Verification runs two layers: **liveness** (does the source exist) and **faithfulness** (does it actually entail the claim it's cited for). Faithfulness verdicts — `SUPPORTED` / `PARTIAL` / `UNSUPPORTED` — land in `.verify/faithfulness.json`.
+Verification runs four layers: **liveness** (does the source exist), **faithfulness** (does it actually entail the claim it's cited for), **qualifier preservation** (does the report still say what the ledger said), and **construct provenance** (do the frameworks, taxonomies and named "laws" the report uses exist outside it). Verdicts land in `.verify/*.json`, one producer per file.
+
+The fourth layer exists because the first three all join on `claim_id` — and a fabricated *name* has none. That is the largest measured class of generation defect in deep-research agents ([FINDER/DEFT](https://arxiv.org/abs/2512.01948): strategic content fabrication, 18.95% of errors), and it passes a citation check with every URL alive.
+
+Numbers get two independent passes: `check_number_provenance.py` on **origin** (who produced the figure; does one value circulate across supposedly independent roots) and `check_number_arithmetic.py` on **computation** — every `derived` figure in `numbers.csv` is recomputed from its own declared `formula` + `inputs`, and `share` groups must sum to 100. A percentage computed in prose is otherwise never re-checked by anything.
 
 [Check →](eval/check_citations.py)
 
@@ -312,9 +316,11 @@ Verification runs two layers: **liveness** (does the source exist) and **faithfu
 
 ### Phase-gate Validator
 
-`scripts/validate_phases.py` reads a finished run's `mode:` frontmatter and checks that every phase mandatory for that depth left its file artifact — `plan.md`, `claims.csv`, `evidence/`, `.verify/*.json`, the dated report.
+`scripts/validate_phases.py` reads a finished run's `mode:` frontmatter and checks that every phase mandatory for that depth left its file artifact — `plan.md`, `state.md`, `claims.csv`, `numbers.csv`, `outline.md`, `evidence/`, `.verify/*.json`, the dated report.
 
 A skipped phase fails the check (`--strict` for CI) instead of the model just asserting "done" — it's a **finish-up blocker**, not advice. Machine insurance against the one failure mode a markdown methodology can't fix by discipline alone.
+
+It also checks three things a missing-file test cannot: that `state.md` is a **rebuilt** round window (Known/Gaps/Next, size-capped) and not an appended second transcript; that every `triangulated`/`contested` claim is mapped to a section in `outline.md` — the **synthesis gap**, where retrieval succeeded and the finding never reached the report; and that no `unsourced` construct sits in the memo or TL;DR.
 
 Its own inputs are machine-built too: `scripts/build_sources_csv.py` generates `sources.csv` deterministically from `sources/NN.md` frontmatter (`--check` for CI drift), and `eval/validate_structure.py` enforces the `caveat:` field as a strict enum (`-` / `vendor` / `self-reported` / `disputed:sNN`) instead of free text, so it stays greppable.
 
@@ -333,7 +339,11 @@ Sample output for a typical `decision`-genre research:
 ```
 research/<topic-slug>/
 ├── plan.md                              # 17-section plan
+├── state.md                             # Round window, rewritten each round
 ├── sources.csv                          # Index with C/R/B scoring
+├── claims.csv                           # Claim ledger + triangulation status
+├── numbers.csv                          # Every figure the report stands on
+├── outline.md                           # section → block → claim_id map
 ├── sources/                             # One file per source
 │   ├── 01_vendor-docs.md                # Primary, total=14
 │   ├── 02_benchmark-paper.md            # Academic, total=12
@@ -343,6 +353,12 @@ research/<topic-slug>/
 ├── findings/
 │   ├── F1_<atomic-thesis>.md            # confidence: high
 │   └── F2_<atomic-thesis>.md            # confidence: medium
+├── .verify/                             # One producer per file, many consumers
+│   ├── authority.json                   # Phase 5.5 — who may assert this
+│   ├── citations.json                   # Layer 1 — liveness
+│   ├── faithfulness.json                # Layer 2 — entailment
+│   ├── qualifiers.json                  # Layer 3 — scope drift
+│   └── constructs.json                  # Layer 4 — named-construct provenance
 ├── memo.md                              # One-page decision memo (always)
 ├── application.md                       # Decision walkthrough verdict (always)
 └── 2026-05-21_decision.md               # Final report
