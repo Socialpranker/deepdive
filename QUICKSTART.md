@@ -23,7 +23,7 @@ In a Claude Code session, just ask in natural language — any of these trigger 
 
 Claude will: restate your question, pick a report genre, write a `plan.md`, search
 across <!--gen:count:channels-->29<!--/gen--> channels and <!--gen:count:stat_sources-->460<!--/gen-->
-curated stat sources (+ <!--gen:count:api-->39<!--/gen-->+ APIs), score and triangulate every
+curated stat sources (+ <!--gen:count:api-->47<!--/gen-->+ APIs), score and triangulate every
 source via a claims-ledger, synthesize with a multi-angle red team, and verify citations.
 
 ## 3. What you get

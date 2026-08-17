@@ -68,6 +68,16 @@ api_sources/
 │   ├── eurostat.md             Eurostat REST API
 │   ├── census_us.md            US Census API
 │   └── un_data.md              UN Data API
+├── patents/                    ← patent offices
+│   ├── uspto_odp.md            USPTO Open Data Portal (key + ID.me)
+│   ├── epo_ops.md              EPO OPS (OAuth2, 4 GB/week free)
+│   ├── epo_lod.md              EPO Linked Open Data (SPARQL, no auth)
+│   └── wipo.md                 WIPO — платный, программного free API нет
+├── grants/                     ← research funding
+│   ├── nsf_awards.md           NSF Awards (no auth)
+│   ├── nih_reporter.md         NIH RePORTER v2 (no auth, POST-only)
+│   ├── cordis.md               CORDIS EU projects (bulk + SPARQL)
+│   └── grants_gov.md           Grants.gov search2 (no auth)
 └── domain_specific/            ← specialized
     ├── pubmed.md               PubMed E-utilities
     ├── clinicaltrials.md       ClinicalTrials.gov
@@ -99,12 +109,18 @@ api_sources/
 | **GDELT** | global events | news/sentiment |
 | **OpenAlex** | scholarly graph | research network analysis |
 | **PyPI / npm** | package metadata | tech stack research |
+| **NSF Awards** | US research grants с 1969 | кто финансирует тему, суммы |
+| **NIH RePORTER** | биомед-гранты NIH с FY1985 | финансирование медицинских тем |
+| **Grants.gov** | открытые конкурсы US federal | будущие возможности, не выданное |
+| **EPO Linked Open Data** | патентные публикации, SPARQL | патентная активность без ключа |
 
 ### Free with key (one-time setup, then automatic)
 
 | API | Free tier | Setup |
 |---|---|---|
 | **FRED** | unlimited | https://fred.stlouisfed.org/docs/api/api_key.html |
+| **USPTO ODP** | 5M calls/week metadata, 1.2M documents | https://developer.uspto.gov (нужен ID.me-верифицированный аккаунт) |
+| **EPO OPS** | 4 GB/week, ~1 Мбит/сек | https://developers.epo.org (OAuth2 client_credentials) |
 | **GitHub** | 5000 req/h authenticated | https://github.com/settings/tokens |
 | **Stack Exchange** | 10000 req/day | https://stackapps.com/apps/oauth/register |
 | **NewsAPI** | 100 req/day | https://newsapi.org/register |
@@ -120,6 +136,9 @@ api_sources/
 | **Exa.ai** | $5/1k searches | Semantic search, neural |
 | **SerpAPI** | $50/mo | Google/Bing/DuckDuckGo unified |
 | **Crunchbase Basic** | $99/mo | Company data, funding rounds |
+| **WIPO** | 600–2000 CHF/год SOAP, 400–19500 CHF/год bulk | программного бесплатного доступа нет вообще; веб-UI отдаёт CAPTCHA |
+
+**Мёртвое, не тратить время:** `search.patentsview.org` — сервис закрылся 20.03.2026, домен не резолвится; данные ушли в USPTO ODP bulk. Подробности — `patents/uspto_odp.md`, раздел Fallback.
 
 ## How to navigate this catalog
 

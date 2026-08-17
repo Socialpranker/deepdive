@@ -239,7 +239,7 @@ Categories: `gov_macro` · `companies_public` · `crypto` · `health` · `educat
 </td>
 <td valign="top">
 
-### <!--gen:count:api-->39<!--/gen-->+ API Endpoints
+### <!--gen:count:api-->47<!--/gen-->+ API Endpoints
 
 Free no-auth APIs prioritized:
 
@@ -256,7 +256,7 @@ Auth via env vars only — skill never asks for keys inline.
 
 GitHub Actions cron validates all endpoints + discovers upstream additions:
 
-- HEAD-check <!--gen:count:api-->39<!--/gen-->+ APIs weekly
+- HEAD-check <!--gen:count:api-->47<!--/gen-->+ APIs weekly
 - Scan public-apis & awesome-public-datasets
 - Auto-PR for dead endpoints
 - Reports committed to `reports/` branch
@@ -529,7 +529,7 @@ The methodology is portable. ~70% of content is LLM-agnostic markdown templates.
 - **<!--gen:count:blocks-->105<!--/gen--> блоков** в 10 категориях — переиспользуемые секции с шаблонами и анти-паттернами
 - **<!--gen:count:channels-->29<!--/gen--> каналов поиска** с paywall fallback протоколом (включая api-direct)
 - **<!--gen:count:stat_sources-->460<!--/gen-->+ статистических источников** в 14 cross-industry + 19 отраслевых категориях
-- **<!--gen:count:api-->39<!--/gen-->+ API endpoints** для programmatic доступа (free no-auth приоритетны)
+- **<!--gen:count:api-->47<!--/gen-->+ API endpoints** для programmatic доступа (free no-auth приоритетны)
 - **plan.md** с 17 секциями для прозрачности
 - **Plan-review gate** (фаза 3.7) — единственная human-in-the-loop точка перед дорогой Фазой 4: план (гипотезы, жанр, каналы) показывается и утверждается ДО поиска; жёсткость по режиму (deep — ждать «Ок», medium — soft, shallow — skip)
 - **Multi-angle red team** из враждебных ролей (Skeptic/Contrarian/Gap-hunter) с триажем severity (обязателен для medium/deep)
