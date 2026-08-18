@@ -25,7 +25,6 @@ Capability Discovery закрывает этот gap. **Прозрачность
 # Check known env vars
 if env $FRED_API_KEY exists → mark FRED as 'authenticated'
 if env $GITHUB_TOKEN exists → mark GitHub as 'authenticated'
-if env $BRAVE_API_KEY exists → mark Brave as 'authenticated'
 # ...
 ```
 

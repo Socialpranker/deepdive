@@ -37,3 +37,35 @@ def test_capabilities_py_does_not_audit_unused_search_keys():
     text = CAPS_PY.read_text(encoding="utf-8")
     for key in DEAD_SEARCH_KEYS:
         assert key not in text, f"{key} аудируется, но нигде не вызывается"
+
+
+def _fenced_blocks(text: str, lang: str) -> list[str]:
+    """Bodies of every ```<lang> ... ``` fence, in document order."""
+    marker = f"```{lang}"
+    out: list[str] = []
+    pos = 0
+    while True:
+        start = text.find(marker, pos)
+        if start == -1:
+            return out
+        body_start = start + len(marker)
+        end = text.find("```", body_start)
+        if end == -1:
+            return out
+        out.append(text[body_start:end])
+        pos = end + 3
+
+
+def test_step1_pseudocode_does_not_gate_on_dead_search_keys():
+    # Step 1's ```bash pseudocode instructs the skill to treat "env $KEY exists"
+    # as a live authenticated/not-authenticated toggle. A dead search key sitting
+    # there contradicts the "не используется" note in the table below it, in the
+    # same file — the file argues with itself and nothing catches it.
+    text = CAPS_MD.read_text(encoding="utf-8")
+    blocks = _fenced_blocks(text, "bash")
+    assert blocks, "ожидался ```bash блок с псевдокодом Step 1"
+    pseudocode = blocks[0]
+    for key in DEAD_SEARCH_KEYS:
+        assert key not in pseudocode, (
+            f"{key} проверяется в псевдокоде Step 1 как переключатель статуса"
+        )
