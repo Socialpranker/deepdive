@@ -372,7 +372,7 @@ time_box_hard: <Y hours>
 Проверь существование env vars для API ключей запланированных в plan.md секции 12:
 
 ```
-$FRED_API_KEY, $GITHUB_TOKEN, $TAVILY_API_KEY, $BRAVE_API_KEY, $NEWSAPI_KEY, ...
+$FRED_API_KEY, $GITHUB_TOKEN, $NEWSAPI_KEY, ...
 ```
 
 Полный список — `capability_discovery.md` секция "Step 1".

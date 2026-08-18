@@ -35,10 +35,10 @@ if env $BRAVE_API_KEY exists → mark Brave as 'authenticated'
 |---|---|---|
 | `FRED_API_KEY` | FRED economic data | optional (HTML fallback есть) |
 | `GITHUB_TOKEN` | GitHub Search | optional (60/h без, 5000/h с) |
-| `BRAVE_API_KEY` | Brave Search | paid alternative |
-| `TAVILY_API_KEY` | Tavily | для AI-optimized search |
-| `EXA_API_KEY` | Exa.ai | для semantic search |
-| `SERPAPI_KEY` | SerpAPI | для Google specifically |
+| `BRAVE_API_KEY` | Brave Search | **не используется** — скилл ходит через WebSearch харнесса |
+| `TAVILY_API_KEY` | Tavily | **не используется** — оставлено для внешних раннеров |
+| `EXA_API_KEY` | Exa.ai | **не используется** — оставлено для внешних раннеров |
+| `SERPAPI_KEY` | SerpAPI | **не используется** — оставлено для внешних раннеров |
 | `NEWSAPI_KEY` | NewsAPI | для news |
 | `ALPHA_VANTAGE_KEY` | Alpha Vantage | для stock prices |
 | `CRUNCHBASE_API_KEY` | Crunchbase | для company data |
@@ -115,7 +115,6 @@ Capability Discovery complete:
   Lyst API, Vogue Business RSS — для fashion industry subtopic
 
 To improve coverage next time, configure these env vars:
-  export TAVILY_API_KEY=... (1000 free/mo)
   export ALPHA_VANTAGE_KEY=... (25 free/day)
 
 Continue with current capabilities? [Y/n]

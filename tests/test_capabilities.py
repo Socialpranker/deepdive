@@ -21,7 +21,7 @@ def test_audit_env_empty_env_all_absent():
 def test_audit_env_covers_all_known_keys():
     audit = audit_env({})
     assert {a["key"] for a in audit} == set(KNOWN_KEYS)
-    assert len(KNOWN_KEYS) == 18
+    assert len(KNOWN_KEYS) == 14
 
 
 def test_audit_env_empty_string_is_absent():
@@ -31,8 +31,10 @@ def test_audit_env_empty_string_is_absent():
 
 
 def test_render_capabilities_has_header_and_keys():
-    audit = [{"key": "FRED_API_KEY", "present": True},
-             {"key": "BRAVE_API_KEY", "present": False}]
+    audit = [
+        {"key": "FRED_API_KEY", "present": True},
+        {"key": "BRAVE_API_KEY", "present": False},
+    ]
     md = render_capabilities(audit, "Use FRED for macro context.")
     assert "## Capabilities check (Phase 3.5)" in md
     assert "✅ FRED_API_KEY" in md

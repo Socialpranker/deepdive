@@ -242,6 +242,22 @@ https://www.npmjs.com/search?q=<topic>
 
 После того как все подвопросы прогнаны через этот файл — заполни секцию 12 plan.md в таком формате:
 
+### Поле `qclass`
+
+Каждый подвопрос получает `qclass` — класс, по которому накапливается статистика
+отдачи каналов. Ставится вместе с dispatch-решением, пишется в §12 рядом с каналами:
+
+`market-size` · `time-series` · `scientific-claim` · `players` · `country-stat` ·
+`how-it-works` · `recent-change` · `regulation` · `benchmark` · `sentiment` ·
+`adoption` · `pricing` · `crypto` · `health` · `climate` · `jobs` · `qualitative`
+
+Класс соответствует строке матрицы выше. Подвопрос, не попавший ни в одну строку,
+получает `qclass: qualitative` и помечается как ad-hoc — как и сейчас.
+
+Формат строки в §12:
+
+- **qclass:** `market-size`
+
 ```markdown
 ## 12. Information sourcing strategy
 

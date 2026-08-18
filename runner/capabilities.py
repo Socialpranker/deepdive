@@ -4,15 +4,28 @@ Mirrors runner.scoring: deterministic helpers live here; the LLM-facing mapping
 call lives in the orchestrator method discover_capabilities(). audit_env takes the
 environment explicitly so it is testable by injection (never reads os.environ here).
 """
+
 from __future__ import annotations
 
-# 18 known API-key env vars from references/capability_discovery.md.
+# 14 known API-key env vars from references/capability_discovery.md.
+# Search-provider keys (BRAVE/TAVILY/EXA/SERPAPI) are excluded on purpose: the
+# skill searches through the harness's WebSearch, never calls those APIs, and
+# auditing them here made Capability Discovery advertise coverage it doesn't have.
 KNOWN_KEYS: tuple[str, ...] = (
-    "FRED_API_KEY", "GITHUB_TOKEN", "BRAVE_API_KEY", "TAVILY_API_KEY",
-    "EXA_API_KEY", "SERPAPI_KEY", "NEWSAPI_KEY", "ALPHA_VANTAGE_KEY",
-    "CRUNCHBASE_API_KEY", "OPENWEATHER_KEY", "ETHERSCAN_KEY", "STACKEXCHANGE_KEY",
-    "CENSUS_API_KEY", "COMPANIES_HOUSE_API_KEY", "NCBI_API_KEY",
-    "SEMANTIC_SCHOLAR_API_KEY", "DUNE_API_KEY", "NASA_API_KEY",
+    "FRED_API_KEY",
+    "GITHUB_TOKEN",
+    "NEWSAPI_KEY",
+    "ALPHA_VANTAGE_KEY",
+    "CRUNCHBASE_API_KEY",
+    "OPENWEATHER_KEY",
+    "ETHERSCAN_KEY",
+    "STACKEXCHANGE_KEY",
+    "CENSUS_API_KEY",
+    "COMPANIES_HOUSE_API_KEY",
+    "NCBI_API_KEY",
+    "SEMANTIC_SCHOLAR_API_KEY",
+    "DUNE_API_KEY",
+    "NASA_API_KEY",
 )
 
 
