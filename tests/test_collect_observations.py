@@ -1,12 +1,37 @@
 from pathlib import Path
 
-from scripts.collect_observations import channel_of, rewarded_sources, collect
+from scripts.collect_observations import (
+    channel_of,
+    collect,
+    parse_frontmatter,
+    rewarded_sources,
+)
 
 RUN = Path(__file__).parent / "fixtures" / "run_mini"
 
 
 def test_channel_extracted_from_discovery_path():
     assert channel_of({"discovery_path": "academic|запрос|en"}) == "academic"
+
+
+def test_parse_frontmatter_skips_nested_block():
+    text = (
+        "---\n"
+        "id: s1\n"
+        "discovery_path: academic|vertical farming yield|en\n"
+        "hypothesis_evidence:\n"
+        "  H1: supports\n"
+        "  H2: contradicts\n"
+        "chain_len: 0\n"
+        "---\n"
+        "Текст источника.\n"
+    )
+    fm = parse_frontmatter(text)
+    assert fm["id"] == "s1"
+    assert fm["discovery_path"] == "academic|vertical farming yield|en"
+    assert fm["chain_len"] == "0"
+    assert "H1" not in fm
+    assert "H2" not in fm
 
 
 def test_channel_of_missing_discovery_path_is_empty():

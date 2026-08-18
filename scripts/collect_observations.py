@@ -29,16 +29,25 @@ FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
 
 def parse_frontmatter(text: str) -> dict[str, str]:
-    """Flat `key: value` reader — same contract as check_number_provenance.py."""
+    """Flat `key: value` reader — same contract as check_number_provenance.py.
+
+    Skips blank lines, comment lines (`#`), and nested blocks (any line with
+    leading whitespace, e.g. `hypothesis_evidence:` -> `H1: supports`) — those
+    are not flat `key: value` pairs and must not be folded into the dict.
+    """
     m = FRONTMATTER_RE.match(text)
     if not m:
         return {}
     out: dict[str, str] = {}
     for line in m.group(1).splitlines():
-        if ":" not in line:
+        if not line.strip() or line.lstrip().startswith("#"):
             continue
-        k, _, v = line.partition(":")
-        out[k.strip()] = v.split("#", 1)[0].strip()
+        if line[:1].isspace():  # nested block (hypothesis_evidence) — not needed here
+            continue
+        key, sep, value = line.partition(":")
+        if not sep:
+            continue
+        out[key.strip()] = value.split("#", 1)[0].strip()
     return out
 
 
@@ -64,7 +73,7 @@ def rewarded_sources(rows: list[dict]) -> set[str]:
         for field in ("sources", "dissent"):
             for token in (row.get(field) or "").split(";"):
                 token = token.strip()
-                if token and token not in {"-", "own"}:
+                if token and token != "-":
                     out.add(token)
     return out
 
