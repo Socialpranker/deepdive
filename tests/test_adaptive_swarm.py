@@ -201,6 +201,78 @@ def test_session_bandit_view_feeds_allocate_and_never_writes_priors_json(
     assert bandit.persisted_delta() == {}
 
 
+def test_strong_prior_channel_dominates_allocation_via_run_search_loop(monkeypatch):
+    """Proves Thompson sampling actually runs inside run_search_loop, not just that
+    Budget.allocate does it in isolation (test_adaptive.py already covers that). The
+    strong-prior channel is placed LAST in candidate order so a mutant that returns
+    `candidates[:free_slots]` unsampled (dropping the priors argument) would never
+    pick it — only real sampling favors it despite its position."""
+    monkeypatch.delenv("DEEPDIVE_SWARM", raising=False)
+    candidates = ["c1", "c2", "c3", "c4", "STRONG"]
+    priors = {
+        "STRONG|pricing": Prior(8.0, 2.0, 20, "t"),
+        "c1|pricing": Prior(2.0, 8.0, 20, "t"),
+        "c2|pricing": Prior(2.0, 8.0, 20, "t"),
+        "c3|pricing": Prior(2.0, 8.0, 20, "t"),
+        "c4|pricing": Prior(2.0, 8.0, 20, "t"),
+    }
+    trials = 60
+    strong_hits = 0
+    for seed in range(trials):
+        record: list = []
+        run_round = _calm_round_factory(record)
+        run_search_loop(
+            _CalmProvider(),
+            "shallow",  # budget.cheap + expensive = 2 -> free_slots=2 of 5 candidates
+            run_round,
+            qclass="pricing",
+            channel_candidates=candidates,
+            priors=priors,
+            groups=groups(),
+            rng=random.Random(seed),
+        )
+        if "STRONG" in record[0]["channels"]:
+            strong_hits += 1
+
+    assert strong_hits > trials * 0.7, (
+        f"STRONG picked {strong_hits}/{trials} times — sampling looks unweighted"
+    )
+
+
+def test_mandatory_slots_is_bookkeeping_only_not_subtracted_from_pool(monkeypatch):
+    """Regression for the reading that mandatory channels sit *inside*
+    `channel_candidates` and get sliced out via `mandatory_slots` (rejected reading,
+    see runner/adaptive.py:_allocate_for_round docstring). `channel_candidates` is
+    always the free-eligible pool only; `mandatory_slots` must not change which/how
+    many channels get drawn from it, only ride along into the report."""
+    monkeypatch.delenv("DEEPDIVE_SWARM", raising=False)
+    priors = {"academic|pricing": Prior(6.0, 4.0, 10, "t")}
+
+    def run_once(mandatory_slots):
+        record: list = []
+        run_round = _calm_round_factory(record)
+        run_search_loop(
+            _CalmProvider(),
+            "shallow",
+            run_round,
+            qclass="pricing",
+            channel_candidates=CANDIDATES,
+            priors=priors,
+            groups=groups(),
+            mandatory_slots=mandatory_slots,
+            rng=random.Random(7),
+        )
+        return record[0]
+
+    d0 = run_once(0)
+    d2 = run_once(2)
+
+    assert d0["channels"] == d2["channels"]  # same free pool, same seed -> same draw
+    assert d0["mandatory_slots"] == 0
+    assert d2["mandatory_slots"] == 2  # value still reaches the report
+    assert set(d2["channels"]).issubset(set(CANDIDATES))  # never pulls from outside
+
+
 def test_default_call_without_swarm_params_is_unaffected(monkeypatch):
     """Old 3-positional-arg call site (orchestrator.py today) must behave exactly
     as before: no candidates supplied -> no allocation, directives stays None."""

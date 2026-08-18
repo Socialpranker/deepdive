@@ -20,6 +20,8 @@ import random
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from runner.qclass import normalize_qclass
+
 log = logging.getLogger(__name__)
 
 TRIGGERS = ("empty_result", "citation_lead", "unexpected_finding", "contradiction")
@@ -104,25 +106,36 @@ class Budget:
         """True if a round at current_depth may spawn a (deeper) deviation round."""
         return current_depth < self.depth_limit
 
-    def allocate(self, qclass, free_slots, candidates, priors, groups, rng):
+    def allocate(
+        self, qclass, free_slots, candidates, priors, groups, rng, *, fallback_hint=None
+    ):
         """Thompson-sample `free_slots` distinct channels; report whether priors were usable.
 
         The fallback flag is not decoration: a silently uniform allocator looks
         identical to a working one from outside, and the tests stay green while the
         behaviour is gone. The caller writes the flag into the run report.
 
-        Only the FREE part of the budget goes through here. The mandatory part
-        (primary + secondary of different types, from source_dispatch.md) is spent
-        regardless of the prior — that is what keeps triangulation intact and what
-        stops the prior from confirming itself.
+        `candidates` here is exclusively the free-eligible pool — the mandatory part
+        (primary + secondary of different types, from source_dispatch.md) is spent by
+        the caller before this call and never appears in `candidates`; that is what
+        keeps triangulation intact and what stops the prior from confirming itself.
+
+        `priors` is what sampling reads from (may be a SessionBandit's live view,
+        overlaid with in-run observations). `fallback_hint`, when given, overrides
+        the fallback flag instead of deriving it from `priors`: a bandit view seeded
+        from an empty base is non-empty by construction (it materializes group/uniform
+        defaults on first observe()), so judging fallback off the view would report
+        "no fallback" even when the run never had real evidence. Callers that pass a
+        bandit view should pass `fallback_hint` computed off the *base* priors instead.
         """
         from runner.priors import (
             effective_prior,
-        )  # локальный импорт: adaptive не тянет state в тестах DryRun
+        )  # локальный импорт: не тянет runner.priors/state в модули, использующие
+        # adaptive без приоров (например DryRun-тесты)
 
         if free_slots <= 0 or not candidates:
             return [], False
-        fallback = not priors
+        fallback = (not priors) if fallback_hint is None else fallback_hint
         if fallback:
             log.warning(
                 "priors empty or unreadable — allocating uniform for qclass=%s", qclass
@@ -280,6 +293,20 @@ def _allocate_for_round(
     the scaffold orchestrator does not yet, so that call site is byte-for-byte
     unaffected (directives stays None, exactly as before this function existed).
 
+    `channel_candidates` is exclusively the free-eligible pool: per commit 0cdb1d8,
+    the caller spends the mandatory part (primary + secondary from source_dispatch.md)
+    itself and never includes those channels here. `mandatory_slots` is therefore NOT
+    used to slice the pool — it is forwarded into `directives` purely as an audit-trail
+    count for the run report.
+
+    `free_slots` — how many of the free-eligible candidates actually get drawn — comes
+    from the run's own deviation budget (`budget.cheap + budget.expensive`, see
+    docs/specs/2026-08-18-bayesian-swarm-design.md §5: "остаток плюс deviation-бюджет"),
+    capped at the number of candidates on offer. Using `len(channel_candidates)` alone
+    here would make `free_slots` track pool size instead of the run's budget, which is
+    the bug this replaced: with a pool the same size as (or smaller than) the budget,
+    every candidate would be "selected" and Thompson sampling would only reorder them.
+
     DEEPDIVE_SWARM=off is the measurement's control-group switch (see
     docs/specs/2026-08-18-bayesian-swarm-measurement.md §1): it takes the candidate
     list in its given order instead of calling Budget.allocate, and fallback_used is
@@ -288,7 +315,7 @@ def _allocate_for_round(
     if not channel_candidates:
         return None
 
-    free_slots = max(0, len(channel_candidates) - mandatory_slots)
+    free_slots = min(len(channel_candidates), budget.cheap + budget.expensive)
 
     if not swarm_enabled:
         return {
@@ -297,9 +324,26 @@ def _allocate_for_round(
             "mandatory_slots": mandatory_slots,
         }
 
-    view = bandit.view() if bandit is not None else (priors or {})
+    if bandit is not None:
+        # bandit.view() overlays in-run observations on top of its own base priors
+        # and always wins over the raw `priors` arg when both are given — `priors`
+        # is not read again here once a bandit is supplied.
+        view = bandit.view()
+    else:
+        view = priors or {}
     allocated, fallback_used = budget.allocate(
-        qclass, free_slots, channel_candidates, view, groups or {}, rng
+        qclass,
+        free_slots,
+        channel_candidates,
+        view,
+        groups or {},
+        rng,
+        # fallback must reflect whether *this run* had real evidence, not whether
+        # the bandit's view happens to be non-empty: a bandit seeded from an empty
+        # base still produces a non-empty view after its first observe() (it
+        # materializes group/uniform defaults), which would otherwise silently
+        # report fallback_used=False for a run that never had a real prior.
+        fallback_hint=not priors,
     )
     return {
         "channels": allocated,
@@ -330,13 +374,17 @@ def run_search_loop(
     exits immediately.
 
     Swarm allocation (opt-in, additive — see docs/specs/2026-08-18-bayesian-swarm-design.md
-    §5-6): when `channel_candidates` is given, the FREE part of the round's channel
-    budget (candidates beyond `mandatory_slots`) is Thompson-sampled via `Budget.allocate`
-    and handed to `run_round` as `directives["channels"]`; the mandatory part never goes
-    through the allocator — the caller is responsible for spending it itself, this loop
-    never drops it. `directives["fallback_used"]` mirrors `Budget.allocate`'s fallback
-    flag so a silently-uniform allocator can't hide behind a green test suite; pass
-    `swarm_log` to also collect one record per round from the outside.
+    §5-6): when `channel_candidates` is given, it must already be the free-eligible pool
+    only — the caller spends the mandatory part (primary + secondary from
+    source_dispatch.md) itself and never includes those channels here; this loop never
+    sees them and cannot drop them. The number of free candidates actually drawn is
+    capped by the run's own deviation budget (`Budget.cheap + Budget.expensive` for the
+    depth), not by pool size, and handed to `run_round` as `directives["channels"]` via
+    Thompson sampling (`Budget.allocate`). `mandatory_slots` is not used to slice
+    anything — it only rides along into `directives`/`swarm_log` as a report count.
+    `directives["fallback_used"]` mirrors `Budget.allocate`'s fallback flag so a
+    silently-uniform allocator can't hide behind a green test suite; pass `swarm_log`
+    to also collect one record per round from the outside.
 
     The fast in-run signal lives in `session_bandit` (a `SessionBandit`, memory-only,
     never written to `priors.json` — see `runner/session_bandit.py`). Pass one in to
@@ -350,6 +398,9 @@ def run_search_loop(
     docs/specs/2026-08-18-bayesian-swarm-measurement.md. Unset (default) means on.
     """
     budget = Budget.for_depth(depth)
+    qclass = normalize_qclass(
+        qclass
+    )  # см. runner/qclass.py — raw input не пропускаем в приоры
     deviations: list[Deviation] = []
     round_index = 1
     current_depth = 0

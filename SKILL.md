@@ -50,7 +50,7 @@ description: Meta-research под вопрос или решение. Веб-п�
 
 ## Постобработка прогона — сбор наблюдений
 
-После завершения фазы 8 байесовский рой пересчитывает приоры на основе накопленных наблюдений. Шаг выполняется вне конвейера: `scripts/collect_observations.py` сводит `sources/NN.md` и `claims.csv` в наблюдения роя, `scripts/update_priors.py` пересчитывает приоры. Аллокатор свободного бюджета — `Budget.allocate`, обязательная часть покрытия из `source_dispatch.md` приором не управляется. См. `docs/specs/2026-08-18-bayesian-swarm-design.md`.
+После завершения фазы 7 байесовский рой пересчитывает приоры на основе накопленных наблюдений. Шаг выполняется вне конвейера: `scripts/collect_observations.py` сводит `sources/NN.md` и `claims.csv` в наблюдения роя, `scripts/update_priors.py` пересчитывает приоры. Аллокатор свободного бюджета — `Budget.allocate`, обязательная часть покрытия из `source_dispatch.md` приором не управляется. См. `docs/specs/2026-08-18-bayesian-swarm-design.md`.
 
 ## Stop-criteria — по содержанию, не по бюджету
 
