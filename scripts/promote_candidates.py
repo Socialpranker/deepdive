@@ -9,8 +9,8 @@ Demotion is the other half. Without it the catalog only ever grows and its share
 dead addresses climbs silently.
 
 Usage:
-    python scripts/promote_candidates.py --dry-run
-    python scripts/promote_candidates.py --write   # печатает дифф, файлы не коммитит
+    python scripts/promote_candidates.py            # только печатает дифф, ничего не пишет
+    python scripts/promote_candidates.py --write     # создаёт файлы, коммит — вручную
 """
 
 from __future__ import annotations
@@ -103,28 +103,35 @@ def render_source_file(c: Candidate) -> str:
     )
 
 
-def main() -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    root: Path | None = None,
+    output_root: Path | None = None,
+    channels_md: Path = CHANNELS_MD,
+) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true", help="создать файлы в api_sources/")
-    ap.add_argument("--dry-run", action="store_true", default=True)
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
-    priors = load_priors()
-    groups = load_channel_groups(CHANNELS_MD)
-    cands = read_candidates()
+    out_root = output_root if output_root is not None else SKILL_ROOT
+
+    priors = load_priors(root=root)
+    groups = load_channel_groups(channels_md)
+    cands = read_candidates(root=root)
 
     promote = [c for c in cands if eligible_for_promotion(c, priors, groups)]
     demote = [c for c in cands if eligible_for_demotion(c)]
 
     for c in promote:
         target = (
-            SKILL_ROOT
+            out_root
             / "references"
             / "api_sources"
             / "promoted"
             / (c.url.replace("https://", "").replace("/", "_") + ".md")
         )
-        print(f"[promote] {c.url} -> {target.relative_to(SKILL_ROOT)}")
+        print(f"[promote] {c.url} -> {target.relative_to(out_root)}")
         print(render_source_file(c))
         if args.write:
             target.parent.mkdir(parents=True, exist_ok=True)

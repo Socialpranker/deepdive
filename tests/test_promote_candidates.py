@@ -1,12 +1,13 @@
 from pathlib import Path
 
 from runner.priors import load_channel_groups
-from runner.state import Prior
+from runner.state import Prior, save_priors
 from scripts.promote_candidates import (
     Candidate,
     MIN_WINS,
     eligible_for_promotion,
     eligible_for_demotion,
+    main,
     read_candidates,
     write_candidates,
     render_source_file,
@@ -76,3 +77,21 @@ def test_rendered_file_carries_required_frontmatter_keys():
     text = render_source_file(c())
     for key in ("access:", "channel:", "url:"):
         assert key in text
+
+
+def test_main_without_write_creates_no_files(tmp_path):
+    save_priors(STRONG, root=tmp_path)
+    write_candidates([c()], root=tmp_path)
+    out_root = tmp_path / "out"
+    main([], root=tmp_path, output_root=out_root, channels_md=FIXTURE)
+    assert not (out_root / "references" / "api_sources" / "promoted").exists()
+
+
+def test_main_with_write_creates_promoted_file(tmp_path):
+    save_priors(STRONG, root=tmp_path)
+    write_candidates([c()], root=tmp_path)
+    out_root = tmp_path / "out"
+    main(["--write"], root=tmp_path, output_root=out_root, channels_md=FIXTURE)
+    promoted = out_root / "references" / "api_sources" / "promoted"
+    assert promoted.exists()
+    assert list(promoted.glob("*.md"))
