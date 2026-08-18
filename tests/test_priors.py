@@ -39,6 +39,16 @@ def test_channel_groups_parsed_from_channels_md():
     assert groups["api-direct"] == "M"
 
 
+def test_channel_groups_ignores_backtick_tokens_in_prose():
+    # фикстура содержит прозу вида "...в `notes` поле" и "...в `gaps` секции"
+    # внутри секций — это не идентификаторы каналов, каналом считается только
+    # заголовок вида "#### N. `channel-id`".
+    groups = load_channel_groups(FIXTURE)
+    assert "notes" not in groups
+    assert "gaps" not in groups
+    assert len(groups) == 5
+
+
 def test_rebuild_aggregates_observations_per_key():
     obs = [
         Observation("r1", "academic", "scientific-claim", 1, "2026-08-01"),

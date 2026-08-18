@@ -3,20 +3,21 @@
 
 ### Часть A — Web и discovery
 
-| id | note |
-|---|---|
-| `web-general` | обычный веб |
-| `wikipedia-references` | ссылки из вики |
+#### 1. `web-general`
+**Что:** обычный веб.
+
+#### 2. `wikipedia-references`
+**Что:** ссылки из вики.
 
 ### Часть B — Academic / Scholarly
 
-| id | note |
-|---|---|
-| `academic` | OpenAlex, Semantic Scholar |
-| `preprint-servers` | arXiv, bioRxiv |
+#### 3. `academic`
+**Что:** OpenAlex, Semantic Scholar. Disclaimer note про legal status в `notes` поле.
+
+#### 4. `preprint-servers`
+**Что:** arXiv, bioRxiv. Если источник не найден — фиксируй в `gaps` секции.
 
 ### Часть M — API-direct (программный access)
 
-| id | note |
-|---|---|
-| `api-direct` | прямые эндпоинты |
+#### 5. `api-direct`
+**Что:** прямые эндпоинты.

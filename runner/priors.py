@@ -30,7 +30,10 @@ GROUP_HEAD_START: dict[str, tuple[float, float]] = {
 }
 
 PART_RE = re.compile(r"^###\s+Часть\s+([A-Z])\b")
-CHANNEL_RE = re.compile(r"`([a-z][a-z0-9-]{3,})`")
+# Только строка-заголовок канала ("#### 12. `industry-reports`"), а не любой
+# backtick-токен в прозе — иначе слова вроде "Пометить в `notes`" или
+# "фиксируй в `gaps`" внутри секции читаются как каналы (см. references/channels.md).
+CHANNEL_HEADING_RE = re.compile(r"^####\s+\d+\.\s*`([a-z][a-z0-9-]{3,})`")
 
 
 def posterior_mean(p: Prior) -> float:
@@ -56,8 +59,9 @@ def _groups_cached(path_str: str, mtime: float) -> tuple[tuple[str, str], ...]:
             continue
         if not current:
             continue
-        for cid in CHANNEL_RE.findall(line):
-            out.append((cid, current))
+        m2 = CHANNEL_HEADING_RE.match(line)
+        if m2:
+            out.append((m2.group(1), current))
     return tuple(out)
 
 
