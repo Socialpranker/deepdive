@@ -1,0 +1,3 @@
+claim_id,sources,source_types,roots,paths,status,confidence,primary_source,source_caveat,dissent,as_of
+c1,s1,academic,study-smith-2024,academic,triangulated,high,s1,,,2026-08-18
+c2,s2,web,own,web-general,single-root,low,,,s2,2026-08-18
