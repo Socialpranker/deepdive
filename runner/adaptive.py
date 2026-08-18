@@ -11,6 +11,7 @@ This module owns the loop's *logic* so the orchestrator stays a thin driver:
 Everything is provider-agnostic (LLMProvider) and runs on DryRunProvider for tests.
 Real web search is out of scope here — sources stay placeholders.
 """
+
 from __future__ import annotations
 
 import logging
@@ -35,7 +36,9 @@ def parse_signals(agent_blob: dict) -> tuple[set[str], dict[str, str]]:
     block = agent_blob.get("signals")
     if not isinstance(block, dict):
         if block is not None:
-            log.warning("signals block is not a dict (%r) — treating as no-flag", type(block))
+            log.warning(
+                "signals block is not a dict (%r) — treating as no-flag", type(block)
+            )
         return fired, details
     for name in TRIGGERS:
         entry = block.get(name)
@@ -55,8 +58,8 @@ def parse_signals(agent_blob: dict) -> tuple[set[str], dict[str, str]]:
 # depth -> (cheap_budget, expensive_budget, depth_limit)
 BUDGET_BY_DEPTH = {
     "shallow": (2, 0, 1),
-    "medium":  (4, 1, 1),
-    "deep":    (8, 3, 2),
+    "medium": (4, 1, 1),
+    "deep": (8, 3, 2),
 }
 
 
@@ -72,6 +75,7 @@ def class_of(trigger: str) -> str:
 @dataclass
 class Budget:
     """Per-run deviation budget. Orchestrator-owned; debit is atomic, never negative."""
+
     cheap: int
     expensive: int
     depth_limit: int
@@ -89,23 +93,56 @@ class Budget:
 
     def spend(self, klass: str) -> None:
         if not self.can_spend(klass):
-            raise ValueError(f"{klass} budget exhausted — caller must check can_spend first")
+            raise ValueError(
+                f"{klass} budget exhausted — caller must check can_spend first"
+            )
         setattr(self, klass, getattr(self, klass) - 1)
 
     def depth_ok(self, current_depth: int) -> bool:
         """True if a round at current_depth may spawn a (deeper) deviation round."""
         return current_depth < self.depth_limit
 
+    def allocate(self, qclass, free_slots, candidates, priors, groups, rng):
+        """Thompson-sample `free_slots` distinct channels; report whether priors were usable.
+
+        The fallback flag is not decoration: a silently uniform allocator looks
+        identical to a working one from outside, and the tests stay green while the
+        behaviour is gone. The caller writes the flag into the run report.
+
+        Only the FREE part of the budget goes through here. The mandatory part
+        (primary + secondary of different types, from source_dispatch.md) is spent
+        regardless of the prior — that is what keeps triangulation intact and what
+        stops the prior from confirming itself.
+        """
+        from runner.priors import (
+            effective_prior,
+        )  # локальный импорт: adaptive не тянет state в тестах DryRun
+
+        if free_slots <= 0 or not candidates:
+            return [], False
+        fallback = not priors
+        if fallback:
+            log.warning(
+                "priors empty or unreadable — allocating uniform for qclass=%s", qclass
+            )
+        draws = []
+        for ch in candidates:
+            p = effective_prior(priors, ch, qclass, groups)
+            draws.append((rng.betavariate(p.alpha, p.beta), ch))
+        draws.sort(reverse=True)
+        return [ch for _, ch in draws[:free_slots]], fallback
+
 
 @dataclass
 class Deviation:
     """One considered trigger (pursued or not_pursued) for the deviations.md log."""
+
     subquestion: str
     round_from: int
-    round_to: int | None        # the round this deviation spawned, or None if not pursued
+    round_to: int | None  # the round this deviation spawned, or None if not pursued
     trigger: str
-    klass: str                  # "cheap" | "expensive"
-    status: str                 # "pursued" | "not_pursued"
+    klass: str  # "cheap" | "expensive"
+    status: str  # "pursued" | "not_pursued"
     rationale: str
     action: str | None
     depth: int | None
@@ -115,10 +152,16 @@ class Deviation:
     carry_forward: str | None = None
 
     def render(self) -> str:
-        round_str = f"{self.round_from}" if self.round_to is None else f"{self.round_from} → {self.round_to}"
+        round_str = (
+            f"{self.round_from}"
+            if self.round_to is None
+            else f"{self.round_from} → {self.round_to}"
+        )
         ids = "[" + ", ".join(self.new_source_ids) + "]"
-        ba = "{ cheap: %d, expensive: %d }" % (self.budget_after.get("cheap", 0),
-                                               self.budget_after.get("expensive", 0))
+        ba = "{ cheap: %d, expensive: %d }" % (
+            self.budget_after.get("cheap", 0),
+            self.budget_after.get("expensive", 0),
+        )
         lines = [
             f"- subquestion: {self.subquestion}",
             f"- round: {round_str}",
@@ -162,8 +205,8 @@ def cross_agent_contradiction_scan(provider, agent_outputs: list[dict]) -> list[
     if len(agent_outputs) < 2:
         return []  # nothing to compare; don't spend a call
     summary = "\n".join(
-        f"{a.get('subquestion_id', '?')}: " +
-        "; ".join(str(s.get("claim", s.get("url", ""))) for s in a.get("sources", []))
+        f"{a.get('subquestion_id', '?')}: "
+        + "; ".join(str(s.get("claim", s.get("url", ""))) for s in a.get("sources", []))
         for a in agent_outputs
     )
     prompt = (
@@ -177,17 +220,20 @@ def cross_agent_contradiction_scan(provider, agent_outputs: list[dict]) -> list[
     for line in reply.splitlines():
         line = line.strip()
         if line.upper().startswith("CONTRADICTION:"):
-            findings.append({"trigger": "contradiction", "detail": line.split(":", 1)[1].strip()})
+            findings.append(
+                {"trigger": "contradiction", "detail": line.split(":", 1)[1].strip()}
+            )
     return findings
 
 
 @dataclass
 class Candidate:
     """A fired trigger awaiting the orchestrator's justification verdict."""
+
     subquestion: str
     trigger: str
     detail: str
-    rationale: str = ""   # filled in when justified
+    rationale: str = ""  # filled in when justified
 
 
 def decide_deviations(provider, candidates: list[Candidate]) -> list[Candidate]:
@@ -236,11 +282,21 @@ def run_search_loop(provider, depth: str, run_round) -> tuple[list[Deviation], i
             fired, details = parse_signals(blob)
             qid = blob.get("subquestion_id", "?")
             for trig in fired:
-                candidates.append(Candidate(subquestion=qid, trigger=trig, detail=details.get(trig, "")))
+                candidates.append(
+                    Candidate(
+                        subquestion=qid, trigger=trig, detail=details.get(trig, "")
+                    )
+                )
 
         # cross-agent contradictions the sub-agents can't see
         for f in cross_agent_contradiction_scan(provider, outputs):
-            candidates.append(Candidate(subquestion="(cross-agent)", trigger="contradiction", detail=f["detail"]))
+            candidates.append(
+                Candidate(
+                    subquestion="(cross-agent)",
+                    trigger="contradiction",
+                    detail=f["detail"],
+                )
+            )
 
         if not candidates:
             break  # nothing flagged -> done
@@ -261,20 +317,46 @@ def run_search_loop(provider, depth: str, run_round) -> tuple[list[Deviation], i
                 next_round = round_index + 1
                 # outcome/new_source_ids are placeholders here; Phase 5
                 # (Orchestrator.score) backfills them after scoring lands.
-                deviations.append(Deviation(
-                    subquestion=c.subquestion, round_from=round_index, round_to=next_round,
-                    trigger=c.trigger, klass=klass, status="pursued", rationale=c.rationale,
-                    action=f"launched round {next_round}", depth=current_depth + 1,
-                    budget_after=ba, outcome="(pending scoring)", new_source_ids=[]))
+                deviations.append(
+                    Deviation(
+                        subquestion=c.subquestion,
+                        round_from=round_index,
+                        round_to=next_round,
+                        trigger=c.trigger,
+                        klass=klass,
+                        status="pursued",
+                        rationale=c.rationale,
+                        action=f"launched round {next_round}",
+                        depth=current_depth + 1,
+                        budget_after=ba,
+                        outcome="(pending scoring)",
+                        new_source_ids=[],
+                    )
+                )
                 spawned = True
             else:
-                reason = "depth_limit" if not budget.depth_ok(current_depth) else "budget_exhausted"
-                deviations.append(Deviation(
-                    subquestion=c.subquestion, round_from=round_index, round_to=None,
-                    trigger=c.trigger, klass=klass, status="not_pursued",
-                    rationale=f"{c.rationale or 'justified'} (not pursued: {reason})",
-                    action=None, depth=None, budget_after=ba, outcome=None,
-                    new_source_ids=[], carry_forward="Phase 7 refresh-target"))
+                reason = (
+                    "depth_limit"
+                    if not budget.depth_ok(current_depth)
+                    else "budget_exhausted"
+                )
+                deviations.append(
+                    Deviation(
+                        subquestion=c.subquestion,
+                        round_from=round_index,
+                        round_to=None,
+                        trigger=c.trigger,
+                        klass=klass,
+                        status="not_pursued",
+                        rationale=f"{c.rationale or 'justified'} (not pursued: {reason})",
+                        action=None,
+                        depth=None,
+                        budget_after=ba,
+                        outcome=None,
+                        new_source_ids=[],
+                        carry_forward="Phase 7 refresh-target",
+                    )
+                )
 
         if not spawned:
             break  # every justified candidate was blocked -> done (records kept)
