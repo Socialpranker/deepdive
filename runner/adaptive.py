@@ -15,6 +15,8 @@ Real web search is out of scope here — sources stay placeholders.
 from __future__ import annotations
 
 import logging
+import os
+import random
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -260,29 +262,125 @@ def decide_deviations(provider, candidates: list[Candidate]) -> list[Candidate]:
     return kept
 
 
-def run_search_loop(provider, depth: str, run_round) -> tuple[list[Deviation], int]:
+def _allocate_for_round(
+    budget: "Budget",
+    *,
+    swarm_enabled: bool,
+    qclass: str,
+    channel_candidates: list[str] | None,
+    priors: dict | None,
+    mandatory_slots: int,
+    bandit,
+    groups: dict[str, str] | None,
+    rng: random.Random,
+) -> dict | None:
+    """Build this round's `directives` dict, or None when swarm isn't in use.
+
+    Swarm is "in use" only when the caller actually supplied `channel_candidates` —
+    the scaffold orchestrator does not yet, so that call site is byte-for-byte
+    unaffected (directives stays None, exactly as before this function existed).
+
+    DEEPDIVE_SWARM=off is the measurement's control-group switch (see
+    docs/specs/2026-08-18-bayesian-swarm-measurement.md §1): it takes the candidate
+    list in its given order instead of calling Budget.allocate, and fallback_used is
+    always False there — this is a deliberate static baseline, not a degraded prior.
+    """
+    if not channel_candidates:
+        return None
+
+    free_slots = max(0, len(channel_candidates) - mandatory_slots)
+
+    if not swarm_enabled:
+        return {
+            "channels": channel_candidates[:free_slots],
+            "fallback_used": False,
+            "mandatory_slots": mandatory_slots,
+        }
+
+    view = bandit.view() if bandit is not None else (priors or {})
+    allocated, fallback_used = budget.allocate(
+        qclass, free_slots, channel_candidates, view, groups or {}, rng
+    )
+    return {
+        "channels": allocated,
+        "fallback_used": fallback_used,
+        "mandatory_slots": mandatory_slots,
+    }
+
+
+def run_search_loop(
+    provider,
+    depth: str,
+    run_round,
+    *,
+    qclass: str = "qualitative",
+    channel_candidates: list[str] | None = None,
+    priors: dict | None = None,
+    groups: dict[str, str] | None = None,
+    mandatory_slots: int = 0,
+    session_bandit=None,
+    rng: random.Random | None = None,
+    swarm_log: list[dict] | None = None,
+) -> tuple[list[Deviation], int]:
     """Drive Phase 4 as a loop. Returns (deviations, total_rounds_run).
 
     `run_round(round_index, depth, directives)` runs one search round and returns a
     list of sub-agent output dicts. Termination is guaranteed: each spawned round either
     spends budget or is blocked by the depth limit; with no justified trigger the loop
     exits immediately.
+
+    Swarm allocation (opt-in, additive — see docs/specs/2026-08-18-bayesian-swarm-design.md
+    §5-6): when `channel_candidates` is given, the FREE part of the round's channel
+    budget (candidates beyond `mandatory_slots`) is Thompson-sampled via `Budget.allocate`
+    and handed to `run_round` as `directives["channels"]`; the mandatory part never goes
+    through the allocator — the caller is responsible for spending it itself, this loop
+    never drops it. `directives["fallback_used"]` mirrors `Budget.allocate`'s fallback
+    flag so a silently-uniform allocator can't hide behind a green test suite; pass
+    `swarm_log` to also collect one record per round from the outside.
+
+    The fast in-run signal lives in `session_bandit` (a `SessionBandit`, memory-only,
+    never written to `priors.json` — see `runner/session_bandit.py`). Pass one in to
+    seed `Budget.allocate`'s view from priors already updated by earlier rounds in this
+    same run; omit it to allocate straight off the base `priors`. The slow signal
+    (`priors.json` itself) is collected post-hoc by `scripts/collect_observations.py`
+    and is out of this loop's scope by design.
+
+    `DEEPDIVE_SWARM=off` disables the allocator and falls back to the previous static
+    behaviour (candidates taken in given order) — the control group for
+    docs/specs/2026-08-18-bayesian-swarm-measurement.md. Unset (default) means on.
     """
     budget = Budget.for_depth(depth)
     deviations: list[Deviation] = []
     round_index = 1
     current_depth = 0
 
+    swarm_enabled = os.environ.get("DEEPDIVE_SWARM", "on").strip().lower() != "off"
+    _rng = rng if rng is not None else random.Random()
+
     while True:
-        outputs = run_round(round_index, current_depth, directives=None)
+        directives = _allocate_for_round(
+            budget,
+            swarm_enabled=swarm_enabled,
+            qclass=qclass,
+            channel_candidates=channel_candidates,
+            priors=priors,
+            mandatory_slots=mandatory_slots,
+            bandit=session_bandit,
+            groups=groups,
+            rng=_rng,
+        )
+        if directives is not None and swarm_log is not None:
+            swarm_log.append({"round": round_index, "qclass": qclass, **directives})
+
+        outputs = run_round(round_index, current_depth, directives=directives)
 
         # collect fired triggers from sub-agent signals (recall)
-        candidates: list[Candidate] = []
+        trigger_candidates: list[Candidate] = []
         for blob in outputs:
             fired, details = parse_signals(blob)
             qid = blob.get("subquestion_id", "?")
             for trig in fired:
-                candidates.append(
+                trigger_candidates.append(
                     Candidate(
                         subquestion=qid, trigger=trig, detail=details.get(trig, "")
                     )
@@ -290,7 +388,7 @@ def run_search_loop(provider, depth: str, run_round) -> tuple[list[Deviation], i
 
         # cross-agent contradictions the sub-agents can't see
         for f in cross_agent_contradiction_scan(provider, outputs):
-            candidates.append(
+            trigger_candidates.append(
                 Candidate(
                     subquestion="(cross-agent)",
                     trigger="contradiction",
@@ -298,11 +396,11 @@ def run_search_loop(provider, depth: str, run_round) -> tuple[list[Deviation], i
                 )
             )
 
-        if not candidates:
+        if not trigger_candidates:
             break  # nothing flagged -> done
 
         # Opus precision filter
-        justified = decide_deviations(provider, candidates)
+        justified = decide_deviations(provider, trigger_candidates)
         if not justified:
             break  # flags existed but none survived judgment -> done
 
