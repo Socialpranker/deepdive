@@ -11,6 +11,8 @@ dead addresses climbs silently.
 Usage:
     python scripts/promote_candidates.py            # только печатает дифф, ничего не пишет
     python scripts/promote_candidates.py --write     # создаёт файлы, коммит — вручную
+    python scripts/promote_candidates.py --track URL --channel C --qclass Q --run-id R
+                                                      # записать одну улику ad-hoc источника
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ import argparse
 import json
 import sys
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -72,6 +75,49 @@ def write_candidates(cands: list[Candidate], root: Path | None = None) -> None:
     )
 
 
+def track_candidate(
+    url: str,
+    channel: str,
+    qclass: str,
+    run_id: str,
+    *,
+    alive: bool = True,
+    root: Path | None = None,
+) -> Candidate:
+    """Record one sighting of an ad-hoc (not-yet-cataloged) source. Upsert by url.
+
+    A plain append would let the same source rack up unlimited JSONL lines that
+    read_candidates() treats as separate Candidates, each with wins=1 — none of
+    which would ever reach MIN_WINS. Promotion counts DISTINCT runs, so this merges
+    by url and only grows `runs` when the run_id is new.
+    """
+    today = datetime.now(timezone.utc).date().isoformat()
+    cands = read_candidates(root=root)
+    for c in cands:
+        if c.url == url:
+            c.wins += 1
+            if run_id not in c.runs:
+                c.runs.append(run_id)
+            c.alive = alive
+            c.last_probe = today
+            write_candidates(cands, root=root)
+            return c
+
+    new = Candidate(
+        url=url,
+        channel=channel,
+        qclass=qclass,
+        wins=1,
+        runs=[run_id],
+        first_seen=today,
+        last_probe=today,
+        alive=alive,
+    )
+    cands.append(new)
+    write_candidates(cands, root=root)
+    return new
+
+
 def eligible_for_promotion(
     c: Candidate, priors: dict[str, Prior], groups: dict[str, str]
 ) -> bool:
@@ -112,7 +158,46 @@ def main(
 ) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true", help="создать файлы в api_sources/")
+    ap.add_argument(
+        "--track", metavar="URL", help="записать одну улику по ad-hoc источнику и выйти"
+    )
+    ap.add_argument("--channel", help="канал источника — обязателен вместе с --track")
+    ap.add_argument("--qclass", help="класс подвопроса — обязателен вместе с --track")
+    ap.add_argument(
+        "--run-id",
+        help="run_id текущего прогона (обычно <slug>) — обязателен вместе с --track",
+    )
+    ap.add_argument(
+        "--dead",
+        action="store_true",
+        help="с --track: пометить как недоступный, а не как выигрыш",
+    )
     args = ap.parse_args(argv)
+
+    if args.track:
+        missing = [
+            n
+            for n, v in (
+                ("--channel", args.channel),
+                ("--qclass", args.qclass),
+                ("--run-id", args.run_id),
+            )
+            if not v
+        ]
+        if missing:
+            ap.error(f"--track требует {', '.join(missing)}")
+        cand = track_candidate(
+            args.track,
+            args.channel,
+            args.qclass,
+            args.run_id,
+            alive=not args.dead,
+            root=root,
+        )
+        print(
+            f"кандидат {cand.url}: wins={cand.wins}, прогонов={len(set(cand.runs))}, alive={cand.alive}"
+        )
+        return 0
 
     out_root = output_root if output_root is not None else SKILL_ROOT
 

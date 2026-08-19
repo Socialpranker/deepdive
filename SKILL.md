@@ -48,9 +48,49 @@ description: Meta-research под вопрос или решение. Веб-п�
 7. **Refresh targets** [`sonnet`/medium] (medium/deep) — entities/numbers/hypotheses/topic-markers из отчёта в `refresh_targets.md`: точка входа для будущих `update`. Блок Z11 в `blocks/close.md`.
 8. **Decision walkthrough** [`opus`/high, главный поток] (**всегда**, в shallow — 1 вилка) — отчёт не обсуждается, а исполняется: показать `memo.md` и провести пользователя по вилкам по одной. Исходы: принято (решение + next action + дата) / `blocked` (после 1 целевой gap-волны) / `deferred`. Артефакт `application.md` (любой status) + строка в `~/.claude/research/applications_ledger.csv`. См. `decision_walkthrough.md`.
 
-## Постобработка прогона — сбор наблюдений
+## Постобработка прогона — сбор наблюдений байесовского роя
 
-После завершения фазы 7 байесовский рой пересчитывает приоры на основе накопленных наблюдений. Шаг выполняется вне конвейера: `scripts/collect_observations.py` сводит `sources/NN.md` и `claims.csv` в наблюдения роя, `scripts/update_priors.py` пересчитывает приоры. Аллокатор свободного бюджета — `Budget.allocate`, обязательная часть покрытия из `source_dispatch.md` приором не управляется. См. `docs/specs/2026-08-18-bayesian-swarm-design.md`.
+После Фазы 7, для medium/deep, до Фазы 8 или сразу после неё — четыре шага. Каждый использует уже существующие артефакты прогона, новых файлов писать руками не нужно. `run_id` = `<slug>` этого прогона (та же папка, что и весь остальной output structure) — использовать один и тот же slug во всех вызовах ниже.
+
+**1. Собрать наблюдения — по подвопросу, не одним вызовом на весь прогон.**
+
+Для КАЖДОГО подвопроса из `plan.md` §12 отдельный вызов, с его `qclass` и его реально запрошенными каналами (primary + secondary + fallback, если fallback реально понадобился):
+
+```
+python3 scripts/collect_observations.py --research-dir <root>/<slug> --run-id <slug> \
+  --requested academic=scientific-claim,data-statistical-gov=scientific-claim
+```
+
+Один вызов на подвопрос, а не общий список `channel=qclass` на весь прогон — `--requested` парсится в словарь по ключу-каналу: если один и тот же канал встретился в разных подвопросах с разным `qclass` в одной строке, вторая пара молча затрёт первую и наблюдение потеряется. Раздельные вызовы этой проблемы не имеют — каждый аппендит независимо.
+
+**2. Пересчитать приоры.**
+
+```
+python3 scripts/update_priors.py
+```
+
+Дёшево (доли секунды), звать после каждого прогона без исключений — без этого шага накопленные наблюдения не попадают в `priors.json` и следующий прогон не увидит статистику.
+
+**3. Зарегистрировать ad-hoc источники, ставшие полезными.**
+
+Источник — ad-hoc, если он найден через Discovery patterns (`source_dispatch.md`), а не из штатного каталога (`api_sources/`, `stat_sources/`, `registry/`). Для каждого такого источника, ставшего `root` или непогашенным `dissent` хотя бы одного claim в `claims.csv`: открыть его `sources/NN.md`, взять `url` и первый сегмент `discovery_path` (это канал), `qclass` — тот, что был у подвопроса в §12:
+
+```
+python3 scripts/promote_candidates.py --track https://api.example.org/v1 \
+  --channel api-direct --qclass market-size --run-id <slug>
+```
+
+Источник, оказавшийся мёртвым/недоступным на момент прогона — тот же вызов с `--dead`, тем же `--run-id`.
+
+**4. Раз в несколько прогонов — проверить промоушен и демоушен.**
+
+```
+python3 scripts/promote_candidates.py --write
+```
+
+Печатает, что промотируется (≥3 улики в ≥3 разных прогонах, живой endpoint, приор канала не деградировал) и что предлагается к удалению (≥3 прогона подряд мёртв). Без `--write` — только печать, ничего не пишет. С `--write` создаёт файлы в `references/api_sources/promoted/` — **посмотреть `git diff`, закоммитить вручную**, скрипт коммит не делает никогда.
+
+Аллокатор свободного бюджета сверх обязательного минимума — читать `python3 scripts/update_priors.py --qclass <qclass подвопроса>` при выборе канала сверх Primary/Secondary; подробно и с оговорками — `source_dispatch.md`, раздел «Приор при выборе канала сверх обязательного минимума». Полная механика — `docs/specs/2026-08-18-bayesian-swarm-design.md`.
 
 ## Stop-criteria — по содержанию, не по бюджету
 

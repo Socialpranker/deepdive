@@ -5,12 +5,14 @@ from runner.state import Prior, save_priors
 from scripts.promote_candidates import (
     Candidate,
     MIN_WINS,
+    MIN_DISTINCT_RUNS,
     eligible_for_promotion,
     eligible_for_demotion,
     main,
     read_candidates,
     write_candidates,
     render_source_file,
+    track_candidate,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "channels_mini.md"
@@ -95,3 +97,73 @@ def test_main_with_write_creates_promoted_file(tmp_path):
     promoted = out_root / "references" / "api_sources" / "promoted"
     assert promoted.exists()
     assert list(promoted.glob("*.md"))
+
+
+def test_track_candidate_creates_new_entry_on_first_sighting(tmp_path):
+    track_candidate(
+        "https://api.new.org/v1", "api-direct", "market-size", "run-a", root=tmp_path
+    )
+    got = read_candidates(root=tmp_path)
+    assert len(got) == 1
+    assert got[0].wins == 1
+    assert got[0].runs == ["run-a"]
+
+
+def test_track_candidate_accumulates_wins_across_distinct_runs(tmp_path):
+    url = "https://api.new.org/v1"
+    for run_id in ("run-a", "run-b", "run-c"):
+        track_candidate(url, "api-direct", "market-size", run_id, root=tmp_path)
+    got = read_candidates(root=tmp_path)
+    assert len(got) == 1  # upsert, не три отдельные строки
+    assert got[0].wins == 3
+    assert len(set(got[0].runs)) == MIN_DISTINCT_RUNS
+
+
+def test_track_candidate_same_run_twice_does_not_inflate_distinct_runs(tmp_path):
+    url = "https://api.new.org/v1"
+    track_candidate(url, "api-direct", "market-size", "run-a", root=tmp_path)
+    track_candidate(url, "api-direct", "market-size", "run-a", root=tmp_path)
+    got = read_candidates(root=tmp_path)
+    assert got[0].wins == 2  # каждая улика считается
+    assert got[0].runs == ["run-a"]  # но прогон один — не задваивается
+
+
+def test_track_candidate_marks_dead_endpoint(tmp_path):
+    track_candidate(
+        "https://api.new.org/v1",
+        "api-direct",
+        "market-size",
+        "run-a",
+        alive=False,
+        root=tmp_path,
+    )
+    got = read_candidates(root=tmp_path)
+    assert got[0].alive is False
+
+
+def test_track_candidate_does_not_touch_other_candidates(tmp_path):
+    write_candidates([c(url="https://other.org")], root=tmp_path)
+    track_candidate(
+        "https://api.new.org/v1", "api-direct", "market-size", "run-a", root=tmp_path
+    )
+    got = {cand.url for cand in read_candidates(root=tmp_path)}
+    assert got == {"https://other.org", "https://api.new.org/v1"}
+
+
+def test_track_via_cli_flag(tmp_path):
+    main(
+        [
+            "--track",
+            "https://api.new.org/v1",
+            "--channel",
+            "api-direct",
+            "--qclass",
+            "market-size",
+            "--run-id",
+            "run-a",
+        ],
+        root=tmp_path,
+    )
+    got = read_candidates(root=tmp_path)
+    assert len(got) == 1
+    assert got[0].wins == 1
