@@ -449,6 +449,8 @@ CL2,"CDC adds >200ms p99 latency at scale",H2,s09;s14,industry;industry,own;own,
 
 ## Фаза 6. Синтез + multi-angle red team
 
+**Вход из 5.7:** вердикты `same-claim-conflict` — это расхождение с ПРОШЛЫМ ресёрчем, и оно обязано попасть в отчёт: обе позиции с их `as_of` и корнями, `confidence` не выше `medium`, без арбитра — `contested`. Механика та же, что у `dissent` в Фазе 5, только сторона-оппонент лежит в вики, а не в этом прогоне. Сработавший срез по `MAX_ADJUDICATED` — строкой в `Урезано:` меморандума. См. `wiki.md`.
+
 **Model:** red-team суб-агенты — `opus` / `high` **(обязательно для deep)**, `sonnet` / `high` для medium. Synthesis assembly — `sonnet` / `high` (длинный контекст). Не экономить на red team — это где Haiku/Sonnet делают soft-pushback без реальной атаки на гипотезы.
 
 **Порядок:**

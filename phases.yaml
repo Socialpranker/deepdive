@@ -77,6 +77,20 @@ phases:
     model: sonnet
     effort: low
     depth_gate: medium
+  # Phase 5.7 confronts this run's claims with the cross-run wiki BEFORE synthesis, not
+  # after: a disagreement with an earlier research is something the report has to carry,
+  # and noticing it in Phase 7 would be noticing it too late to write about. Everything
+  # that needs no judgement — a merely newer figure, a unit mismatch, a different scope —
+  # is decided mechanically by wiki_pair.py, so only what survives that costs a model
+  # call and the expensive failure (a manufactured contradiction) has no path to the
+  # report. The wiki itself is written later, in finish-up, at every depth.
+  # See references/wiki.md.
+  - id: "5.7"
+    name_ru: "Сверка с вики"
+    name_en: "Wiki reconcile"
+    model: sonnet
+    effort: low
+    depth_gate: medium
   - id: "6"
     name_ru: "Синтез + multi-angle red team"
     name_en: "Synthesis + multi-angle red team"

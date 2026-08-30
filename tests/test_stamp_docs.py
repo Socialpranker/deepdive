@@ -60,7 +60,7 @@ def test_render_values_has_all_keys():
     # Не литерал: эти тесты про механику штамповщика, а не про размер каталога.
     # Счёт прибит в одном месте — tests/test_catalog_counts.py.
     assert v["count:blocks"] == str(stamp_docs.catalog_counts.counts(REPO)["blocks"])
-    assert v["count:phases"] == "12"
+    assert v["count:phases"] == "13"
 
 
 def test_check_mode_detects_drift(tmp_path):
