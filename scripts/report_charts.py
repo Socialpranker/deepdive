@@ -178,7 +178,9 @@ def form_slope(rows, fig):
     a, b = (float(r["value"]) for r in rows)
     x1, x2, top, plot_h = 200, 390, 58, 84
     top_val = max(a, b) * 1.25 or 1
-    y = lambda v: top + plot_h - (v / top_val * plot_h)
+    def y(v: float) -> float:
+        return top + plot_h - (v / top_val * plot_h)
+
     y1, y2 = y(a), y(b)
     unit = esc(rows[0].get("unit", ""))
     la, lb = rows[0].get("as_of", "")[:4], rows[1].get("as_of", "")[:4]
