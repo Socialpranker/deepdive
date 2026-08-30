@@ -242,6 +242,33 @@ def test_sidenotes_survive_pandoc2_attributes():
     assert "footnote-back" not in out and "↩" not in out
 
 
+# pandoc 3.1.x (в apt у ubuntu-latest) кладёт сноски не в <section>, а в <aside>;
+# 2.x и 3.10 — в <section>. Разбор обязан пережить оба тега.
+ASIDE_PANDOC313 = """<p>Текст<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+<aside id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Первая<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</aside>"""
+
+
+def test_sidenotes_survive_aside_container():
+    out, moved = br.sidenotes(ASIDE_PANDOC313)
+    assert moved == 1
+    assert '<aside class="sidenote">Первая</aside>' in out
+    assert "footnotes" not in out
+
+
+def test_footnote_refs_without_a_block_fail_the_build():
+    """Контейнер не распознан — отказ, а не тихий ноль: так CI и молчал."""
+    with pytest.raises(br.BuildError, match="блок сносок не найден"):
+        br.sidenotes(
+            '<p>Т<a href="#fn1" class="footnote-ref" id="fnref1">1</a></p>'
+            '<figure class="footnotes"><ol></ol></figure>'
+        )
+
+
 def test_unparsable_footnote_block_fails_the_build():
     """Блок сносок есть, разобрать нечего — отказ, а не тихий ноль."""
     with pytest.raises(br.BuildError, match="ни одна не разобрана"):

@@ -105,7 +105,12 @@ def md_to_html(md_path: Path) -> str:
 FOOTNOTE_REF = re.compile(
     r'<a\s(?=[^>]*class="footnote-ref")[^>]*?href="#fn(\d+)"[^>]*>.*?</a>', re.S
 )
-FOOTNOTE_BLOCK = re.compile(r'<section[^>]*class="footnotes[^"]*".*?</section>', re.S)
+# Контейнер сносок у pandoc меняет ТЕГ между версиями: 2.x и 3.10 дают
+# <section class="footnotes …">, а 3.1.x (он же в apt у ubuntu-latest) — <aside>.
+# Привязка к <section> означала «сносок нет» на CI при живом документе.
+FOOTNOTE_BLOCK = re.compile(
+    r'<(section|aside|div)[^>]*class="[^"]*\bfootnotes\b[^"]*"[^>]*>.*?</\1>', re.S
+)
 # Атрибуты у <li> разнятся по версиям pandoc: 2.x пишет
 # `<li id="fn1" role="doc-endnote">`, 3.x — просто `<li id="fn1">`. Привязка к
 # точной форме тега давала ноль перенесённых сносок на ubuntu и единицу на macOS.
@@ -122,6 +127,14 @@ def sidenotes(body: str) -> tuple[str, int]:
     items = {}
     block = FOOTNOTE_BLOCK.search(body)
     if not block:
+        if FOOTNOTE_REF.search(body):
+            # Ссылки на сноски есть, а контейнера не видно — значит не совпал
+            # разбор, а не «сносок нет». Без этой ветки такой случай возвращал
+            # ноль и выглядел успехом (ровно так CI и пропускал pandoc 3.1.x).
+            raise BuildError(
+                "в тексте есть ссылки на сноски, но блок сносок не найден — "
+                "разбор HTML сломан, все источники потерялись бы молча"
+            )
         return body, 0
     for num, content in FOOTNOTE_ITEM.findall(block.group(0)):
         text = FOOTNOTE_BACK.sub("", content)
