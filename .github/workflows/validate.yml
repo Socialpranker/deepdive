@@ -26,6 +26,13 @@ jobs:
           pip install ruff==0.15.1
           ruff check .
 
+      # tests/test_report_export.py and test_mermaid_figures.py exercise build_report's
+      # error handling, which only gets reached once pandoc exists — without it every one
+      # of them dies on "pandoc не найден" and the export path goes unverified. They
+      # passed on the author's Mac and had never run here.
+      - name: Install pandoc (report export tests)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq pandoc
+
       - name: Run unit tests
         run: python -m pytest tests/ -q
 

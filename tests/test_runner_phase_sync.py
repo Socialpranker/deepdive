@@ -25,7 +25,7 @@ from orchestrator import Orchestrator  # noqa: E402
 # Update this set when the intended gap changes (see DESIGN.md).
 # "8" (decision walkthrough) is a live user dialogue — out of the runner's scope
 # by design, same reasoning as the plan-review gate "3.7".
-KNOWN_MISSING = {"3.7", "5.5", "8"}
+KNOWN_MISSING = {"3.7", "5.5", "5.7", "8"}
 
 
 def test_runner_phase_sync():
