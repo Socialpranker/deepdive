@@ -106,7 +106,11 @@ FOOTNOTE_REF = re.compile(
     r'<a\s(?=[^>]*class="footnote-ref")[^>]*?href="#fn(\d+)"[^>]*>.*?</a>', re.S
 )
 FOOTNOTE_BLOCK = re.compile(r'<section[^>]*class="footnotes[^"]*".*?</section>', re.S)
-FOOTNOTE_ITEM = re.compile(r'<li id="fn(\d+)">(.*?)</li>', re.S)
+# Атрибуты у <li> разнятся по версиям pandoc: 2.x пишет
+# `<li id="fn1" role="doc-endnote">`, 3.x — просто `<li id="fn1">`. Привязка к
+# точной форме тега давала ноль перенесённых сносок на ubuntu и единицу на macOS.
+FOOTNOTE_ITEM = re.compile(r'<li\s(?=[^>]*\bid="fn(\d+)")[^>]*>(.*?)</li>', re.S)
+FOOTNOTE_BACK = re.compile(r'<a\s(?=[^>]*class="footnote-back")[^>]*>.*?</a>', re.S)
 
 
 def sidenotes(body: str) -> tuple[str, int]:
@@ -120,9 +124,18 @@ def sidenotes(body: str) -> tuple[str, int]:
     if not block:
         return body, 0
     for num, content in FOOTNOTE_ITEM.findall(block.group(0)):
-        text = re.sub(r'<a href="#fnref\d+"[^>]*>.*?</a>', "", content, flags=re.S)
+        text = FOOTNOTE_BACK.sub("", content)
         text = re.sub(r"</?p>", "", text).strip()
         items[num] = text
+
+    if not items:
+        # Блок сносок есть, а разобрать из него нечего — значит сломан разбор,
+        # а не документ. Без этого отказа сборка отдаёт «0 сносок» и выглядит
+        # успешной ровно там, где потеряла все источники сразу.
+        raise BuildError(
+            "блок сносок найден, но ни одна не разобрана — "
+            "разбор HTML сломан, все источники потерялись бы молча"
+        )
 
     moved = 0
 

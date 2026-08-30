@@ -221,6 +221,33 @@ def test_losing_a_sidenote_fails_the_build(monkeypatch):
         br.sidenotes(WRAPPED)
 
 
+# Так сноски пишет pandoc 2.x (ubuntu-latest ставит его из apt): у <li> есть
+# role="doc-endnote", у backlink — role="doc-backlink". pandoc 3.x (macOS автора)
+# role у <li> не пишет. Разбор обязан пережить обе формы.
+WRAPPED_PANDOC2 = """<p>Текст<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> и ещё<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>.</p>
+<section class="footnotes" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1" role="doc-endnote"><p>Первая<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2" role="doc-endnote"><p>Вторая<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>"""
+
+
+def test_sidenotes_survive_pandoc2_attributes():
+    out, moved = br.sidenotes(WRAPPED_PANDOC2)
+    assert moved == 2
+    assert out.count('class="sidenote"') == 2
+    assert "Первая" in out and "Вторая" in out
+    assert "footnote-back" not in out and "↩" not in out
+
+
+def test_unparsable_footnote_block_fails_the_build():
+    """Блок сносок есть, разобрать нечего — отказ, а не тихий ноль."""
+    with pytest.raises(br.BuildError, match="ни одна не разобрана"):
+        br.sidenotes('<p>Текст.</p><section class="footnotes"><ol></ol></section>')
+
+
 def test_document_without_footnotes_is_fine():
     out, moved = br.sidenotes("<p>Просто текст.</p>")
     assert moved == 0 and "sidenote" not in out
