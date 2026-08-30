@@ -337,7 +337,9 @@ def test_medium_run_without_outline_fails(tmp_path):
 
 def test_outline_without_table_rows_fails(tmp_path):
     d = make_run(tmp_path, mode="medium", phases=FULL_SET)
-    (d / "outline.md").write_text("# Outline\n\nразделы будут позже\n", encoding="utf-8")
+    (d / "outline.md").write_text(
+        "# Outline\n\nразделы будут позже\n", encoding="utf-8"
+    )
     r = run_validate(d, "medium")
     assert any("no `| section | block | claims |` table" in e for e in r.errors)
 
@@ -466,7 +468,9 @@ def test_malformed_constructs_json_is_an_error(tmp_path):
 
 def test_constructs_json_without_results_is_an_error(tmp_path):
     d = make_run(tmp_path, mode="medium", phases=FULL_SET)
-    (d / ".verify" / "constructs.json").write_text('{"integrity": 1.0}', encoding="utf-8")
+    (d / ".verify" / "constructs.json").write_text(
+        '{"integrity": 1.0}', encoding="utf-8"
+    )
     r = run_validate(d, "medium")
     assert any("no `results` list" in e for e in r.errors)
 
@@ -484,3 +488,4 @@ def test_shallow_run_needs_no_numbers_csv(tmp_path):
     d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET)
     r = run_validate(d, "shallow")
     assert not any("numbers.csv" in e for e in r.errors)
+

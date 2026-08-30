@@ -7,6 +7,7 @@ DISPATCH = ROOT / "references" / "source_dispatch.md"
 CAPS_MD = ROOT / "references" / "capability_discovery.md"
 CAPS_PY = ROOT / "runner" / "capabilities.py"
 SKILL_MD = ROOT / "SKILL.md"
+SWARM_MD = ROOT / "references" / "swarm_postprocess.md"
 
 DEAD_SEARCH_KEYS = ("TAVILY_API_KEY", "BRAVE_API_KEY", "EXA_API_KEY", "SERPAPI_KEY")
 
@@ -72,8 +73,8 @@ def test_step1_pseudocode_does_not_gate_on_dead_search_keys():
         )
 
 
-def test_skill_md_documents_the_observation_collection_sop():
-    text = SKILL_MD.read_text(encoding="utf-8")
+def test_swarm_ref_documents_the_observation_collection_sop():
+    text = SWARM_MD.read_text(encoding="utf-8")
     for needle in (
         "collect_observations.py",
         "update_priors.py",
@@ -83,11 +84,20 @@ def test_skill_md_documents_the_observation_collection_sop():
         assert needle in text, f"постобработка не документирует вызов {needle}"
 
 
-def test_skill_md_warns_against_one_call_per_whole_run():
+def test_skill_md_routes_to_the_swarm_postprocess_ref():
+    # SOP переехал из SKILL.md в phase-scoped ref (диета бюджета 2026-08-24).
+    # Прогон дойдёт до него только если Фаза 7 явно посылает читать файл.
+    text = SKILL_MD.read_text(encoding="utf-8")
+    assert "swarm_postprocess.md" in text, "Фаза 7 не отправляет читать постобработку"
+    for needle in ("collect_observations.py", "update_priors.py", "promote_candidates.py"):
+        assert needle in text, f"маршрут не называет вызов {needle}"
+
+
+def test_swarm_ref_warns_against_one_call_per_whole_run():
     # --requested парсится в dict по ключу-каналу: один и тот же канал в двух
     # подвопросах с разным qclass в одном вызове тихо теряет одно из наблюдений.
     # Это не очевидно из сигнатуры CLI — инструкция обязана предупредить явно.
-    text = SKILL_MD.read_text(encoding="utf-8")
+    text = SWARM_MD.read_text(encoding="utf-8")
     assert "молча затрёт" in text or "silently" in text.lower()
 
 

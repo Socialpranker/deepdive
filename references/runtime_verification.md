@@ -298,56 +298,24 @@ refers to something outside this document — they argue with the content as giv
 Layer 4 is the same species of check as Layer 3: mechanical comparison of the report
 against a corpus, by a model that did not write it.
 
-## Block F10 — Verification header (add to `references/blocks/frame.md`)
+## Block F10 — Verification header
 
-> Renumbered from F9 to F10 (2026-07-07): F9 was claimed by the `background` block
-> (see `references/blocks/frame.md`) merged from the deepdive-v2 design doc before this
-> header was actually implemented in `frame.md`. No functional change — same header,
-> same content, next free slot.
+**Шаблон блока живёт в `references/blocks/frame.md` § F10.** Здесь — только семантика:
+что каждая цифра означает и откуда берётся. Дублировать шаблон обратно не надо; он
+жил тут с 2026-07-07 как «add to frame.md» и до 2026-08-24 туда так и не переехал,
+из-за чего блок числился в `INDEX.md`, но не существовал (счётчик показывал 105 при
+заявленных 106).
 
 Rendered at the very top of the final report. **Carries ALL FOUR axes** (liveness ×
 faithfulness × qualifiers × constructs) — the chain is source → claim → report, and a
-break anywhere in it means the statement is not verified:
-
-```markdown
-> **Citation integrity: 21/23 live · faithfulness 20/22 supported · qualifiers 22/22 preserved · constructs 7/7 sourced · 0 red flags · 2 paywalled**
-> Verified <YYYY-MM-DD>: liveness via check_citations.py (every OPEN source resolved live);
-> faithfulness via Layer 2 judge over evidence/ (2 PARTIAL softened); qualifiers via Layer 3
-> over F1/memo.md/Z12 (no scope drift); constructs via Layer 4 (1 marked as ours).
-> [liveness detail](.verify/citations.md) · [faithfulness detail](.verify/faithfulness.md) · [qualifier detail](.verify/qualifiers.md) · [construct detail](.verify/constructs.md)
-```
-
-When flags were found and resolved (any axis):
-
-```markdown
-> **Citation integrity: 23/23 live · faithfulness 23/23 supported · qualifiers 21/23 preserved · 1 red flag + 1 overclaim + 2 qualifiers restored**
-> s14 (dead URL → replaced <date>); C4 (PARTIAL → claim softened to match source);
-> CL7 (BROADENED → "on fixtures with embedded state" restored in TL;DR).
-```
-
-When an axis is below floor and the user chose to ship anyway (medium only):
-
-```markdown
-> ⚠ **Citation integrity: liveness 0.64 · faithfulness 0.71 · qualifiers 0.88 — liveness below floor (0.70).**
-> s07, s11 (transport UNKNOWN), s19 (OPEN dead → claim demoted); C9 (UNSUPPORTED → Open Questions).
-```
-
-(shallow: faithfulness line omitted — Layer 2 optional, no `evidence/`. Qualifier and
-construct lines omitted unless Layers 3-4 were run.)
+break anywhere in it means the statement is not verified.
 
 ### Second line — source independence (medium/deep)
 
 The three axes above answer "did the source say this, and does the report still say
 what the ledger said". They say nothing about **who the sources are and whether their
 agreement is real**. That is a separate line, computed from `.verify/authority.json`,
-`claims.csv` and the round notes in `plan.md` §15 — never recomputed by hand:
-
-```markdown
-> **Source independence: authority 12/14 qualified (2 quarantined) · numbers 9/9 dated ·
-> overlap 0.12 · 0 circulation flags · 1 contested claim**
-> s11, s23 quarantined (no author, origin unknown) — neither is a sole support.
-> CL6 contested: minority s60 (regulator filing) vs 3 secondary — both positions in §4.
-```
+`claims.csv` и заметки раундов в `plan.md` §15 — и никогда не пересчитывается руками.
 
 Read each figure as a failure signal, not a score:
 

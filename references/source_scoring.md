@@ -341,6 +341,9 @@ hypothesis_evidence:
 language: en | ru | de | ...
 access: OPEN | PARTIAL | paywalled-abstract-only | gray-area-source | closed | archive-restored
 fetched: 2026-05-21              # дата извлечения
+fetch_tier: webfetch              # webfetch | http | browser — чем взят контент
+fetch_note: -                     # - | AI-исключение в robots | robots-disallowed, operator-overridden
+content_kind: -                   # - (html) | pdf | feed — feed даёт аннотацию, не полный текст
 ---
 
 # <Title>

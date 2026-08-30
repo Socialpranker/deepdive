@@ -581,12 +581,51 @@ access: api-free-no-key   # | api-free-with-key | api-paid | api-fallback-html
    - Записать в `gaps` источника в JSON суб-агента
 ```
 
+## Bot-block ≠ paywall
+
+Два разных отказа, и путают их постоянно. Протокол выше — про **paywall**: контент есть, но за деньги или логином. Отдельный случай — когда контент публичный и бесплатный, а закрыт именно AI-агент: `robots.txt` с `Disallow` для `GPTBot`/`ClaudeBot`/`CCBot`. WebFetch такие правила соблюдает и отвечает «unable to fetch from …», из-за чего живой открытый источник выглядит мёртвым.
+
+Замер 21.08.2026 на 7 URL: WebFetch не взял 6 из 7 (nytimes, theverge, wired, stackoverflow, reuters, reddit — прошёл только arxiv). Из этих шести `scripts/fetch_source.py` вернул контент на первом тире для трёх (nytimes 13 КБ, theverge 36 КБ, wired 42 КБ) — все три отдают страницу обычному клиенту и режут только AI-токены. Остальные три — не бот-блок, а auth-волл: reuters 401, reddit 403 «log in or use your developer token», stackoverflow 403 Cloudflare.
+
+Отсюда правило: **сначала классифицируй отказ, потом выбирай протокол.**
+
+| Отказ | Признак | Куда идти |
+|---|---|---|
+| AI-исключение | WebFetch «unable to fetch», robots режет AI-токены, `*` разрешён | fetch ladder, Фаза 4.2 |
+| Paywall / auth-волл | 401/402, «sign in», «subscribers only», «developer token» | `fallback_routes.yaml` → протокол выше |
+| Анти-бот-челлендж | 403, Cloudflare, «verify you are human» | `fallback_routes.yaml` → API/фид, не сила |
+| Site-wide `Disallow` | robots закрывает путь для всех клиентов | `gaps`, спросить пользователя |
+
+## Открытые двери закрытых сайтов
+
+`references/fallback_routes.yaml` — курируемая карта «домен → официальный API / фид / архив», которую `fetch_source.py` печатает сам при вердиктах `antibot` и `auth-wall`. Карта ручная не по лени: у `api_sources/` нет поля с веб-доменом (аудит 24.08.2026 — `Endpoint base:`/`Auth:`/`Docs:` есть у всех 47 файлов, домена нет ни у одного), и связь бывает двух видов — `self` (API на том же домене) и `proxy` (сторонний агрегатор отдаёт чужой контент). Машинно это не выводится.
+
+**Главная находка замера 24.08.2026: фид переживает блокировку HTML.** Пайплайн фида отдельный и анти-бот-слоем обычно не прикрыт.
+
+| Сайт | HTML | Фид / API |
+|---|---|---|
+| stackoverflow.com | 403 Cloudflare | Atom 200 · 115 КБ; StackExchange API 200 без ключа |
+| economist.com | paywall | RSS 200 · 151 КБ |
+| theguardian.com | — | RSS 200 · 96 КБ |
+| nytimes.com | robots режет 7 AI-токенов | RSS 200 · 55 КБ |
+| wsj.com / ft.com | paywall | RSS 200 |
+| reddit.com | 403 | только OAuth — `.rss` тоже 403 под тремя UA |
+| reuters.com | 401 | RSS мёртв (404), только агрегаторы (GDELT, NewsAPI) |
+
+Оговорки:
+
+- **Фид ≠ статья.** Заголовок, дата, аннотация, URL — да. Полный текст — нет. Цитата из аннотации помечается как аннотация.
+- **Архив отвечает на «что там было», не «что там сейчас».** Брать `as_of` снимка в `data_as_of`.
+- **`verified` без даты и кода ответа — не `verified`.** Протухший маршрут хуже отсутствующего: он съедает раунд поиска и выглядит как рабочий.
+- Известные дыры карты: twitter/x (API платный), youtube (только через SerpAPI), wikipedia (не заведён, хотя MediaWiki API открыт).
+
 ## Forbidden patterns (не использовать)
 
 Эти подходы НЕ применять, даже как fallback:
-- Bypass через bot-protection (Cloudflare CAPTCHA, etc) — не работает в WebFetch, не пытайся
-- Credential reuse / login bypass — НИКОГДА
-- Scraping с violation robots.txt — этическое нарушение
+- Решение CAPTCHA и Cloudflare-челленджей, stealth-фингерпринтинг под анти-бот — в `fetch_source.py` этого нет намеренно, и дописывать не надо. 403 — сигнал идти в API сайта, а не наращивать маскировку.
+- Credential reuse / login bypass / обход paywall — НИКОГДА. Auth-волл это терминальный вердикт.
+- Site-wide `Disallow` в robots.txt (запрет для всех клиентов, а не для AI-токенов) — не переступать самому. `--ignore-robots` есть, но ставит его пользователь, и override пишется в `fetch_note:` источника.
+- Произвольный `curl -A 'Mozilla/…'` в обход WebFetch — не потому что «нельзя ходить», а потому что мимо `fetch_source.py` теряются проверка robots, санитайзер prompt injection и `fetch_tier` в провенансе.
 
 ## Когда канал «не работает»
 

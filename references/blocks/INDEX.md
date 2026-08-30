@@ -1,6 +1,6 @@
 # Block Library — INDEX
 
-<!--gen:count:blocks-->105<!--/gen--> блоков в 10 категориях. Композируемые секции для финального отчёта.
+<!--gen:count:blocks-->106<!--/gen--> блоков в 10 категориях. Композируемые секции для финального отчёта.
 
 ## Как использовать
 
@@ -24,7 +24,7 @@
 | NUMBERS | [numbers.md](numbers.md) | N1-N8 | Количественные: метрики, market sizing, forecasts |
 | CONTEXT | [context.md](context.md) | X1-X7 | Внешний контекст: регуляторика, гео, культура |
 
-## Полная таблица всех <!--gen:count:blocks-->105<!--/gen--> блоков
+## Полная таблица всех <!--gen:count:blocks-->106<!--/gen--> блоков
 
 ### FRAME
 
@@ -39,7 +39,7 @@
 | F7 | `executive-summary` | 1-страничный TL;DR для стейкхолдеров | Decision/landscape для не-технических |
 | F8 | `glossary-link` | Ссылка на внешний/общий глоссарий | Если есть проектный glossary |
 | F9 | `background` | Почему вопрос стоит так — предыстория, причины, 5-10 строк | Medium/deep, все жанры (дефолт) |
-| F10 | `verification-header` | Citation integrity (liveness + faithfulness) | Medium/deep, после Фазы 6.5 verify |
+| F10 | `verification-header` | Четыре оси: liveness × faithfulness × qualifiers × constructs + независимость источников | Medium/deep, после Фазы 6.5 verify |
 
 ### EXPLAIN
 
@@ -184,7 +184,7 @@
 
 ## Progressive loading discipline
 
-При <!--gen:count:blocks-->105<!--/gen--> блоках критично не загружать всё в контекст.
+При <!--gen:count:blocks-->106<!--/gen--> блоках критично не загружать всё в контекст.
 
 ```
 Главный поток:
