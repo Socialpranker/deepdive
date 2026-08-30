@@ -33,36 +33,6 @@ jobs:
       - name: Install pandoc (report export tests)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq pandoc
 
-      # ВРЕМЕННЫЙ ШАГ — удалить после диагностики test_end_to_end_html
-      - name: TEMP diag pandoc footnotes
-        run: |
-          pandoc --version | head -3
-          cat > /tmp/diag.md <<'MD'
-          # Отчёт
-
-          Утверждение с источником [s01].[^a]
-
-          [^a]: Оговорка к утверждению.
-
-          {{fig:F1}}
-          MD
-          echo "--- raw md ---"
-          cat -A /tmp/diag.md | head -20
-          echo "--- pandoc html ---"
-          pandoc /tmp/diag.md -f markdown+footnotes -t html5 --no-highlight --wrap=none
-          echo "--- exit: $? ---"
-          echo "--- via build_report.md_to_html (то, что реально видит sidenotes) ---"
-          python - <<'PY'
-          import sys, pathlib
-          sys.path.insert(0, "scripts")
-          import build_report as br
-          out = br.md_to_html(pathlib.Path("/tmp/diag.md"))
-          print(repr(out))
-          print("BLOCK MATCH:", bool(br.FOOTNOTE_BLOCK.search(out)))
-          print("ITEMS:", br.FOOTNOTE_ITEM.findall(out))
-          print("REFS:", br.FOOTNOTE_REF.findall(out))
-          PY
-
       - name: Run unit tests
         run: python -m pytest tests/ -q
 
