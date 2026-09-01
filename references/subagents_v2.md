@@ -282,8 +282,24 @@ CONSTRAINTS:
 - Maximum 10 sources. Quality over quantity.
 - Quotes must be VERBATIM. Do not paraphrase.
 - If a source is paywalled / inaccessible — note it in `gaps` and try alternative.
-- Do not use bash/curl to bypass WebFetch restrictions.
-- If WebFetch fails for a URL — try alternative source, don't insist.
+- Do not use bash/curl to bypass WebFetch. The one sanctioned fallback is
+  `uv run scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
+  — run it when WebFetch answers "unable to fetch from ...", which usually means a
+  robots.txt AI-agent exclusion rather than a dead page. Copy `access:`, `fetched:`,
+  `fetch_tier:` and any `fetch_note:` from the metadata into the source frontmatter.
+- Exit 4 (auth wall / anti-bot) is terminal for the HTML, not for the source. The
+  script prints the open doors of that same site — official API, feed, archive
+  snapshot — from `references/fallback_routes.yaml`. Work that list top-down before
+  giving up. Feeds very often survive when the HTML is blocked (stackoverflow HTML
+  403, its Atom feed 200). Do not retry the HTML harder.
+- A feed gives title, date, summary and URL — NOT the full article. Quote from a
+  summary only as a summary, and never present it as a quote from the article.
+- A PDF is saved as `.pdf`, not markdown, and the metadata says `content_kind: pdf`.
+  Read it with the Read tool (it takes a `pages` range). Preprints and working
+  papers arrive as PDFs, so this is the normal academic path, not an edge case.
+- Exit 3 means robots.txt closes the path to every client, not just AI agents. Never
+  pass `--ignore-robots` yourself — record the URL in `gaps` and move on.
+- If both WebFetch and the ladder fail — try an alternative source, don't insist.
 - Do NOT return full source text/quotes in your final JSON reply — they belong in
   the files you wrote. Returning them again bloats the main thread's context.
 ```
@@ -348,7 +364,22 @@ CONSTRAINTS:
 - Максимум 10 источников. Качество важнее количества.
 - Цитаты ДОСЛОВНЫЕ. Не пересказ.
 - Если источник за paywall — в `gaps`, искать альтернативу.
-- НЕ использовать bash/curl для обхода ограничений WebFetch.
+- НЕ использовать произвольный bash/curl в обход WebFetch. Единственный санкционированный fallback:
+  `uv run scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
+  — запускать, когда WebFetch ответил «unable to fetch from …»: это обычно robots-исключение
+  для AI-агентов, а не мёртвая страница. `access:`, `fetched:`, `fetch_tier:` и `fetch_note:`
+  из метаданных перенести во frontmatter источника.
+- Код 4 (auth-волл / анти-бот) — терминально для HTML, не для источника. Скрипт сам
+  печатает открытые двери того же сайта (API, фид, архив) из `fallback_routes.yaml` —
+  идти по списку сверху вниз. Фид часто жив, когда HTML мёртв: у stackoverflow HTML
+  403, а его Atom-фид 200. HTML сильнее не долбить.
+- Фид даёт заголовок, дату, аннотацию и URL — НЕ полный текст. Цитату из аннотации
+  помечать как аннотацию, не выдавать за цитату из статьи.
+- PDF сохраняется как `.pdf`, не как markdown, и в метаданных стоит `content_kind: pdf`.
+  Читать штатным `Read` с диапазоном `pages`. Препринты и рабочие бумаги приезжают
+  PDF-ами — это основной академический путь, не краевой случай.
+- Код 3 — robots закрывает путь всем клиентам, не только AI. `--ignore-robots` самому
+  НЕ ставить: URL в `gaps` и дальше.
 - НЕ возвращать полные цитаты/тексты источников в финальном JSON — они уже в
   записанных файлах, повторный возврат раздувает контекст главного потока.
 ```

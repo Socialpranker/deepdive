@@ -66,6 +66,10 @@ PHASE_ARTIFACTS: dict[str, dict[str, list[str]]] = {
     # authority (.verify/authority.json). The authority verdicts are fail-closed —
     # an absent file means the axis never ran, not that everything qualified.
     "5.5": {"all_of": ["evidence", ".verify/authority.json"]},
+    # 5.7 leaves the candidate pairs it built against the cross-run wiki. Fail-closed
+    # for the same reason as authority.json: an absent file means the run never
+    # confronted what earlier researches established, not that nothing conflicted.
+    "5.7": {"all_of": [".verify/wiki_pairs.json"]},
     # Phase 6 emits the dated <YYYY-MM-DD>_<genre>.md report (matched by pattern)
     # AND the one-page decision memo the consumer's process actually ingests.
     # outline.md (section -> block -> claim_id) and numbers.csv (every figure the
@@ -383,6 +387,33 @@ def self_check(phases: list[dict], r: Report) -> None:
             )
 
 
+def check_wiki_ingest(d: Path, r: Report) -> None:
+    """The run must have been compiled into the cross-run wiki (finish-up step 0).
+
+    Not in PHASE_ARTIFACTS because it belongs to no phase: ingest runs at finish-up, at
+    every depth, and its real output lives outside the run directory. The receipt is
+    what makes it checkable here at all — without a gate this is precisely the kind of
+    step that keeps being declared and quietly stops running.
+    """
+    receipt = d / ".verify" / "wiki_ingest.json"
+    if not receipt.is_file():
+        r.err(
+            "finish-up: нет .verify/wiki_ingest.json — прогон не попал в кросс-прогонную "
+            "вики (python scripts/wiki_ingest.py --research-dir <dir>)"
+        )
+        return
+    try:
+        data = json.loads(receipt.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        r.err(f"wiki_ingest.json нечитаем ({exc}) — перезапусти wiki_ingest.py")
+        return
+    if data.get("run") != d.name:
+        r.err(
+            f"wiki_ingest.json от прогона '{data.get('run')}', а папка '{d.name}' — "
+            "квитанция скопирована из чужого ресёрча"
+        )
+
+
 def validate(d: Path, mode: str, phases: list[dict], r: Report) -> None:
     self_check(phases, r)
     check_source_perimeter(d, r)
@@ -390,6 +421,7 @@ def validate(d: Path, mode: str, phases: list[dict], r: Report) -> None:
     check_state_window(d, r)
     check_outline_coverage(d, mode, r)
     check_constructs(d, r)
+    check_wiki_ingest(d, r)
     gate_of = {p["id"]: p["depth_gate"] for p in phases}
     run_rank = GATE_RANK[mode]
     for phase_id, spec in PHASE_ARTIFACTS.items():

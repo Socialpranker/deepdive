@@ -309,41 +309,39 @@ Axes:
 
 **Когда:** Relationships in field. Кто с кем связан.
 
-**Что внутри:** ASCII или текстовое описание связей.
+**Что внутри:** Mermaid `graph LR` — основная форма. ASCII или таблица отношений — фолбэк без сборки документа.
 
-**Антипаттерн:** Граф с >15 нодами — нечитаемый в ASCII. Тогда — таблица отношений или Mermaid.
+**Антипаттерн:** Граф, где связи не типизированы, — картинка «все со всеми». Каждое ребро несёт тип (`partners`/`competes`/`integrates`/`acquired`) и расшифровывается в легенде под схемой.
 
 **Композиция:** Дополнение к `categories`. Когда связи между игроками важнее категоризации.
 
 **Шаблон:**
 
-```markdown
+````markdown
 ## Network
 
-```
-          ┌──── A ────┐
-          │           │
-  partners│           │partners
-          ▼           ▼
-          B           C
-          │           │
-   competes           competes
-          ▼           ▼
-          D ────────► E
-            integrates
+```mermaid
+%% caption: связи игроков рынка на <дата>
+graph LR
+  A -- partners --> B
+  A -- partners --> C
+  D -- competes --> E
+  D -- integrates --> A
 ```
 
 **Типы связей:**
-- **Partners (●—●):** формальное партнёрство, есть public announcement
-- **Competes (●→●):** прямой конкурент по >50% продукта
-- **Integrates (●→●):** один использует другого как dependency
-- **Acquired (●═●):** owned
+- **partners:** формальное партнёрство, есть public announcement
+- **competes:** прямой конкурент по >50% продукта
+- **integrates:** один использует другого как dependency
+- **acquired:** owned
 
 **Ключевые наблюдения:**
 - A — central hub, partners с большинством
 - D и E — бывшие competitors, теперь integrates after pivot
 - ...
-```
+````
+
+**Рендер:** см. E13 — тот же конвейер `build_report.py` → `mmdc` → «Схема N».
 
 ---
 

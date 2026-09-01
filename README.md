@@ -39,7 +39,7 @@ Claude:  ✓ Reframed your question (3 hypotheses) + decision spec: what you'll 
 
 ## What this is
 
-A [Claude Code skill](https://docs.anthropic.com/claude/docs/skills) that turns **"research this topic"** into a **<!--gen:count:phases-->12<!--/gen-->-phase pipeline** with hypothesis testing, parallel sub-agent search, source triangulation, and adversarial review.
+A [Claude Code skill](https://docs.anthropic.com/claude/docs/skills) that turns **"research this topic"** into a **<!--gen:count:phases-->13<!--/gen-->-phase pipeline** with hypothesis testing, parallel sub-agent search, source triangulation, and adversarial review.
 
 The output is a folder you can return to in a month. Every claim traces to a specific source file. The plan documents *why* you made every choice. No re-research needed.
 
@@ -122,7 +122,7 @@ zip -r ../deepdive.skill . -x ".*" -x "*.zip"
 <details>
 <summary><b>For other LLMs (Codex, Gemini, local)</b></summary>
 
-The <!--gen:count:phases-->12<!--/gen-->-phase methodology is portable. Load `SKILL.md` + `references/*.md` into the LLM's context manually. Skip the sub-agent parts and use separate chat sessions per subtopic.
+The <!--gen:count:phases-->13<!--/gen-->-phase methodology is portable. Load `SKILL.md` + `references/*.md` into the LLM's context manually. Skip the sub-agent parts and use separate chat sessions per subtopic.
 
 [Full instructions →](#use-with-other-llms-codex-gemini-etc)
 
@@ -132,7 +132,7 @@ The <!--gen:count:phases-->12<!--/gen-->-phase methodology is portable. Load `SK
 
 ## How it works
 
-The skill runs **<!--gen:count:phases-->12<!--/gen--> phases** in order:
+The skill runs **<!--gen:count:phases-->13<!--/gen--> phases** in order:
 
 | Phase | Name | What happens |
 |:---:|:---|:---|
@@ -145,6 +145,7 @@ The skill runs **<!--gen:count:phases-->12<!--/gen--> phases** in order:
 | **4** | **Search** | sonnet / medium |
 | **5** | **Claims-ledger + triangulation** | haiku / low |
 | **5.5** | **Evidence filter** | sonnet / low |
+| **5.7** | **Wiki reconcile** | sonnet / low |
 | **6** | **Synthesis + multi-angle red team** | opus / high |
 | **6.5** | **Verify** | haiku / low |
 | **7** | **Refresh targets** | sonnet / medium |
@@ -188,7 +189,7 @@ Want to compare models head-to-head? The [eval harness](eval/README.md) scores a
 <tr>
 <td width="33%" valign="top">
 
-### <!--gen:count:blocks-->105<!--/gen--> Report Blocks
+### <!--gen:count:blocks-->106<!--/gen--> Report Blocks
 
 10 categories: **FRAME** · **EXPLAIN** · **COMPARE** · **MAP** · **VALIDATE** · **ANALYZE** · **CLOSE** · **PEOPLE** · **NUMBERS** · **CONTEXT**
 
@@ -460,9 +461,9 @@ The file-per-source structure is the key **reuse** mechanism. A single research 
 
 It's **structured methodology + curated catalog + reusable templates + automation**.
 
-- The <!--gen:count:phases-->12<!--/gen-->-phase workflow forces discipline
+- The <!--gen:count:phases-->13<!--/gen-->-phase workflow forces discipline
 - <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources catalog is curated knowledge
-- <!--gen:count:blocks-->105<!--/gen--> reusable blocks compose any report shape
+- <!--gen:count:blocks-->106<!--/gen--> reusable blocks compose any report shape
 - `scripts/validate_phases.py` machine-checks phase completeness, not just style
 - A decision spec + mandatory walkthrough (phase 8) ties every research to an actual action, not just a document
 - Weekly auto-validation keeps the catalog alive
@@ -500,8 +501,8 @@ The methodology is portable. ~70% of content is LLM-agnostic markdown templates.
 |:---|:---:|:---:|
 | `SKILL.md` frontmatter | ✓ | — |
 | Sub-agent `Explore` type | ✓ | — |
-| <!--gen:count:phases-->12<!--/gen-->-phase workflow | — | ✓ |
-| <!--gen:count:blocks-->105<!--/gen--> report blocks | — | ✓ |
+| <!--gen:count:phases-->13<!--/gen-->-phase workflow | — | ✓ |
+| <!--gen:count:blocks-->106<!--/gen--> report blocks | — | ✓ |
 | <!--gen:count:channels-->29<!--/gen--> search channels | — | ✓ |
 | <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources | — | ✓ |
 
@@ -526,13 +527,13 @@ The methodology is portable. ~70% of content is LLM-agnostic markdown templates.
 <details>
 <summary><h2>На русском</h2></summary>
 
-**Deepdive** — скилл для [Claude Code](https://claude.com/claude-code), превращающий «загугли это» в дисциплинированный <!--gen:count:phases-->12<!--/gen-->-фазный процесс.
+**Deepdive** — скилл для [Claude Code](https://claude.com/claude-code), превращающий «загугли это» в дисциплинированный <!--gen:count:phases-->13<!--/gen-->-фазный процесс.
 
 ### Что внутри
 
-- **<!--gen:count:phases-->12<!--/gen--> фаз workflow**: <!--gen:phases:list:ru-->Reframing → Genre & block selection → Plan → Capability Discovery → Plan-review gate → Поиск → Claims-ledger + триангуляция → Evidence-фильтр → Синтез + multi-angle red team → Verify → Refresh targets → Decision walkthrough<!--/gen-->
+- **<!--gen:count:phases-->13<!--/gen--> фаз workflow**: <!--gen:phases:list:ru-->Reframing → Genre & block selection → Plan → Capability Discovery → Plan-review gate → Поиск → Claims-ledger + триангуляция → Evidence-фильтр → Сверка с вики → Синтез + multi-angle red team → Verify → Refresh targets → Decision walkthrough<!--/gen-->
 - **<!--gen:count:genres-->6<!--/gen--> жанров отчёта**: qa / explainer / decision / landscape / validation / custom
-- **<!--gen:count:blocks-->105<!--/gen--> блоков** в 10 категориях — переиспользуемые секции с шаблонами и анти-паттернами
+- **<!--gen:count:blocks-->106<!--/gen--> блоков** в 10 категориях — переиспользуемые секции с шаблонами и анти-паттернами
 - **<!--gen:count:channels-->29<!--/gen--> каналов поиска** с paywall fallback протоколом (включая api-direct)
 - **<!--gen:count:stat_sources-->460<!--/gen-->+ статистических источников** в 14 cross-industry + 19 отраслевых категориях
 - **<!--gen:count:api-->47<!--/gen-->+ API endpoints** для programmatic доступа (free no-auth приоритетны)

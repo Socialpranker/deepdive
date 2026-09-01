@@ -1,0 +1,156 @@
+/* deepdive report — направление e-ink/paper + аппарат Тафти.
+   Иерархия держится на кегле и вертикальном ритме. Ни одной тени, ни одного
+   градиента: убери цвет — структура не изменится. */
+
+:root {
+  --paper: #f5f2ea;          /* тонированная бумага, не #fff — блеск утомляет */
+  --ink: #2b2926;            /* тёмно-серый, не #000 — контраст ~12:1, не максимальный */
+  --muted: #6f6a62;
+  --rule: #d8d2c6;
+  --accent: #0072a8;
+  --warn: #c9560c;
+  --serif: Charter, "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --sans: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --measure: 62ch;           /* колонка 60–75 знаков */
+  --margin-col: 15rem;       /* поле Тафти под сноски и рисунки */
+  --gutter: 2.2rem;
+}
+
+@page { size: A4; margin: 20mm 16mm 18mm 16mm; }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 3rem 4rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 11.5pt;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  hanging-punctuation: first last;
+}
+
+/* ── Сетка: текстовая колонка + поле ─────────────────────────────── */
+
+.doc { max-width: calc(var(--measure) + var(--gutter) + var(--margin-col)); margin: 0 auto; }
+
+section, .lede, .panel, figure, table, h1, h2, h3, p, ul, ol, blockquote {
+  max-width: var(--measure);
+}
+
+/* ── Титул ───────────────────────────────────────────────────────── */
+
+.title-block { padding: 3.5rem 0 1.6rem; border-bottom: 1px solid var(--rule); margin-bottom: 2rem; }
+h1 {
+  font-size: 30pt; line-height: 1.12; font-weight: 400;
+  letter-spacing: -0.015em; margin: 0 0 0.7rem;
+}
+.subtitle { font-size: 13pt; color: var(--muted); margin: 0 0 1.4rem; font-style: italic; }
+.byline { font-family: var(--sans); font-size: 8.5pt; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* ── Панель доверия (F10) ────────────────────────────────────────── */
+
+.panel {
+  font-family: var(--sans); font-size: 9pt; line-height: 1.5;
+  border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+  padding: 0.85rem 1.1rem; margin: 0 0 2.4rem; color: var(--ink);
+}
+.panel b { font-weight: 600; }
+.panel .axes { display: flex; flex-wrap: wrap; gap: 0 1.4rem; margin-top: 0.35rem; color: var(--muted); }
+.panel .flag { color: var(--warn); }
+
+/* ── Заголовки: размер и ритм, не цвет и не вес 800 ──────────────── */
+
+h2 {
+  font-size: 17pt; font-weight: 400; line-height: 1.25;
+  margin: 2.8rem 0 0.2rem; letter-spacing: -0.01em;
+  break-after: avoid;
+}
+h2 .num {
+  font-family: var(--sans); font-size: 9pt; color: var(--muted);
+  display: block; margin-bottom: 0.35rem; letter-spacing: 0.1em;
+}
+h3 { font-size: 12pt; font-weight: 600; margin: 1.7rem 0 0.2rem; break-after: avoid; }
+
+p { margin: 0 0 0.85rem; }
+.lede { font-size: 13pt; line-height: 1.5; }
+.lede::first-letter { font-size: 300%; float: left; line-height: 0.82; padding: 0.06em 0.08em 0 0; }
+
+/* ── Аппарат Тафти: сноска на поле, ровно напротив своей строки ──── */
+
+.sidenote {
+  float: right; clear: right;
+  width: var(--margin-col);
+  margin-right: calc(-1 * (var(--margin-col) + var(--gutter)));
+  margin-bottom: 0.9rem;
+  font-family: var(--sans); font-size: 8.5pt; line-height: 1.45;
+  color: var(--muted);
+  text-align: left;
+}
+.sidenote .src { color: var(--accent); font-weight: 600; }
+.sidenote .asof { display: block; margin-top: 0.15rem; font-size: 7.5pt; }
+
+/* Метка источника в тексте — маленькая, не разрывает строку */
+.ref {
+  font-family: var(--sans); font-size: 7.5pt; font-weight: 600;
+  color: var(--accent); vertical-align: 0.28em; text-decoration: none;
+  padding-left: 0.1em; white-space: nowrap;
+}
+
+/* ── Уверенность: носитель — засечка, не цвет ────────────────────── */
+
+.conf { font-family: var(--sans); font-size: 7.5pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.conf::before { content: ""; display: inline-block; width: 0.5rem; height: 0.5rem; margin-right: 0.3rem; vertical-align: 0.02em; border: 1px solid var(--muted); }
+.conf.high::before { background: var(--ink); border-color: var(--ink); }
+.conf.medium::before { background: linear-gradient(90deg, var(--muted) 50%, transparent 50%); }
+.conf.low::before { background: transparent; }
+
+/* ── Рисунки ─────────────────────────────────────────────────────── */
+
+figure { margin: 1.9rem 0; break-inside: avoid; }
+figure img, figure svg { width: 100%; height: auto; display: block; }
+
+/* Схема — не график: растягивать её на всю колонку значит раздувать шрифт
+   подписей до кегля заголовка. Ширина по содержимому, потолок — колонка. */
+figure.diagram svg { width: auto; max-width: 100%; margin: 0 auto; }
+figcaption {
+  font-family: var(--sans); font-size: 8.5pt; line-height: 1.45; color: var(--muted);
+  margin-top: 0.5rem; padding-top: 0.4rem; border-top: 1px solid var(--rule);
+}
+figcaption b { color: var(--ink); font-weight: 600; }
+
+/* ── Таблицы: линии только горизонтальные ───────────────────────── */
+
+table { border-collapse: collapse; width: 100%; font-size: 9.5pt; margin: 1.5rem 0; break-inside: avoid; }
+th, td { text-align: left; padding: 0.42rem 0.7rem 0.42rem 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--sans); font-size: 8pt; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border-bottom-color: var(--ink); }
+td.num { font-variant-numeric: tabular-nums; text-align: right; }
+tr.gap td { color: var(--muted); font-style: italic; }
+
+/* ── Врезка «что бы изменило вывод» ──────────────────────────────── */
+
+.callout {
+  border-top: 2px solid var(--ink); border-bottom: 1px solid var(--rule);
+  padding: 0.9rem 0 1rem; margin: 2rem 0;
+}
+.callout h3 { margin-top: 0; }
+
+/* ── Приложение источников ───────────────────────────────────────── */
+
+.sources { font-size: 9.5pt; }
+.sources dt { font-family: var(--sans); font-size: 8.5pt; font-weight: 600; color: var(--accent); margin-top: 0.8rem; }
+.sources dd { margin: 0.1rem 0 0; }
+.sources .meta { font-family: var(--sans); font-size: 8pt; color: var(--muted); }
+
+/* ── Печать ──────────────────────────────────────────────────────── */
+
+@media print {
+  body { padding: 0; font-size: 10.5pt; }
+  .sidenote { font-size: 7.5pt; }
+  h2 { break-after: avoid; }
+  figure, table, .callout { break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+}

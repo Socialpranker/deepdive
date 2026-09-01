@@ -1,0 +1,240 @@
+# Обходные маршруты к источникам, чей HTML закрыт для скрейперов.
+#
+# Читается scripts/fetch_source.py при вердиктах `antibot` / `auth-wall`: HTML не
+# отдали — но тот же контент почти всегда доступен через официальный API, фид или
+# архив. Это не обход защиты, а нормальный вход, который сайт держит открытым.
+#
+# Формат намеренно ручной. api_sources/ не имеет поля с веб-доменом (аудит
+# 24.08.2026: `Endpoint base:`/`Auth:`/`Docs:` есть у 47/47 файлов, домена нет ни
+# у одного), а связь «домен → endpoint» бывает двух разных видов и машинно не
+# выводится:
+#   self   — API живёт на том же домене, что и закрытый сайт (stackoverflow)
+#   proxy  — сторонний агрегатор отдаёт контент чужих доменов (GDELT, SerpAPI)
+#
+# `verified` — дата живой проверки с кодом ответа. Не проверял — не пиши.
+# Протухшее лучше удалить, чем оставить: маршрут, который молча не работает,
+# хуже отсутствующего, потому что съедает раунд поиска.
+
+version: 1
+updated: 2026-08-24
+
+# Пробуются для любого домена, которого нет в `domains`. Дёшево и часто срабатывает:
+# фид генерится отдельным пайплайном и обычно не прикрыт тем же анти-бот-слоем.
+wellknown_feeds:
+  - /feed
+  - /feed/
+  - /rss
+  - /rss.xml
+  - /index.xml
+  - /atom.xml
+  - /feeds/posts/default
+
+# Последний общий рубеж — снимок вместо живой страницы. `as_of` снимка обязателен
+# в источнике: архив отвечает на вопрос «что там было», не «что там сейчас».
+archive:
+  availability: "https://archive.org/wayback/available?url={url}"
+  note: "429 при частых запросах — это троттлинг, не отсутствие снимка. Повторить позже."
+
+domains:
+
+  stackoverflow.com:
+    kind: self
+    note: "HTML — 403 Cloudflare. API и Atom-фид открыты и без ключа."
+    routes:
+      - type: api
+        url: "https://api.stackexchange.com/2.3/search/advanced?site=stackoverflow&q={q}&sort=votes&order=desc&filter=withbody"
+        auth: none
+        catalog: code/stackexchange.md
+        verified: "2026-08-24 · 200"
+      - type: feed
+        url: "https://stackoverflow.com/feeds/tag/{tag}"
+        auth: none
+        verified: "2026-08-24 · 200, 115 КБ"
+
+  reddit.com:
+    kind: self
+    note: >
+      Единственный рабочий вход — OAuth. Анонимный .json — 403; .rss в замере
+      24.08.2026 тоже отдал 403 под тремя разными UA (честный, stealthy, Chrome),
+      что сходится с social/reddit.md: блок идёт по IP/TLS, а не по заголовку.
+      Фид сюда НЕ вписан намеренно — он нестабилен.
+    routes:
+      - type: api
+        url: "https://oauth.reddit.com/r/{sub}/top?t=week"
+        auth: "oauth · REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET"
+        catalog: social/reddit.md
+        verified: "не проверено — нет тестового приложения"
+
+  news.ycombinator.com:
+    kind: self
+    routes:
+      - type: api
+        url: "https://hn.algolia.com/api/v1/search?query={q}"
+        auth: none
+        catalog: social/hn_algolia.md
+        verified: "2026-08-24 · 200"
+
+  nytimes.com:
+    kind: self
+    note: "robots режет все 7 AI-токенов. HTML берётся тиром http; фид — резерв."
+    routes:
+      - type: feed
+        url: "https://rss.nytimes.com/services/xml/rss/nyt/{section}.xml"
+        auth: none
+        verified: "2026-08-24 · 200, 55 КБ"
+
+  wsj.com:
+    kind: self
+    note: "Жёсткий paywall на статьях, но фид отдаёт заголовки и аннотации — для триажа хватает."
+    routes:
+      - type: feed
+        url: "https://feeds.a.dj.com/rss/RSSWorldNews.xml"
+        auth: none
+        verified: "2026-08-24 · 200"
+
+  ft.com:
+    kind: self
+    note: "Paywall на статьях; фид открыт."
+    routes:
+      - type: feed
+        url: "https://www.ft.com/{section}?format=rss"
+        auth: none
+        verified: "2026-08-24 · 200"
+
+  economist.com:
+    kind: self
+    note: "Paywall на статьях; фид открыт и объёмный."
+    routes:
+      - type: feed
+        url: "https://www.economist.com/{section}/rss.xml"
+        auth: none
+        verified: "2026-08-24 · 200, 151 КБ"
+
+  theguardian.com:
+    kind: self
+    routes:
+      - type: feed
+        url: "https://www.theguardian.com/{section}/rss"
+        auth: none
+        verified: "2026-08-24 · 200, 96 КБ"
+
+  bbc.co.uk:
+    kind: self
+    routes:
+      - type: feed
+        url: "https://feeds.bbci.co.uk/news/{section}/rss.xml"
+        auth: none
+        verified: "2026-08-24 · 200"
+
+  arstechnica.com:
+    kind: self
+    routes:
+      - type: feed
+        url: "https://arstechnica.com/feed/"
+        auth: none
+        verified: "2026-08-24 · 200, 79 КБ"
+
+  techcrunch.com:
+    kind: self
+    routes:
+      - type: feed
+        url: "https://techcrunch.com/feed/"
+        auth: none
+        verified: "2026-08-24 · 200"
+
+  theverge.com:
+    kind: self
+    routes:
+      - type: feed
+        url: "https://www.theverge.com/rss/index.xml"
+        auth: none
+        verified: "2026-08-24 · 200, 40 КБ"
+
+  wired.com:
+    kind: self
+    routes:
+      - type: feed
+        url: "https://www.wired.com/feed/rss"
+        auth: none
+        verified: "2026-08-24 · 200, 45 КБ"
+
+  medium.com:
+    kind: self
+    routes:
+      - type: feed
+        url: "https://medium.com/feed/tag/{tag}"
+        auth: none
+        verified: "2026-08-24 · 200"
+
+  reuters.com:
+    kind: proxy
+    note: >
+      RSS мёртв — https://www.reuters.com/arc/outboundfeeds/rss/ отдал 404,
+      legacy feeds.reuters.com не резолвится. Прямого входа нет: HTML 401 и на
+      http-, и на browser-тире. Только агрегаторы, покрывающие wire-контент.
+    routes:
+      - type: api
+        url: "https://api.gdeltproject.org/api/v2/doc/doc?query={q}&format=json"
+        auth: none
+        catalog: news/gdelt.md
+        verified: "не перепроверено 24.08"
+      - type: api
+        url: "https://newsapi.org/v2/everything?q={q}"
+        auth: "api-key · NEWSAPI_KEY"
+        catalog: news/newsapi.md
+
+  arxiv.org:
+    kind: self
+    note: "HTML берётся и WebFetch, и http-тиром. API — когда нужен batch или метаданные."
+    routes:
+      - type: api
+        url: "https://export.arxiv.org/api/query?search_query={q}"
+        auth: none
+        catalog: academic/arxiv.md
+        verified: "2026-08-24 · 429 троттлинг, endpoint живой"
+
+  github.com:
+    kind: self
+    routes:
+      - type: api
+        url: "https://api.github.com/search/repositories?q={q}"
+        auth: "bearer · GITHUB_TOKEN (без токена 60 req/h)"
+        catalog: code/github.md
+
+  crunchbase.com:
+    kind: self
+    note: "Legacy public endpoint отдаёт 403; v4 Data API — платный, contact-sales."
+    routes:
+      - type: api
+        url: "https://api.crunchbase.com/api/v4/searches/organizations"
+        auth: "api-key · платный"
+        catalog: companies/crunchbase.md
+
+  patentscope.wipo.int:
+    kind: proxy
+    note: >
+      Веб-интерфейс за капчей, ToS прямо запрещает автоматические запросы,
+      программный API платный (600–19 500 CHF/год). Не пытаться — брать
+      пересекающиеся PCT-данные из EPO.
+    routes:
+      - type: api
+        url: "https://ops.epo.org/3.2/rest-services/"
+        auth: "oauth2 · EPO Consumer Key + Secret"
+        catalog: patents/epo_ops.md
+      - type: api
+        url: "https://data.epo.org/linked-data/query"
+        auth: none
+        catalog: patents/epo_lod.md
+
+  wikipedia.org:
+    kind: self
+    note: "MediaWiki API открыт и без ключа; в api_sources/ файла нет — дыра каталога."
+    routes:
+      - type: api
+        url: "https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={q}&format=json"
+        auth: none
+        verified: "2026-08-24 · 200"
+
+# Домены без покрытия — известные дыры, а не пропуски по недосмотру.
+# twitter.com / x.com — API платный от $100/мес, бесплатного входа нет.
+# youtube.com        — только через SerpAPI (платный ключ), своего файла нет.

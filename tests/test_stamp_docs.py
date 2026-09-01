@@ -57,22 +57,25 @@ def test_render_values_has_all_keys():
               "count:genres", "count:phases", "phases:list:ru",
               "phases:table:en"):
         assert k in v
-    assert v["count:blocks"] == "105"
-    assert v["count:phases"] == "12"
+    # Не литерал: эти тесты про механику штамповщика, а не про размер каталога.
+    # Счёт прибит в одном месте — tests/test_catalog_counts.py.
+    assert v["count:blocks"] == str(stamp_docs.catalog_counts.counts(REPO)["blocks"])
+    assert v["count:phases"] == "13"
 
 
 def test_check_mode_detects_drift(tmp_path):
     f = tmp_path / "doc.md"
     f.write_text("n=<!--gen:count:blocks-->75<!--/gen-->", encoding="utf-8")
     rc = stamp_docs.run(REPO, [f], write=False)
-    assert rc == 1  # 75 != 105 → drift
+    assert rc == 1  # 75 != реального счёта → drift
 
 
 def test_write_mode_fixes_and_check_passes(tmp_path):
     f = tmp_path / "doc.md"
     f.write_text("n=<!--gen:count:blocks-->75<!--/gen-->", encoding="utf-8")
     assert stamp_docs.run(REPO, [f], write=True) == 0
-    assert "105" in f.read_text(encoding="utf-8")
+    expected = str(stamp_docs.catalog_counts.counts(REPO)["blocks"])
+    assert expected in f.read_text(encoding="utf-8")
     assert stamp_docs.run(REPO, [f], write=False) == 0  # now synced
 
 
@@ -87,7 +90,8 @@ def test_zero_count_refused(monkeypatch, tmp_path):
 def test_unused_key_warns_not_fails(tmp_path, capsys):
     # a doc using only ONE key → the other keys are "stamped nowhere" → WARNING, rc 0
     f = tmp_path / "doc.md"
-    f.write_text("n=<!--gen:count:blocks-->105<!--/gen-->", encoding="utf-8")
+    live = stamp_docs.catalog_counts.counts(REPO)["blocks"]
+    f.write_text(f"n=<!--gen:count:blocks-->{live}<!--/gen-->", encoding="utf-8")
     rc = stamp_docs.run(REPO, [f], write=False)
     out = capsys.readouterr().out
     assert rc == 0  # warning, not drift

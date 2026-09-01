@@ -2,3 +2,12 @@ requests>=2.31.0
 pytest>=8.0
 anthropic>=0.40
 openai>=1.50
+# fetch_source.py declares its own deps inline (PEP 723) and runs via `uv run`.
+# protego is pinned here as well so tests/test_fetch_source.py can exercise the
+# robots.txt parsing path without pulling in the scrapling/browser stack.
+protego>=0.5
+# Same reason as protego: fetch_source.load_routes() imports yaml at call time, and
+# test_fetch_source.py calls it at module scope. Without this the whole module fails to
+# import and pytest aborts collection — which is how that test came to never run at all,
+# neither in CI nor locally.
+PyYAML>=6.0

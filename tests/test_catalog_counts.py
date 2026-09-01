@@ -14,7 +14,7 @@ def test_counts_match_verified_ground_truth():
     категории — patents/ и grants/, по 4 файла). If the catalog grows, update these
     intentionally — a mismatch here means either the catalog changed or a regex broke."""
     c = catalog_counts.counts(REPO)
-    assert c["blocks"] == 105
+    assert c["blocks"] == 106  # +F10: шаблон переехал в frame.md 24.08.2026
     assert c["channels"] == 29
     assert c["stat_sources"] == 460
     assert c["api"] == 47

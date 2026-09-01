@@ -77,13 +77,25 @@ def make_run(root: Path, *, mode: str, phases: set[str]) -> Path:
         (d / "application.md").write_text(
             "---\nstatus: deferred\n---\n", encoding="utf-8"
         )
+    if "5.7" in phases:
+        vd = d / ".verify"
+        vd.mkdir(exist_ok=True)
+        (vd / "wiki_pairs.json").write_text('{"pairs": []}', encoding="utf-8")
+    if "wiki" in phases:
+        vd = d / ".verify"
+        vd.mkdir(exist_ok=True)
+        (vd / "wiki_ingest.json").write_text(
+            f'{{"run": "{d.name}", "ingested": "2026-07-16"}}', encoding="utf-8"
+        )
     return d
 
 
-SHALLOW_SET = {"3", "4", "5", "report", "memo", "8"}
+# `wiki` is the finish-up ingest receipt, not a phase artifact: the run is compiled into
+# the cross-run wiki at every depth, so it belongs to the shallow set.
+SHALLOW_SET = {"3", "4", "5", "report", "memo", "8", "wiki"}
 # From medium up the run also keeps the machine-checkable bookkeeping: the round
 # workspace (state.md), the section->claim map (outline.md) and the number registry.
-FULL_SET = SHALLOW_SET | {"5.5", "6.5", "7", "state", "outline", "numbers"}
+FULL_SET = SHALLOW_SET | {"5.5", "5.7", "6.5", "7", "state", "outline", "numbers"}
 
 
 def run_validate(d: Path, mode: str):
@@ -337,7 +349,9 @@ def test_medium_run_without_outline_fails(tmp_path):
 
 def test_outline_without_table_rows_fails(tmp_path):
     d = make_run(tmp_path, mode="medium", phases=FULL_SET)
-    (d / "outline.md").write_text("# Outline\n\nразделы будут позже\n", encoding="utf-8")
+    (d / "outline.md").write_text(
+        "# Outline\n\nразделы будут позже\n", encoding="utf-8"
+    )
     r = run_validate(d, "medium")
     assert any("no `| section | block | claims |` table" in e for e in r.errors)
 
@@ -466,7 +480,9 @@ def test_malformed_constructs_json_is_an_error(tmp_path):
 
 def test_constructs_json_without_results_is_an_error(tmp_path):
     d = make_run(tmp_path, mode="medium", phases=FULL_SET)
-    (d / ".verify" / "constructs.json").write_text('{"integrity": 1.0}', encoding="utf-8")
+    (d / ".verify" / "constructs.json").write_text(
+        '{"integrity": 1.0}', encoding="utf-8"
+    )
     r = run_validate(d, "medium")
     assert any("no `results` list" in e for e in r.errors)
 
@@ -484,3 +500,34 @@ def test_shallow_run_needs_no_numbers_csv(tmp_path):
     d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET)
     r = run_validate(d, "shallow")
     assert not any("numbers.csv" in e for e in r.errors)
+
+
+def test_missing_wiki_ingest_receipt_blocks_finish(tmp_path):
+    """Finish-up must have compiled the run into the wiki — at every depth."""
+    d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET - {"wiki"})
+    r = run_validate(d, "shallow")
+    assert any("wiki_ingest.json" in e for e in r.errors)
+
+
+def test_wiki_receipt_from_another_run_is_rejected(tmp_path):
+    """A copied receipt is worse than a missing one: it asserts work nobody did."""
+    d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET)
+    (d / ".verify" / "wiki_ingest.json").write_text(
+        '{"run": "some-other-slug", "ingested": "2026-07-16"}', encoding="utf-8"
+    )
+    r = run_validate(d, "shallow")
+    assert any("чужого ресёрча" in e for e in r.errors)
+
+
+def test_medium_run_without_wiki_pairs_is_blocked(tmp_path):
+    """Phase 5.7 is fail-closed: no file means the wiki was never confronted."""
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET - {"5.7"})
+    r = run_validate(d, "medium")
+    assert any("wiki_pairs.json" in e for e in r.errors)
+
+
+def test_shallow_run_does_not_require_wiki_pairs(tmp_path):
+    """5.7 is gated at medium — a shallow run still ingests, but does not adjudicate."""
+    d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET)
+    r = run_validate(d, "shallow")
+    assert not any("wiki_pairs.json" in e for e in r.errors)

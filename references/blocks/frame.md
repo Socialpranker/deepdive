@@ -230,3 +230,47 @@
 **Почему это важно для ответа:** <короткая связка — как эта предыстория влияет на
 то, как нужно читать остальной отчёт>
 ```
+
+## F10 — `verification-header`
+
+**Когда:** medium/deep — обязателен, ставится Фазой 6.5. В shallow — только строка liveness (Layers 2–4 не гонялись). Без него отчёт не «готов»: заголовок и есть заявление о том, насколько ему можно верить.
+
+**Что внутри:** Блокквот в самом верху отчёта, до `tldr` [F1]. Четыре оси одной строкой — liveness × faithfulness × qualifiers × constructs — плюс вторая строка независимости источников для medium/deep. Цепочка «источник → claim → отчёт» рвётся в любом звене, поэтому оси не заменяют друг друга и показываются вместе.
+
+Все цифры берутся из `.verify/*.json` и `claims.csv` и **никогда не пересчитываются руками**. Как они производятся и что означает плохое значение каждой — `references/runtime_verification.md`.
+
+**Антипаттерн:** Показывать заголовок как оценку («9/10, хорошо»). Каждая цифра — сигнал провала, а не балл. Отдельно: ноль `contested` по конфликтной теме — не достижение, а признак, что несогласных не искали. Метрика, которую улучшают, переставая делать работу, — не метрика.
+
+**Композиция:** Самый первый элемент отчёта, до [F1]. В экспорте (Фаза 6.9) верстается панелью доверия на первой странице.
+
+**Шаблон:**
+
+```markdown
+> **Citation integrity: 21/23 live · faithfulness 20/22 supported · qualifiers 22/22 preserved · constructs 7/7 sourced · 0 red flags · 2 paywalled**
+> Verified <YYYY-MM-DD>: liveness via check_citations.py (every OPEN source resolved live);
+> faithfulness via Layer 2 judge over evidence/ (2 PARTIAL softened); qualifiers via Layer 3
+> over F1/memo.md/Z12 (no scope drift); constructs via Layer 4 (1 marked as ours).
+> [liveness detail](.verify/citations.md) · [faithfulness detail](.verify/faithfulness.md) · [qualifier detail](.verify/qualifiers.md) · [construct detail](.verify/constructs.md)
+>
+> **Source independence: authority 12/14 qualified (2 quarantined) · numbers 9/9 dated ·
+> overlap 0.12 · 0 circulation flags · 1 contested claim**
+> s11, s23 quarantined (no author, origin unknown) — neither is a sole support.
+> CL6 contested: minority s60 (regulator filing) vs 3 secondary — both positions in §4.
+```
+
+Когда флаги нашлись и были погашены:
+
+```markdown
+> **Citation integrity: 23/23 live · faithfulness 23/23 supported · qualifiers 21/23 preserved · 1 red flag + 1 overclaim + 2 qualifiers restored**
+> s14 (dead URL → replaced <date>); C4 (PARTIAL → claim softened to match source);
+> CL7 (BROADENED → "on fixtures with embedded state" restored in TL;DR).
+```
+
+Когда ось ниже порога и пользователь решил выпускать всё равно (только medium):
+
+```markdown
+> ⚠ **Citation integrity: liveness 0.64 · faithfulness 0.71 · qualifiers 0.88 — liveness below floor (0.70).**
+> s07, s11 (transport UNKNOWN), s19 (OPEN dead → claim demoted); C9 (UNSUPPORTED → Open Questions).
+```
+
+shallow: строки faithfulness/qualifier/construct опускаются, если слои не гонялись.
