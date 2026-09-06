@@ -53,7 +53,7 @@ GET /repos/{owner}/{repo}/contents/{path}?ref={branch}
 
 Используй GitHub Trending pages через WebFetch + scraping.
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — find implementations:**
 

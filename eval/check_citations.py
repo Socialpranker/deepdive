@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Citation integrity check for a deep-research run.
+Citation integrity check for a deepdive run.
 
 Reads the sources of one research run and verifies each URL actually resolves —
 the deterministic guard against hallucinated citations. A source whose access is
@@ -38,7 +38,7 @@ except ImportError:
     print("ERROR: 'requests' required. Run: pip install -r scripts/requirements.txt")
     sys.exit(1)
 
-USER_AGENT = "claude-deep-research-citecheck/1.0 (+https://github.com/Socialpranker/claude-deep-research)"
+USER_AGENT = "deepdive-citecheck/1.0 (+https://github.com/Socialpranker/deepdive)"
 TIMEOUT_SECONDS = 12
 DELAY_BETWEEN_REQUESTS = 0.4
 # access values that make a non-200 expected rather than a failure

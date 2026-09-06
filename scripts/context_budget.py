@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Context-budget instrumentation for the deep-research skill.
+Context-budget instrumentation for the deepdive skill.
 
 The skill ships ~154k tokens of markdown across SKILL.md + references/. That is
 fine *only* if progressive loading is disciplined: load a reference when you reach
@@ -215,7 +215,7 @@ def main() -> int:
     always_tok, always_missing = profile_tokens(inv, ALWAYS_LOAD)
 
     print(
-        f"Deep-research context budget  (proxy: {CHARS_PER_TOKEN} chars/token, window {args.window:,})"
+        f"deepdive context budget  (proxy: {CHARS_PER_TOKEN} chars/token, window {args.window:,})"
     )
     print("=" * 64)
     print(f"Catalog files: {len(inv)}")

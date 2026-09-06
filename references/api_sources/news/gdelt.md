@@ -48,7 +48,7 @@ GET /doc/doc?query={query}&mode=TimelineSourceCountry&timespan=1y&format=json
 - `WordCloudImageWebTags` — image tag cloud
 - `PointData` — geographic points
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — global narrative tracking:**
 

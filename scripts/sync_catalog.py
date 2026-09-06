@@ -34,7 +34,7 @@ except ImportError:
 REPO_ROOT = Path(__file__).parent.parent
 OUTPUT_DIR = Path(__file__).parent / "output"
 
-USER_AGENT = "claude-deep-research-sync/1.0"
+USER_AGENT = "deepdive-sync/1.0"
 TIMEOUT_SECONDS = 15
 
 # Upstream awesome-lists to check

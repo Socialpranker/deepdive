@@ -86,7 +86,7 @@ GET /api/query?id_list=2401.12345
 - `econ.*` — Economics
 - `eess.*` — Electrical Engineering and Systems Science
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — find recent ML papers:**
 

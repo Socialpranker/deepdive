@@ -80,7 +80,7 @@ GET /works?filter=funder:10.13039/100000001&rows=20
 # (NSF funder ID)
 ```
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — validate DOI from source:**
 

@@ -74,7 +74,7 @@ Brave Goggles позволяют создать custom ranker:
 GET https://api.search.brave.com/res/v1/web/search?q={query}&goggles_id={GOGGLE_ID}
 ```
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — landscape research:**
 

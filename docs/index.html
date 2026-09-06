@@ -1281,7 +1281,7 @@ footer a {
   deepdive.git \
   ~/.claude/skills/deepdive</code></pre>
       <ul>
-        <li data-i18n="install.c1.b1">Type "deep research" or "deep dive"</li>
+        <li data-i18n="install.c1.b1">Type "deepdive" or "deep dive"</li>
         <li data-i18n="install.c1.b2">Works across all projects</li>
         <li data-i18n="install.c1.b3">Auto-loads via progressive disclosure</li>
       </ul>
@@ -1343,7 +1343,7 @@ zip -r ../deepdive.skill . \
     <div class="faq-item">
       <div class="faq-question" data-i18n="faq.q4">What if I don't have CLAUDE.md or a project context?</div>
       <div class="faq-answer" data-i18n-html="faq.a4">
-        The skill detects context in 3 tiers: explicit (CLAUDE.md research_root setting) → autodetect (pyproject.toml, package.json) → fallback (<code>~/deep-research/</code>). No project, no problem.
+        The skill detects context in 3 tiers: explicit (CLAUDE.md research_root setting) → autodetect (pyproject.toml, package.json) → fallback (<code>~/deepdive/</code>). No project, no problem.
       </div>
     </div>
     <div class="faq-item">
@@ -1380,7 +1380,7 @@ zip -r ../deepdive.skill . \
 </main>
 
 <footer>
-  <span data-i18n="footer.line1">DEEP-RESEARCH v2.0 · Built by Socialpranker · MIT Licensed</span>
+  <span data-i18n="footer.line1">DEEPDIVE v2.0 · Built by Socialpranker · MIT Licensed</span>
   <br>
   <a href="https://github.com/Socialpranker/deepdive">GitHub</a> ·
   <a href="https://github.com/Socialpranker/deepdive/blob/main/SKILL.md" data-i18n="footer.spec">Skill spec</a> ·
@@ -1503,7 +1503,7 @@ zip -r ../deepdive.skill . \
       'install.intro': 'Works on Claude Code (CLI), Claude Desktop with Skills enabled, and any other LLM with manual context loading.',
       'install.c1.tag': '// recommended',
       'install.c1.title': 'Claude Code (CLI)',
-      'install.c1.b1': 'Type "deep research" or "deep dive"',
+      'install.c1.b1': 'Type "deepdive" or "deep dive"',
       'install.c1.b2': 'Works across all projects',
       'install.c1.b3': 'Auto-loads via progressive disclosure',
       'install.c2.tag': '// .skill bundle',
@@ -1526,7 +1526,7 @@ zip -r ../deepdive.skill . \
       'faq.q3': "Why so many files? Isn't this overkill?",
       'faq.a3': 'For a 5-minute "what\'s the latest X" question — yes. That\'s why <code>shallow</code> mode exists (5-7 sources, no sub-agents, ~15 min). The full machinery is for <code>medium</code> (1 hour) and <code>deep</code> (3 hours) when you need to use the output for a decision. The file-per-source structure is the reuse mechanism — a single research often informs 3-5 future researches.',
       'faq.q4': "What if I don't have CLAUDE.md or a project context?",
-      'faq.a4': 'The skill detects context in 3 tiers: explicit (CLAUDE.md research_root setting) → autodetect (pyproject.toml, package.json) → fallback (<code>~/deep-research/</code>). No project, no problem.',
+      'faq.a4': 'The skill detects context in 3 tiers: explicit (CLAUDE.md research_root setting) → autodetect (pyproject.toml, package.json) → fallback (<code>~/deepdive/</code>). No project, no problem.',
       'faq.q5': 'Is this just prompt engineering?',
       'faq.a5': "It's structured methodology plus a curated catalog plus reusable templates plus automation. The <!--gen:count:phases-->13<!--/gen-->-phase workflow forces discipline. <!--gen:count:stat_sources-->460<!--/gen-->+ stat sources is curated knowledge. <!--gen:count:blocks-->106<!--/gen--> reusable blocks compose any report shape. Weekly auto-validation keeps the catalog alive. 25+ upstream awesome-lists give a discovery layer. Prompts are an implementation detail, not the value.",
       'faq.q6': 'Can I use this commercially?',
@@ -1537,7 +1537,7 @@ zip -r ../deepdive.skill . \
       'cta.btn_primary': 'star on github',
       'cta.btn_secondary': 'how to contribute',
 
-      'footer.line1': 'DEEP-RESEARCH v2.0 · Built by Socialpranker · MIT Licensed',
+      'footer.line1': 'DEEPDIVE v2.0 · Built by Socialpranker · MIT Licensed',
       'footer.spec': 'Skill spec',
       'footer.contrib': 'Contributing',
       'footer.issues': 'Issues',
@@ -1654,7 +1654,7 @@ zip -r ../deepdive.skill . \
       'install.intro': 'Работает в Claude Code (CLI), в Claude Desktop с включёнными Skills и в любой другой LLM через ручную загрузку контекста.',
       'install.c1.tag': '// рекомендуется',
       'install.c1.title': 'Claude Code (CLI)',
-      'install.c1.b1': 'Напиши "deep research" или "deep dive"',
+      'install.c1.b1': 'Напиши "deepdive" или "deep dive"',
       'install.c1.b2': 'Работает во всех проектах',
       'install.c1.b3': 'Автозагрузка через progressive disclosure',
       'install.c2.tag': '// .skill bundle',
@@ -1677,7 +1677,7 @@ zip -r ../deepdive.skill . \
       'faq.q3': 'Зачем столько файлов? Не перебор?',
       'faq.a3': 'Для вопроса на 5 минут вида «что там нового про X» — да, перебор. Поэтому есть режим <code>shallow</code> (5–7 источников, без суб-агентов, ~15 минут). Полная машинерия — для режимов <code>medium</code> (~час) и <code>deep</code> (~3 часа), когда нужно использовать вывод для решения. Файл-на-источник — это и есть механизм переиспользования: один ресёрч часто кормит 3–5 будущих.',
       'faq.q4': 'А если нет CLAUDE.md или контекста проекта?',
-      'faq.a4': 'Скилл определяет контекст по 3 уровням: явный (CLAUDE.md с research_root) → автодетект (pyproject.toml, package.json) → fallback (<code>~/deep-research/</code>). Нет проекта — не проблема.',
+      'faq.a4': 'Скилл определяет контекст по 3 уровням: явный (CLAUDE.md с research_root) → автодетект (pyproject.toml, package.json) → fallback (<code>~/deepdive/</code>). Нет проекта — не проблема.',
       'faq.q5': 'Это просто prompt engineering?',
       'faq.a5': 'Это структурированная методология плюс кураторский каталог плюс переиспользуемые шаблоны плюс автоматизация. Workflow из <!--gen:count:phases-->13<!--/gen--> фаз дисциплинирует. <!--gen:count:stat_sources-->460<!--/gen-->+ стат-источников — это куратный домен. <!--gen:count:blocks-->106<!--/gen--> блоков складываются в любую форму отчёта. Авто-валидация раз в неделю держит каталог живым. 25+ awesome-листов дают слой discovery. Промпты — это implementation detail, не ценность.',
       'faq.q6': 'Можно использовать коммерчески?',
@@ -1688,7 +1688,7 @@ zip -r ../deepdive.skill . \
       'cta.btn_primary': 'поставить звезду',
       'cta.btn_secondary': 'как контрибьютить',
 
-      'footer.line1': 'DEEP-RESEARCH v2.0 · Сделал Socialpranker · Лицензия MIT',
+      'footer.line1': 'DEEPDIVE v2.0 · Сделал Socialpranker · Лицензия MIT',
       'footer.spec': 'Спека скилла',
       'footer.contrib': 'Контрибьютинг',
       'footer.issues': 'Issues',

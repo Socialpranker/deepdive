@@ -31,7 +31,7 @@
 
 - **`general-purpose`** — дефолт для fetch+save (Phase 4.1). Нужен `Write`, чтобы агент сам сохранял `sources/NN.md` в своём диапазоне номеров, а не передавал полные тексты обратно в главный поток. Каждому агенту — явный диапазон: агент №1 → `s01-s09`, №2 → `s10-s19`, и т.д. (см. промпт-шаблон ниже, поле `SOURCE ID RANGE`).
 - **`Explore`** — только для чистой discovery-разведки БЕЗ сохранения файлов (например, Phase 3.5 capability discovery или предварительная разведка «сколько вообще есть материала» до того как решили дробить на подтемы). Как только агенту нужно писать `sources/NN.md` — это `general-purpose`, не `Explore`.
-- **`Plan`** — НЕ для поиска. В deep-research не использовать.
+- **`Plan`** — НЕ для поиска. В deepdive не использовать.
 
 ## Какую модель выбрать (model routing)
 
@@ -97,7 +97,7 @@ Agent({
 ### EN template
 
 ```
-CONTEXT: We are researching <main_question>. This is the deep-research workflow,
+CONTEXT: We are researching <main_question>. This is the deepdive workflow,
 medium/deep depth, with structured JSON output requested.
 
 YOUR SUBTOPIC: <narrow subtopic — what THIS agent looks for, not the whole theme>
@@ -307,7 +307,7 @@ CONSTRAINTS:
 ### RU template
 
 ```
-КОНТЕКСТ: Исследуем <главный вопрос>. Workflow — deep-research, режим medium/deep,
+КОНТЕКСТ: Исследуем <главный вопрос>. Workflow — deepdive, режим medium/deep,
 ожидается структурированный JSON.
 
 ТВОЯ ПОДТЕМА: <узкая подтема — что ищет ЭТОТ агент, не вся тема>

@@ -1,6 +1,6 @@
 # Eval — на какой модели гонять research и как это мерить
 
-Отвечает на два вопроса о deep-research скилле:
+Отвечает на два вопроса о deepdive скилле:
 
 1. **На какой модели запускать ради экономии?** — короткий ответ: не на одной.
    Скилл гетерогенный, и роутинг (`references/model_routing.md`) уже раскидывает
@@ -45,8 +45,8 @@ pip install -r ../scripts/requirements.txt
 cp questions/EXAMPLE.md questions/my-q.md      # заполни
 
 # 2. прогони ОДИН И ТОТ ЖЕ вопрос на разных конфигах, в Claude Code:
-#    /model sonnet → /deep-research <вопрос>          → research/<slug>/
-#    /deep research <вопрос> with all on opus         → research/<slug>-opus/
+#    /model sonnet → /deepdive <вопрос>          → research/<slug>/
+#    /deepdive <вопрос> with all on opus         → research/<slug>-opus/
 #    после каждого прогона запиши цену из /cost
 
 # 3. зарегистрируй прогоны в runs/runs.csv (run_id, slug, config, real_cost_usd)

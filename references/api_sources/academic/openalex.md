@@ -102,7 +102,7 @@ GET /concepts/{concept-id}
 GET /works?filter=concepts.id:{concept-id}&per-page=200
 ```
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — get all recent papers in a niche concept:**
 

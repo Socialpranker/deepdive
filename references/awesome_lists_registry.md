@@ -192,7 +192,7 @@ Lists которые сами aggregate другие lists.
 
 Lists в категории "Claude ecosystem" критичны для **распространения этого скилла**:
 
-- Submit deep-research в [travisvn/awesome-claude-skills](https://github.com/travisvn/awesome-claude-skills) после первого release
+- Submit deepdive в [travisvn/awesome-claude-skills](https://github.com/travisvn/awesome-claude-skills) после первого release
 - Submit в [JSONbored/awesome-claude](https://github.com/JSONbored/awesome-claude)
 - Submit в [rohitg00/awesome-claude-code-toolkit](https://github.com/rohitg00/awesome-claude-code-toolkit)
 

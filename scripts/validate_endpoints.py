@@ -34,7 +34,7 @@ REPO_ROOT = Path(__file__).parent.parent
 API_SOURCES_DIR = REPO_ROOT / "references" / "api_sources"
 OUTPUT_DIR = Path(__file__).parent / "output"
 
-USER_AGENT = "claude-deep-research-validator/1.0 (https://github.com/your-username/claude-deep-research)"
+USER_AGENT = "deepdive-validator/1.0 (https://github.com/Socialpranker/deepdive)"
 TIMEOUT_SECONDS = 10
 DELAY_BETWEEN_REQUESTS = 0.5  # politeness
 

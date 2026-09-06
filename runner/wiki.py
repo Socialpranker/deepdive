@@ -26,7 +26,7 @@ scope). Whatever survives that goes to an adjudicator in phase 5.7, and its verd
 appended to pairs.jsonl as an audit trail. `unknown` is quarantine, never a conflict.
 
 Storage lives under ~/.claude/research/wiki/ — global on purpose. Research folders land
-per-project (research/, 06_Деск-ресёрч/, ~/deep-research/), and a per-project wiki would
+per-project (research/, 06_Деск-ресёрч/, ~/deepdive/), and a per-project wiki would
 fragment exactly the thing that is supposed to accumulate. The precedent is already
 there: applications_ledger.csv and deepdive-state/ are both global.
 """

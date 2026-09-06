@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Model-agnostic deep-research orchestrator (SCAFFOLD).
+Model-agnostic deepdive orchestrator (SCAFFOLD).
 
 Owns the two Claude-specific responsibilities so the methodology doesn't have to:
   - sub-agent fan-out  (delegated to provider.fanout)

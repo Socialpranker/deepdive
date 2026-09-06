@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Score one deep-research run across the 6-axis rubric (see eval/rubric.md).
+Score one deepdive run across the 6-axis rubric (see eval/rubric.md).
 
 Splits work the way the rubric does:
   - deterministic axes (citation integrity, source diversity, cost proxy) → here

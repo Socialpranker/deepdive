@@ -33,7 +33,7 @@ where the skill is weak.
 For each question, in a Claude Code session at the repo root:
 
 ```
-/deep-research <paste the Question block>
+/deepdive <paste the Question block>
 ```
 
 Pin the depth stated in the file. To compare configs, run the same question under:

@@ -88,7 +88,7 @@ POST https://api.exa.ai/contents
 }
 ```
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — find similar to a paper:**
 

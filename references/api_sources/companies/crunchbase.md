@@ -44,7 +44,7 @@ Body: {
 GET /entities/funding_rounds/{uuid}
 ```
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — competitive landscape:**
 

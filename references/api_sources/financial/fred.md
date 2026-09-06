@@ -55,7 +55,7 @@ GET /series/observations?series_id=UNRATE&api_key={FRED_API_KEY}&file_type=json
 GET /series/search?search_text={query}&api_key={FRED_API_KEY}&file_type=json
 ```
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — macro context:**
 

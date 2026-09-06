@@ -526,7 +526,7 @@ access: api-free-no-key   # | api-free-with-key | api-paid | api-fallback-html
 - `stats/` — Eurostat, Census US, UN Data
 - `domain_specific/` — PubMed, ClinicalTrials, EMA, NASA, OpenWeather
 
-Каждый файл API имеет: endpoint, auth, free tier, rate limits, query templates, example queries для deep-research, limitations, combine-with рекомендации, fallback strategy.
+Каждый файл API имеет: endpoint, auth, free tier, rate limits, query templates, example queries для deepdive, limitations, combine-with рекомендации, fallback strategy.
 
 ---
 

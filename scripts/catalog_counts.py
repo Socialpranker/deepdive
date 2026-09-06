@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ground-truth counts for the deep-research catalog.
+"""Ground-truth counts for the deepdive catalog.
 
 Counts are derived directly from the files — there is no separate number registry.
 These regexes were verified against the tree on 2026-06-13:
