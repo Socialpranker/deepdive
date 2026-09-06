@@ -1,4 +1,4 @@
-# Single source of truth for the deep-research workflow phases.
+# Single source of truth for the deepdive workflow phases.
 # Counts and phase lists in README/SKILL/docs are stamped FROM this file by
 # scripts/stamp_docs.py. Edit phases here, then: python scripts/stamp_docs.py --write
 #

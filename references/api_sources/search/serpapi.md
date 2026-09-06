@@ -87,7 +87,7 @@ GET https://serpapi.com/search.json?q={query}&engine=google_news&api_key={SERPAP
 GET https://serpapi.com/search.json?q={query}&engine=google_trends&data_type=TIMESERIES&api_key={SERPAPI_KEY}
 ```
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — localized search (e.g. German):**
 
@@ -113,7 +113,7 @@ Major ones: `google`, `google_scholar`, `google_news`, `google_images`, `google_
 
 ## Limitations
 
-- $50/mo plan = ~$0.01 per search — для deep research с 100+ queries дорого
+- $50/mo plan = ~$0.01 per search — для deepdive с 100+ queries дорого
 - Free tier 100/mo съедается быстро
 - Не parsing custom — структура задана SerpAPI
 

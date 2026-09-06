@@ -35,7 +35,7 @@ except ImportError:
     print("ERROR: 'requests' required. Run: pip install -r scripts/requirements.txt")
     sys.exit(1)
 
-UA = "claude-deep-research-statcheck/1.0 (+https://github.com/Socialpranker/claude-deep-research)"
+UA = "deepdive-statcheck/1.0 (+https://github.com/Socialpranker/deepdive)"
 TIMEOUT = 12
 DELAY = 0.3
 URL_RE = re.compile(r"\[(?:[^\]]*)\]\((https?://[^)\s]+)\)|(?<![\w(])(https?://[^\s)\]<>\"']+)")

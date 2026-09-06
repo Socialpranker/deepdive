@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Phase-gate validator for a completed deep-research run directory.
+Phase-gate validator for a completed deepdive run directory.
 
 The methodology in references/ is executed only by the model's discipline inside a
 Claude Code session — nothing forces a phase to actually run. This script closes

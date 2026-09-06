@@ -90,7 +90,7 @@ POST /paper/batch
 }
 ```
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — literature scan:**
 
@@ -134,4 +134,4 @@ GET /paper/{recent-paper-id}/references?limit=100&fields=title,authors,year
 
 - Самый удобный академический API — структурированный, free, no key
 - Поле `openAccessPdf` критично — даёт ссылки на free full-text копии (часто preprint versions paywalled статей)
-- Idiomatic для deep-research workflow
+- Idiomatic для deepdive workflow

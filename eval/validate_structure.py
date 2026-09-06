@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Structural validator for a deep-research run directory.
+Structural validator for a deepdive run directory.
 
 This is the schema guard the eval scripts implicitly depend on. check_citations.py
 and score_run.py both parse the run's files by convention (frontmatter keys, CSV

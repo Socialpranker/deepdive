@@ -10,7 +10,7 @@
 - **Coverage:** Все public subreddits + posts + comments (доступ теперь только через OAuth)
 - **Verified:** 2026-08-17
 
-Live-проверка 2026-08-17: `GET https://www.reddit.com/r/programming/.json` без токена → HTTP 403 с default curl UA, с кастомным `deep-research-skill/1.0` UA и с полным browser UA (Chrome/120) — во всех трёх случаях 403 и HTML-заглушка антибот-защиты вместо JSON. Тот же результат на `old.reddit.com` и на `oauth.reddit.com` без Bearer-токена (это официальный OAuth-хост данных — тоже блокируется без валидного токена). Несколько независимых источников (посты/блоги, май–август 2026, не первоисточник Reddit) сходятся на дате 28–30.05.2026: Reddit закрыл unauth `.json` endpoints, сославшись на анти-скрейпинговое Rule 8, и одновременно резко сузил выдачу новых OAuth-приложений для personal/script use. Официальным Reddit-источником это не перепроверено (reddit.com и support.reddithelp.com отдают 403 на прямой WebFetch/curl из этой среды) — но согласуется с live-результатом выше.
+Live-проверка 2026-08-17: `GET https://www.reddit.com/r/programming/.json` без токена → HTTP 403 с default curl UA, с кастомным `deepdive-skill/1.0` UA и с полным browser UA (Chrome/120) — во всех трёх случаях 403 и HTML-заглушка антибот-защиты вместо JSON. Тот же результат на `old.reddit.com` и на `oauth.reddit.com` без Bearer-токена (это официальный OAuth-хост данных — тоже блокируется без валидного токена). Несколько независимых источников (посты/блоги, май–август 2026, не первоисточник Reddit) сходятся на дате 28–30.05.2026: Reddit закрыл unauth `.json` endpoints, сославшись на анти-скрейпинговое Rule 8, и одновременно резко сузил выдачу новых OAuth-приложений для personal/script use. Официальным Reddit-источником это не перепроверено (reddit.com и support.reddithelp.com отдают 403 на прямой WebFetch/curl из этой среды) — но согласуется с live-результатом выше.
 
 ## What it returns
 
@@ -30,7 +30,7 @@ JSON — просто добавь `.json` к URL Reddit page (при налич
 ## Required headers
 
 ```
-User-Agent: deep-research-skill/1.0 (your-contact)
+User-Agent: deepdive-skill/1.0 (your-contact)
 Authorization: Bearer {token}
 ```
 
@@ -75,7 +75,7 @@ GET https://www.reddit.com/user/{username}/comments.json
 - Anecdotal experiences ("my experience with X")
 - Real-world implementation pitfalls
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — community opposition:**
 

@@ -88,7 +88,7 @@ POST https://api.tavily.com/extract
 }
 ```
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — academic search:**
 

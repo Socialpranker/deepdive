@@ -8,7 +8,7 @@ question, so the comparison is apples-to-apples.
 
 ## Question
 
-<The exact research question or decision, as you'd type it after `/deep-research`.
+<The exact research question or decision, as you'd type it after `/deepdive`.
 Be specific — an underspecified question makes runs incomparable.>
 
 ## Depth
@@ -25,6 +25,6 @@ like. The judge reads this to score coverage.>
 
 <Which model setups you'll run. Examples:
 - A: default routing (Opus on phase 1/3/6, Haiku on fan-out, Sonnet/high synth)
-- B: all-opus  (`deep research <q> with all on opus`)
+- B: all-opus  (`deepdive <q> with all on opus`)
 - C: cheap-mode (`... with cheap mode`)
 Give each a run_id you'll use in runs.csv.>

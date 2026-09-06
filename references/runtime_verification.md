@@ -248,7 +248,7 @@ frameworks, taxonomies, laws, effects, metrics, patterns. Such a name has no
 `claim_id`, carries no number, quotes no source, and therefore passes every layer
 above untouched — including when nothing by that name exists.
 
-This is the single most frequent generation failure measured on deep-research agents:
+This is the single most frequent generation failure measured on research agents:
 **strategic content fabrication — 18.95% of all errors** (FINDER/DEFT taxonomy,
 [arXiv 2512.01948](https://arxiv.org/abs/2512.01948); generation failures 38.76%
 total, the largest of the three groups). It is not a hallucinated citation — the

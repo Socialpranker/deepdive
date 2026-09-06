@@ -19,7 +19,7 @@ catalog/eval checks; you don't need it to run research.)
 
 In a Claude Code session, just ask in natural language — any of these trigger it:
 
-> «проведи ресёрч: <your question>»  ·  "deep research <your question>"  ·  "deep dive <your question>"
+> «проведи ресёрч: <your question>»  ·  "deep dive <your question>"
 
 Claude will: restate your question, pick a report genre, write a `plan.md`, search
 across <!--gen:count:channels-->29<!--/gen--> channels and <!--gen:count:stat_sources-->460<!--/gen-->
@@ -28,7 +28,7 @@ source via a claims-ledger, synthesize with a multi-angle red team, and verify c
 
 ## 3. What you get
 
-A folder (default `~/deep-research/<slug>/`) you can return to months later:
+A folder (default `~/deepdive/<slug>/`) you can return to months later:
 
 ```
 <slug>/

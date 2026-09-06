@@ -312,7 +312,7 @@ Ignores env proxies (`trust_env=False`). `--strict` for CI.
 
 Verification runs four layers: **liveness** (does the source exist), **faithfulness** (does it actually entail the claim it's cited for), **qualifier preservation** (does the report still say what the ledger said), and **construct provenance** (do the frameworks, taxonomies and named "laws" the report uses exist outside it). Verdicts land in `.verify/*.json`, one producer per file.
 
-The fourth layer exists because the first three all join on `claim_id` — and a fabricated *name* has none. That is the largest measured class of generation defect in deep-research agents ([FINDER/DEFT](https://arxiv.org/abs/2512.01948): strategic content fabrication, 18.95% of errors), and it passes a citation check with every URL alive.
+The fourth layer exists because the first three all join on `claim_id` — and a fabricated *name* has none. That is the largest measured class of generation defect in research agents ([FINDER/DEFT](https://arxiv.org/abs/2512.01948): strategic content fabrication, 18.95% of errors), and it passes a citation check with every URL alive.
 
 Numbers get two independent passes: `check_number_provenance.py` on **origin** (who produced the figure; does one value circulate across supposedly independent roots) and `check_number_arithmetic.py` on **computation** — every `derived` figure in `numbers.csv` is recomputed from its own declared `formula` + `inputs`, and `share` groups must sum to 100. A percentage computed in prose is otherwise never re-checked by anything.
 

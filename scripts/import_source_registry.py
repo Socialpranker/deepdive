@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import a scouted source catalog (CSV) into the deep-research source registry.
+"""Import a scouted source catalog (CSV) into the deepdive source registry.
 
 The skill catalogs *how to reach* a source (api_sources/) and *what a domain's canonical
 sources are* (stat_sources/). It had no registry of concrete verified endpoints per signal

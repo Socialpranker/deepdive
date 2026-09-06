@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Number-provenance checker for a completed deep-research run directory.
+Number-provenance checker for a completed deepdive run directory.
 
 Phases 6.5 verify that a source *said* what it is quoted as saying. Nothing checks
 where the source got a NUMBER from — so a content farm with a verbatim quote passes

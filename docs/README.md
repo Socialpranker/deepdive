@@ -36,7 +36,7 @@ After ~1 minute, the site will be live.
 
 ## Custom domain (optional)
 
-If you have a domain (e.g., `deep-research-skill.com`):
+If you have a domain (e.g., `deepdive-skill.com`):
 
 1. Create `docs/CNAME` with the domain on a single line
 2. Configure DNS: CNAME record `yourdomain.com → socialpranker.github.io`

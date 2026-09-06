@@ -51,7 +51,7 @@ GET https://data.sec.gov/api/xbrl/frames/us-gaap/Revenues/USD/CY2023Q4I.json
 GET https://efts.sec.gov/LATEST/search-index?q={query}&forms=10-K
 ```
 
-## Example queries для deep-research
+## Example queries для deepdive
 
 **Phase 4 — company financials:**
 
