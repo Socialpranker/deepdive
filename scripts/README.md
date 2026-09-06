@@ -2,6 +2,13 @@
 
 Automation для catalog maintenance — плюс run-time инструменты прогона (`build_sources_csv.py`, `validate_phases.py`).
 
+## finish.py
+
+One finish-up command: `python scripts/finish.py --research-dir research/<slug> [--mode medium] [--offline]`.
+Runs build_sources_csv → check_citations (into `.verify/citations.json`) → wiki_ingest →
+check_number_provenance --strict → check_number_arithmetic --strict → validate_phases --strict,
+never stopping early; exit 1 if any step failed. `--offline` skips the liveness check.
+
 ## build_sources_csv.py
 
 Собирает `sources.csv` прогона из `sources/NN.md` frontmatter — детерминированно, вместо
