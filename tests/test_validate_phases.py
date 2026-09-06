@@ -281,9 +281,66 @@ def test_ledger_missing_new_columns_warns(tmp_path):
         "claim_id,status\nc1,triangulated\n", encoding="utf-8"
     )
     r = run_validate(d, "deep")
-    joined = " ".join(r.warnings)
+    joined = " ".join(r.errors)
+    # A ledger without these columns means the triangulation/dissent rules silently
+    # never fire — the "green check, no behavior" failure. From medium up that blocks.
     assert "dissent" in joined and "paths" in joined
-    assert not any("claims.csv" in e for e in r.errors)  # warning, never a blocker
+    assert not any("claims.csv" in w for w in r.warnings)
+
+
+def test_ledger_missing_columns_only_warns_on_shallow(tmp_path):
+    d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET)
+    (d / "claims.csv").write_text(
+        "claim_id,status\nc1,triangulated\n", encoding="utf-8"
+    )
+    r = run_validate(d, "shallow")
+    assert any("paths" in w for w in r.warnings)
+    assert not any("claims.csv" in e for e in r.errors)
+
+
+# --- mode resolution: never refuse to validate ---------------------------------
+
+
+def test_resolve_mode_prefers_explicit(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    r = vp.Report()
+    assert vp.resolve_mode(d, "shallow", r) == "shallow"
+    assert r.warnings == []
+
+
+def test_resolve_mode_reads_frontmatter(tmp_path):
+    d = make_run(tmp_path, mode="deep", phases=FULL_SET)
+    r = vp.Report()
+    assert vp.resolve_mode(d, None, r) == "deep"
+    assert r.warnings == []
+
+
+def test_resolve_mode_infers_medium_from_artifacts_and_warns(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    for p in (d / "plan.md", *d.glob("2026-*.md")):
+        p.write_text("no frontmatter\n", encoding="utf-8")
+    r = vp.Report()
+    assert vp.resolve_mode(d, None, r) == "medium"
+    assert any("inferred" in w and "medium" in w for w in r.warnings)
+
+
+def test_resolve_mode_infers_shallow_when_no_medium_artifacts(tmp_path):
+    d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET)
+    for p in (d / "plan.md", *d.glob("2026-*.md")):
+        p.write_text("no frontmatter\n", encoding="utf-8")
+    r = vp.Report()
+    assert vp.resolve_mode(d, None, r) == "shallow"
+    assert any("inferred" in w for w in r.warnings)
+
+
+def test_resolve_mode_infers_medium_from_source_count(tmp_path):
+    d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET)
+    for p in (d / "plan.md", *d.glob("2026-*.md")):
+        p.write_text("no frontmatter\n", encoding="utf-8")
+    for i in range(2, 13):
+        (d / "sources" / f"{i:02d}_x.md").write_text("---\nurl: http://x\n---\n")
+    r = vp.Report()
+    assert vp.resolve_mode(d, None, r) == "medium"
 
 
 def test_real_research_dir_flagged_incomplete_for_deep():

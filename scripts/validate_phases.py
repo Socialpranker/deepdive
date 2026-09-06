@@ -165,9 +165,18 @@ def check_phase(
 
 
 SOURCE_FILE_RE = re.compile(r"^(\d+)_.+\.md$")
-# Columns the triangulation / dissent / provenance rules read. Warn (not error) so
-# runs made before those rules existed stay validatable.
+# Columns the triangulation / dissent / provenance rules read. From medium up their
+# absence is an error: the ledger looks complete while the rules that make
+# `triangulated` mean anything never fire. Shallow (no triangulation gate) only warns.
 LEDGER_COLUMNS = ("roots", "paths", "dissent", "as_of")
+# Artifacts that only a medium/deep run produces — used to infer the mode when the
+# run never wrote a `mode:` frontmatter (2 of 12 real runs had one).
+MEDIUM_MARKERS = (
+    "state.md", "outline.md", "numbers.csv", "evidence", "refresh_targets.md",
+    ".verify/authority.json", ".verify/wiki_pairs.json",
+)
+# SKILL.md depth table: shallow is 5–7 sources, medium starts at 12.
+MEDIUM_SOURCE_COUNT = 10
 
 
 def check_source_perimeter(d: Path, r: Report) -> None:
@@ -194,7 +203,37 @@ def check_source_perimeter(d: Path, r: Report) -> None:
             )
 
 
-def check_ledger_columns(d: Path, r: Report) -> None:
+def infer_mode(d: Path) -> tuple[str, str]:
+    """Best-effort depth from what the run left on disk. Never returns deep: on disk
+    deep and medium are the same set of files, and guessing the stricter one would
+    fail a run for a phase (3.5) that leaves no artifact."""
+    present = [m for m in MEDIUM_MARKERS if artifact_present(d, m)]
+    if present:
+        return "medium", f"medium-only artifacts present: {', '.join(present)}"
+    src = d / "sources"
+    n = len(list(src.glob("*.md"))) if src.is_dir() else 0
+    if n >= MEDIUM_SOURCE_COUNT:
+        return "medium", f"{n} sources (shallow is 5–7)"
+    return "shallow", f"no medium artifacts, {n} sources"
+
+
+def resolve_mode(d: Path, explicit: str | None, r: Report) -> str:
+    """Explicit flag > frontmatter > inference. A run with no `mode:` is validated
+    anyway — refusing would let the least disciplined runs skip the gate entirely."""
+    if explicit:
+        return explicit
+    found = detect_mode(d)
+    if found:
+        return found
+    mode, why = infer_mode(d)
+    r.warn(
+        f"no 'mode:' frontmatter in report or plan.md — inferred '{mode}' ({why}); "
+        f"add `mode: {mode}` to plan.md or pass --mode"
+    )
+    return mode
+
+
+def check_ledger_columns(d: Path, mode: str, r: Report) -> None:
     """A missing ledger column is not a formatting nit: the rule that reads it
     silently never fires — the 'green check, no behavior' failure mode."""
     ledger = d / "claims.csv"
@@ -207,11 +246,15 @@ def check_ledger_columns(d: Path, r: Report) -> None:
     cols = {c.strip() for c in lines[0].split(",")}
     missing = [c for c in LEDGER_COLUMNS if c not in cols]
     if missing:
-        r.warn(
+        msg = (
             f"claims.csv is missing column(s) {', '.join(missing)} — the rules reading "
             f"them (triangulation by root/path, dissent protection, number provenance) "
             f"cannot fire; see references/source_scoring.md"
         )
+        if GATE_RANK[mode] >= GATE_RANK["medium"]:
+            r.err(msg)
+        else:
+            r.warn(msg)
 
 
 OUTLINE_ROW_RE = re.compile(r"^\|(?P<cells>.+)\|\s*$")
@@ -417,7 +460,7 @@ def check_wiki_ingest(d: Path, r: Report) -> None:
 def validate(d: Path, mode: str, phases: list[dict], r: Report) -> None:
     self_check(phases, r)
     check_source_perimeter(d, r)
-    check_ledger_columns(d, r)
+    check_ledger_columns(d, mode, r)
     check_state_window(d, r)
     check_outline_coverage(d, mode, r)
     check_constructs(d, r)
@@ -441,7 +484,7 @@ def main() -> int:
     ap.add_argument(
         "--mode",
         choices=MODES,
-        help="run depth; auto-detected from frontmatter if omitted",
+        help="run depth; frontmatter, else inferred from artifacts, if omitted",
     )
     ap.add_argument("--strict", action="store_true", help="Exit 1 if any error")
     ap.add_argument("--json", action="store_true")
@@ -452,18 +495,12 @@ def main() -> int:
         print(f"ERROR: not a directory: {d}")
         return 2
 
-    mode = args.mode or detect_mode(d)
-    if mode is None:
-        print(
-            "ERROR: could not determine run mode — pass --mode {shallow,medium,deep} "
-            "(no 'mode:' frontmatter found in report or plan.md)"
-        )
-        return 2
+    r = Report()
+    mode = resolve_mode(d, args.mode, r)
 
     phases = phases_manifest.load_phases(
         Path(__file__).resolve().parents[1] / "phases.yaml"
     )
-    r = Report()
     validate(d, mode, phases, r)
 
     if args.json:
