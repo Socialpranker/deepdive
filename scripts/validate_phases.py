@@ -257,6 +257,120 @@ def check_ledger_columns(d: Path, mode: str, r: Report) -> None:
             r.warn(msg)
 
 
+# --- source quality ------------------------------------------------------------
+# A source that carries fewer than 2 verbatim quotes, or that was written off a
+# paywall/consent/abstract stub, is not evidence: it is a URL with a title. It
+# happens when WebFetch returned a thin page and the fetch ladder
+# (scripts/fetch_source.py) was never run. Such a source must not be a
+# triangulation leg — otherwise `triangulated` is backed by nothing.
+MIN_QUOTES = 2
+THIN_ACCESS_PREFIXES = ("partial", "closed", "paywalled", "abstract-only")
+THIN_SHARE_WARN = 0.25
+ACCESS_RE = re.compile(r"^access:\s*(.+?)\s*$", re.MULTILINE)
+SOURCE_ID_COLUMNS = ("sources", "source_ids", "source", "source_id")
+SOURCE_ID_SPLIT_RE = re.compile(r"[;,|\s\[\]()]+")
+# Real runs use both `NN_slug.md` and `sNN_slug.md`; the id is the same either way.
+SOURCE_ID_FILE_RE = re.compile(r"^s?(\d+)_.+\.md$")
+
+
+def _norm_source_id(token: str) -> str | None:
+    """`s01`, `[s01]`, `01`, `1` -> canonical `1`. Anything else -> None."""
+    tok = token.strip().strip("[]()").lower()
+    if tok.startswith("s"):
+        tok = tok[1:]
+    if not tok.isdigit():
+        return None
+    return tok.lstrip("0") or "0"
+
+
+def _split_frontmatter(text: str) -> tuple[str, str]:
+    if text.startswith("---"):
+        parts = text.split("---", 2)
+        if len(parts) == 3:
+            return parts[1], parts[2]
+    return "", text
+
+
+def source_is_thin(text: str) -> bool:
+    front, body = _split_frontmatter(text)
+    m = ACCESS_RE.search(front)
+    if m:
+        access = m.group(1).strip().strip('"\'').lower()
+        if access.startswith(THIN_ACCESS_PREFIXES):
+            return True
+    quotes = sum(1 for line in body.splitlines() if line.lstrip().startswith(">"))
+    return quotes < MIN_QUOTES
+
+
+def collect_thin_sources(d: Path) -> tuple[dict[str, str], set[str]]:
+    """-> ({normalized id: label}, {normalized id of every source file})."""
+    src = d / "sources"
+    thin: dict[str, str] = {}
+    seen: set[str] = set()
+    if not src.is_dir():
+        return thin, seen
+    for p in sorted(src.glob("*.md")):
+        m = SOURCE_ID_FILE_RE.match(p.name)
+        if not m:
+            continue
+        num = m.group(1)
+        key = num.lstrip("0") or "0"
+        seen.add(key)
+        if source_is_thin(p.read_text(encoding="utf-8")):
+            thin[key] = f"s{num}"
+    return thin, seen
+
+
+def check_source_quality(d: Path, mode: str, r: Report) -> None:
+    """Thin sources silently backing `triangulated` claims.
+
+    Measured on 12 real runs: 27% of source files carry <2 quotes and every one
+    of them reports `fetch_tier: webfetch` — the ladder was never used. A claim
+    standing only on such sources is not triangulated, it is one bad fetch.
+    """
+    thin, seen = collect_thin_sources(d)
+    if not seen:
+        return
+
+    for row in load_claim_rows(d):
+        if (row.get("status") or "").strip().lower() != "triangulated":
+            continue
+        cid = (row.get("claim_id") or "").strip() or "?"
+        cell = next(
+            (row[c] for c in SOURCE_ID_COLUMNS if (row.get(c) or "").strip()), ""
+        )
+        cited = []
+        for tok in SOURCE_ID_SPLIT_RE.split(cell):
+            key = _norm_source_id(tok)
+            if key is not None and key in seen and key not in cited:
+                cited.append(key)
+        if not cited:
+            continue
+        bad = [thin[k] for k in cited if k in thin]
+        if not bad:
+            continue
+        listed = ", ".join(bad)
+        if len(bad) == len(cited):
+            msg = (
+                f"claim {cid} is triangulated on thin sources only ({listed}) — "
+                f"thin = <{MIN_QUOTES} quotes or access PARTIAL/closed; refetch via "
+                f"scripts/fetch_source.py or downgrade"
+            )
+            (r.err if GATE_RANK[mode] >= GATE_RANK["medium"] else r.warn)(msg)
+        else:
+            r.warn(
+                f"claim {cid} is triangulated partly on thin sources ({listed}) — "
+                f"refetch them via scripts/fetch_source.py or drop them as legs"
+            )
+
+    share = len(thin) / len(seen)
+    if share > THIN_SHARE_WARN:
+        r.warn(
+            f"{len(thin)} of {len(seen)} sources are thin ({share * 100:.0f}%) — "
+            f"the fetch ladder was not used; see subagents_v2.md §fetch"
+        )
+
+
 OUTLINE_ROW_RE = re.compile(r"^\|(?P<cells>.+)\|\s*$")
 CLAIM_CELL_SPLIT_RE = re.compile(r"[;,\s]+")
 # Claims this strong are the run's product: reaching one and leaving it out of the
@@ -461,6 +575,7 @@ def validate(d: Path, mode: str, phases: list[dict], r: Report) -> None:
     self_check(phases, r)
     check_source_perimeter(d, r)
     check_ledger_columns(d, mode, r)
+    check_source_quality(d, mode, r)
     check_state_window(d, r)
     check_outline_coverage(d, mode, r)
     check_constructs(d, r)

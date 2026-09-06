@@ -42,6 +42,7 @@ Exit codes: 0 ok · 3 robots-disallowed · 4 blocked (auth wall / anti-bot) · 5
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from datetime import date, timezone, datetime
@@ -167,13 +168,24 @@ def check_robots(url: str, ua_token: str, timeout: int, fetch=None) -> dict:
         "ai_disallowed": [],
         "crawl_delay": None,
         "fetched": False,
+        "unreachable": False,
         "error": "",
     }
     try:
         status, body = fetch(verdict["robots_url"], timeout)
-        if status != 200 or not body:
-            # No robots.txt (or unreadable) means no restriction was expressed.
+        if status in (404, 410):
+            # RFC 9309 §2.3.1.3: no robots.txt means no restriction was expressed.
             verdict["error"] = f"robots.txt status {status}"
+            return verdict
+        if status != 200 or body is None:
+            # RFC 9309 §2.3.1.4: unreachable (5xx, junk status) means fail closed —
+            # this is "we could not find out", not "nothing was expressed".
+            verdict["error"] = f"robots.txt status {status}"
+            verdict["unreachable"] = True
+            verdict["allowed"] = False
+            return verdict
+        if not body:
+            verdict["fetched"] = True
             return verdict
         parser = Protego.parse(decode_robots(body))
         verdict["fetched"] = True
@@ -183,7 +195,10 @@ def check_robots(url: str, ua_token: str, timeout: int, fetch=None) -> dict:
             token for token in AI_CRAWLER_TOKENS if not parser.can_fetch(url, token)
         ]
     except Exception as exc:  # noqa: BLE001 - robots failure must not abort the fetch
+        # Network error / timeout: also unreachable, also fail closed.
         verdict["error"] = f"{type(exc).__name__}: {exc}"
+        verdict["unreachable"] = True
+        verdict["allowed"] = False
     return verdict
 
 
@@ -316,7 +331,9 @@ def build_outcome(tier: str, resp) -> FetchOutcome:
                 raw=raw,
             )
         verdict, note = classify(resp.status, markdown)
-        return FetchOutcome(tier, resp.status, markdown, verdict, note, kind="html")
+        return FetchOutcome(
+            tier, resp.status, markdown, verdict, note, kind="html", raw=raw
+        )
 
     if kind in ("feed", "text"):
         # Kept verbatim: markdownifying XML/JSON destroys the structure that is the
@@ -411,8 +428,25 @@ ACCESS_BY_VERDICT = {
 }
 
 
+def content_sha256(outcome: FetchOutcome) -> str:
+    """Hash of the extracted main text, so a re-fetch can be diffed against it."""
+    if not outcome.ok:
+        return "-"
+    payload = (
+        outcome.markdown.encode("utf-8")
+        if outcome.kind == "html"
+        else (outcome.raw or b"")
+    )
+    return hashlib.sha256(payload).hexdigest()
+
+
 def build_meta(
-    url: str, outcome: FetchOutcome, robots: dict, trail: list[dict], overridden: bool
+    url: str,
+    outcome: FetchOutcome,
+    robots: dict,
+    trail: list[dict],
+    overridden: bool,
+    snapshot: str = "-",
 ) -> dict:
     return {
         "url": url,
@@ -427,7 +461,10 @@ def build_meta(
         "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "robots_allowed": robots["allowed"],
         "robots_ai_disallowed": robots["ai_disallowed"],
+        "robots_unreachable": robots.get("unreachable", False),
         "robots_overridden": overridden,
+        "content_sha256": content_sha256(outcome),
+        "snapshot": snapshot,
         "trail": trail,
     }
 
@@ -438,9 +475,13 @@ def frontmatter_lines(meta: dict) -> str:
         f"access: {meta['access']}",
         f"fetched: {meta['fetched']}",
         f"fetch_tier: {meta['fetch_tier']}",
+        f"content_sha256: {meta['content_sha256']}",
+        f"snapshot: {meta['snapshot']}",
     ]
     if meta.get("content_kind") not in (None, "html"):
         lines.append(f"content_kind: {meta['content_kind']}")
+    if meta.get("robots_unreachable"):
+        lines.append("robots: unreachable")
     if meta["robots_overridden"]:
         lines.append("fetch_note: robots-disallowed, operator-overridden")
     elif meta["robots_ai_disallowed"]:
@@ -605,18 +646,31 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="on a block, do not live-probe the well-known feed paths",
     )
+    ap.add_argument(
+        "--no-snapshot",
+        action="store_true",
+        help="do not save a raw copy of the fetched body next to --out",
+    )
     args = ap.parse_args(argv)
 
     robots = check_robots(args.url, args.ua_token, args.timeout)
     overridden = False
     if not robots["allowed"]:
         if not args.ignore_robots:
-            print(
-                f"robots.txt disallows this path for a generic client: {robots['robots_url']}\n"
-                "This is a site-wide exclusion, not an AI-specific one.\n"
-                "Pass --ignore-robots to override; the override is stamped into the source file.",
-                file=sys.stderr,
-            )
+            if robots.get("unreachable"):
+                print(
+                    f"robots.txt could not be fetched ({robots['error']}): {robots['robots_url']}\n"
+                    "Unreachable is treated as disallow, not as allow (RFC 9309 §2.3.1.4).\n"
+                    "Pass --ignore-robots to override; the override is stamped into the source file.",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"robots.txt disallows this path for a generic client: {robots['robots_url']}\n"
+                    "This is a site-wide exclusion, not an AI-specific one.\n"
+                    "Pass --ignore-robots to override; the override is stamped into the source file.",
+                    file=sys.stderr,
+                )
             return 3
         overridden = True
 
@@ -640,6 +694,13 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 out.write_bytes(outcome.raw or b"")
             meta["out"] = str(out)
+            if not args.no_snapshot:
+                snap_ext = (
+                    ".snapshot.html" if outcome.kind == "html" else ".snapshot.bin"
+                )
+                snap_path = out.with_name(out.stem + snap_ext)
+                snap_path.write_bytes(outcome.raw or b"")
+                meta["snapshot"] = str(snap_path)
             print(
                 f"ok  tier={outcome.tier}  kind={outcome.kind}  status={outcome.status}  "
                 f"size={outcome.size}  -> {out}",
@@ -683,9 +744,7 @@ def main(argv: list[str] | None = None) -> int:
         probed = (
             None
             if args.no_probe
-            else probe_wellknown_feeds(
-                args.url, routes, 10, robots.get("crawl_delay")
-            )
+            else probe_wellknown_feeds(args.url, routes, 10, robots.get("crawl_delay"))
         )
         if not key or probed:
             meta["fallback_probed_feeds"] = probed or []

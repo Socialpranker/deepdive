@@ -117,13 +117,51 @@ def test_missing_robots_is_not_a_restriction():
     assert "404" in v["error"]
 
 
-def test_robots_fetch_failure_does_not_raise():
+def test_robots_fetch_network_error_fails_closed():
+    """RFC 9309 §2.3.1.4: unreachable robots.txt means assume disallow, not allow."""
+
     def boom(robots_url, timeout):
         raise TimeoutError("nope")
 
     v = fs.check_robots(URL, "deepdive-research", 10, fetch=boom)
-    assert v["allowed"] is True
+    assert v["allowed"] is False
+    assert v["unreachable"] is True
     assert "TimeoutError" in v["error"]
+
+
+def test_robots_404_is_not_a_restriction():
+    """RFC 9309 §2.3.1.3: a missing robots.txt (404/410) means the client may crawl."""
+    v = fs.check_robots(
+        URL, "deepdive-research", 10, fetch=robots_source(b"", status=404)
+    )
+    assert v["allowed"] is True
+    assert v["unreachable"] is False
+    assert "404" in v["error"]
+
+
+def test_robots_410_is_not_a_restriction():
+    v = fs.check_robots(
+        URL, "deepdive-research", 10, fetch=robots_source(b"", status=410)
+    )
+    assert v["allowed"] is True
+    assert v["unreachable"] is False
+
+
+def test_robots_5xx_fails_closed():
+    """A server error is not "no robots.txt" — it is "we could not find out"."""
+    v = fs.check_robots(
+        URL, "deepdive-research", 10, fetch=robots_source(b"", status=503)
+    )
+    assert v["allowed"] is False
+    assert v["unreachable"] is True
+    assert "503" in v["error"]
+
+
+def test_frontmatter_flags_unreachable_robots():
+    outcome = fs.FetchOutcome("http", 200, GOOD, "ok")
+    robots = fs.check_robots(URL, "u", 1, robots_source(b"", status=503))
+    lines = fs.frontmatter_lines(fs.build_meta(URL, outcome, robots, [], False))
+    assert "robots: unreachable" in lines
 
 
 # --- classification -------------------------------------------------------
@@ -451,7 +489,10 @@ def test_blocked_pdf_url_is_still_blocked():
 
 
 def test_feed_is_kept_verbatim_not_markdownified():
-    body = b'<?xml version="1.0"?><rss><channel><title>x</title></channel></rss>' + b" " * 2000
+    body = (
+        b'<?xml version="1.0"?><rss><channel><title>x</title></channel></rss>'
+        + b" " * 2000
+    )
     outcome = fs.build_outcome("http", FakeResp(body))
     assert outcome.kind == "feed"
     assert outcome.ok
@@ -499,3 +540,134 @@ def test_crawl_delay_is_capped():
 def test_wikipedia_route_exists():
     _, entry = fs.resolve_routes("https://en.wikipedia.org/wiki/LLM", ROUTES)
     assert entry and entry["routes"][0]["auth"] == "none"
+
+
+# --- unreachable robots.txt blocks the run, like an explicit disallow ------
+
+
+def test_main_exits_3_on_unreachable_robots(monkeypatch, capsys):
+    monkeypatch.setattr(
+        fs,
+        "check_robots",
+        lambda url, ua, timeout, _f=fs.check_robots: _f(
+            url, ua, timeout, fetch=robots_source(b"", status=503)
+        ),
+    )
+    rc = fs.main([URL])
+    assert rc == 3
+    assert "unreachable" in capsys.readouterr().err.lower()
+
+
+def test_main_ignore_robots_overrides_unreachable(monkeypatch):
+    monkeypatch.setattr(
+        fs,
+        "check_robots",
+        lambda url, ua, timeout, _f=fs.check_robots: _f(
+            url, ua, timeout, fetch=robots_source(b"", status=503)
+        ),
+    )
+    monkeypatch.setattr(
+        fs,
+        "run_ladder",
+        lambda url, timeout, only: (
+            fs.FetchOutcome("http", 200, GOOD, "ok"),
+            [],
+        ),
+    )
+    rc = fs.main([URL, "--ignore-robots"])
+    assert rc == 0
+
+
+# --- content hash + raw snapshot -------------------------------------------
+
+
+def _ok_html_outcome():
+    return fs.FetchOutcome(
+        "http", 200, GOOD, "ok", kind="html", raw=b"<html>raw</html>"
+    )
+
+
+def test_build_meta_includes_content_sha256():
+    import hashlib
+
+    outcome = _ok_html_outcome()
+    robots = fs.check_robots(URL, "u", 1, robots_source(ROBOTS_OPEN))
+    meta = fs.build_meta(URL, outcome, robots, [], False)
+    assert meta["content_sha256"] == hashlib.sha256(GOOD.encode("utf-8")).hexdigest()
+
+
+def test_frontmatter_declares_content_sha256_and_snapshot_placeholder():
+    outcome = _ok_html_outcome()
+    robots = fs.check_robots(URL, "u", 1, robots_source(ROBOTS_OPEN))
+    meta = fs.build_meta(URL, outcome, robots, [], False)
+    lines = fs.frontmatter_lines(meta)
+    assert f"content_sha256: {meta['content_sha256']}" in lines
+    assert "snapshot: -" in lines
+
+
+def test_main_without_out_reports_no_snapshot(monkeypatch, capsys):
+    monkeypatch.setattr(
+        fs,
+        "check_robots",
+        lambda url, ua, timeout, _f=fs.check_robots: _f(
+            url, ua, timeout, fetch=robots_source(ROBOTS_OPEN)
+        ),
+    )
+    monkeypatch.setattr(
+        fs,
+        "run_ladder",
+        lambda url, timeout, only: (
+            _ok_html_outcome(),
+            [],
+        ),
+    )
+    rc = fs.main([URL])
+    assert rc == 0
+    assert "snapshot: -" in capsys.readouterr().err
+
+
+def test_main_with_out_writes_snapshot_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        fs,
+        "check_robots",
+        lambda url, ua, timeout, _f=fs.check_robots: _f(
+            url, ua, timeout, fetch=robots_source(ROBOTS_OPEN)
+        ),
+    )
+    monkeypatch.setattr(
+        fs,
+        "run_ladder",
+        lambda url, timeout, only: (
+            _ok_html_outcome(),
+            [],
+        ),
+    )
+    out = tmp_path / "source.md"
+    rc = fs.main([URL, "-o", str(out)])
+    assert rc == 0
+    snapshot = tmp_path / "source.snapshot.html"
+    assert snapshot.exists()
+    assert snapshot.read_bytes() == b"<html>raw</html>"
+
+
+def test_main_no_snapshot_flag_skips_the_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        fs,
+        "check_robots",
+        lambda url, ua, timeout, _f=fs.check_robots: _f(
+            url, ua, timeout, fetch=robots_source(ROBOTS_OPEN)
+        ),
+    )
+    monkeypatch.setattr(
+        fs,
+        "run_ladder",
+        lambda url, timeout, only: (
+            _ok_html_outcome(),
+            [],
+        ),
+    )
+    out = tmp_path / "source.md"
+    rc = fs.main([URL, "-o", str(out), "--no-snapshot"])
+    assert rc == 0
+    assert not (tmp_path / "source.snapshot.html").exists()
+    assert not list(tmp_path.glob("*.snapshot.*"))

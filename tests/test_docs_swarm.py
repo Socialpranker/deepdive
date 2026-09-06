@@ -9,7 +9,10 @@ CAPS_PY = ROOT / "runner" / "capabilities.py"
 SKILL_MD = ROOT / "SKILL.md"
 SWARM_MD = ROOT / "references" / "swarm_postprocess.md"
 
-DEAD_SEARCH_KEYS = ("TAVILY_API_KEY", "BRAVE_API_KEY", "EXA_API_KEY", "SERPAPI_KEY")
+# SERPAPI has no free tier and is the only search key the skill still does not call.
+# BRAVE/TAVILY/EXA became the second search engine (scripts/search_query.py).
+DEAD_SEARCH_KEYS = ("SERPAPI_KEY",)
+LIVE_SEARCH_KEYS = ("BRAVE_SEARCH_API_KEY", "TAVILY_API_KEY", "EXA_API_KEY")
 
 
 def test_dispatch_documents_qclass_field():
@@ -36,9 +39,22 @@ def test_dead_search_keys_are_not_advertised_as_configurable():
 
 
 def test_capabilities_py_does_not_audit_unused_search_keys():
-    text = CAPS_PY.read_text(encoding="utf-8")
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("capabilities", CAPS_PY)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    audited = {k[0] if isinstance(k, tuple) else k for k in mod.KNOWN_KEYS}
     for key in DEAD_SEARCH_KEYS:
-        assert key not in text, f"{key} аудируется, но нигде не вызывается"
+        assert key not in audited, f"{key} аудируется, но нигде не вызывается"
+
+
+def test_live_search_keys_are_audited_and_wired_to_search_query():
+    text = CAPS_PY.read_text(encoding="utf-8")
+    script = (ROOT / "scripts" / "search_query.py").read_text(encoding="utf-8")
+    for key in LIVE_SEARCH_KEYS:
+        assert key in text, f"{key} не аудируется, хотя search_query.py его читает"
+        assert key in script, f"{key} аудируется, но search_query.py его не читает"
 
 
 def _fenced_blocks(text: str, lang: str) -> list[str]:

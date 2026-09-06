@@ -151,6 +151,11 @@ TASK:
    Different source types: Primary, Academic, Industry-media, General-media,
    Expert-blog, Forum, Opposition.
 2. For each source — read it (WebFetch) and extract:
+   - If WebFetch comes back THIN — under ~500 chars of main text, no quotable
+     passage, or a block/consent/paywall page — run the ladder RIGHT THEN, as a
+     standard step, not as an exception:
+     `uv run scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
+     Record `fetch_tier:` from the metadata in the source frontmatter.
    - 2-4 key direct quotes (verbatim, with location/page if possible)
    - Author, publication date, source type. `type` is a STRICT enum — copy ONE
      of these seven verbatim, never invent a label or a variant spelling:
@@ -169,7 +174,10 @@ TASK:
    of the dominant view in this subtopic. If you cannot find any — say so explicitly.
 5. WRITE the full source file yourself: `sources/<id>_<short-slug>.md` using the
    template in `source_scoring.md`, with complete frontmatter (channel, access,
-   scores, subquestion_ids) and verbatim quotes. Use ONLY ids from your assigned
+   scores, subquestion_ids) and verbatim quotes. Never write a source with fewer
+   than 2 verbatim quotes: run the ladder first. If the ladder ends in auth-wall /
+   anti-bot, write it with `access: closed` and only what the snippet gave — such a
+   source cannot be a triangulation leg. Use ONLY ids from your assigned
    range (see YOUR SOURCE ID RANGE above).
    Fill the `root:` field while reading (see source_scoring.md "Provenance"):
    `own` if the source produced its material itself; a short stable id of the
@@ -282,11 +290,16 @@ CONSTRAINTS:
 - Maximum 10 sources. Quality over quantity.
 - Quotes must be VERBATIM. Do not paraphrase.
 - If a source is paywalled / inaccessible — note it in `gaps` and try alternative.
-- Do not use bash/curl to bypass WebFetch. The one sanctioned fallback is
+- Do not use bash/curl to bypass WebFetch. The one sanctioned ladder is
   `uv run scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
-  — run it when WebFetch answers "unable to fetch from ...", which usually means a
-  robots.txt AI-agent exclusion rather than a dead page. Copy `access:`, `fetched:`,
+  — it is the STANDARD second step, not an exception. Run it whenever WebFetch
+  answers "unable to fetch from ..." OR returns a thin result (<500 chars of main
+  text, no quotable passage, block/consent/paywall page): usually a robots.txt
+  AI-agent exclusion or a JS-only page, not a dead one. Copy `access:`, `fetched:`,
   `fetch_tier:` and any `fetch_note:` from the metadata into the source frontmatter.
+  A thin source (<2 verbatim quotes, or `access: PARTIAL/closed`) is not a
+  triangulation leg — validate_phases.py errors on a `triangulated` claim standing
+  only on such sources.
 - Exit 4 (auth wall / anti-bot) is terminal for the HTML, not for the source. The
   script prints the open doors of that same site — official API, feed, archive
   snapshot — from `references/fallback_routes.yaml`. Work that list top-down before
@@ -331,6 +344,11 @@ CONSTRAINTS:
 1. Найти 5-10 источников разных типов: первичные, академические, отраслевая медиа,
    общая пресса, экспертные блоги, обсуждения, противоположная позиция.
 2. Каждый источник прочитать (WebFetch) и извлечь:
+   - Если WebFetch вернул ТОНКО — меньше ~500 знаков основного текста, ни одной
+     цитируемой фразы, страница блокировки/консента/paywall — сразу запускать
+     лестницу, это штатный шаг, а не исключение:
+     `uv run scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
+     `fetch_tier:` из метаданных перенести во frontmatter источника.
    - 2-4 прямые цитаты (дословно, с указанием раздела/страницы если есть)
    - Автор, дата публикации, тип источника
    - Отношение к каждой гипотезе (supports / contradicts / neutral)
@@ -364,11 +382,16 @@ CONSTRAINTS:
 - Максимум 10 источников. Качество важнее количества.
 - Цитаты ДОСЛОВНЫЕ. Не пересказ.
 - Если источник за paywall — в `gaps`, искать альтернативу.
-- НЕ использовать произвольный bash/curl в обход WebFetch. Единственный санкционированный fallback:
+- НЕ использовать произвольный bash/curl в обход WebFetch. Единственная санкционированная лестница:
   `uv run scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
-  — запускать, когда WebFetch ответил «unable to fetch from …»: это обычно robots-исключение
-  для AI-агентов, а не мёртвая страница. `access:`, `fetched:`, `fetch_tier:` и `fetch_note:`
-  из метаданных перенести во frontmatter источника.
+  — это ШТАТНЫЙ второй шаг, не исключение. Запускать и когда WebFetch ответил
+  «unable to fetch from …», и когда вернул тонкий результат (<500 знаков основного
+  текста, нет цитируемой фразы, страница блокировки/консента/paywall): обычно это
+  robots-исключение для AI-агентов или JS-only страница, а не мёртвая. `access:`,
+  `fetched:`, `fetch_tier:` и `fetch_note:` из метаданных перенести во frontmatter.
+  Источник без 2 дословных цитат не пишется вовсе; если лестница упёрлась в
+  auth-волл/анти-бот — писать с `access: closed` и только тем, что дал сниппет, и
+  плечом триангуляции он быть не может (validate_phases.py даёт error).
 - Код 4 (auth-волл / анти-бот) — терминально для HTML, не для источника. Скрипт сам
   печатает открытые двери того же сайта (API, фид, архив) из `fallback_routes.yaml` —
   идти по списку сверху вниз. Фид часто жив, когда HTML мёртв: у stackoverflow HTML
