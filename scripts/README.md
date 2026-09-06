@@ -9,6 +9,21 @@ Runs build_sources_csv → check_citations (into `.verify/citations.json`) → w
 check_number_provenance --strict → check_number_arithmetic --strict → validate_phases --strict,
 never stopping early; exit 1 if any step failed. `--offline` skips the liveness check.
 
+## search_query.py
+
+Прямой вызов одного из трёх поисковых движков с free tier — второй, независимой от
+харнесс-WebSearch поисковой траектории (см. `references/capability_discovery.md`,
+`references/source_dispatch.md`):
+
+```bash
+python3 scripts/search_query.py --engine {brave,tavily,exa} --query "..." [--n 10] [--json]
+```
+
+Ключ читается из env: `BRAVE_SEARCH_API_KEY`, `TAVILY_API_KEY`, `EXA_API_KEY`. Без
+ключа — exit 2 с именем переменной. HTTP-ошибка — exit 1. Один ретрай при обрыве
+транспорта, timeout 20s. Без `--json` печатает `NN  title — url` построчно;
+`--json` — нормализованный список `{rank, title, url, snippet, engine, fetched_at}`.
+
 ## build_sources_csv.py
 
 Собирает `sources.csv` прогона из `sources/NN.md` frontmatter — детерминированно, вместо

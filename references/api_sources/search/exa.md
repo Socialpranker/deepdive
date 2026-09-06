@@ -50,6 +50,10 @@ JSON с результатами ranked by semantic similarity to query.
 
 ## Query patterns
 
+Прямой вызов из скилла: `python3 scripts/search_query.py --engine exa --query "..." [--n 10] [--json]`
+(читает `EXA_API_KEY` из env, exit 2 если ключа нет). Ниже — сырой HTTP-контракт,
+который скрипт реализует.
+
 ### Neural search
 
 ```

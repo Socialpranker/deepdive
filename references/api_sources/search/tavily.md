@@ -48,6 +48,10 @@ JSON с готовыми **answers + sources**. Tavily — это search API, с
 
 ## Query patterns
 
+Прямой вызов из скилла: `python3 scripts/search_query.py --engine tavily --query "..." [--n 10] [--json]`
+(читает `TAVILY_API_KEY` из env, exit 2 если ключа нет). Ниже — сырой HTTP-контракт,
+который скрипт реализует (basic search, без `include_answer`/`include_domains`).
+
 ### Basic search
 
 ```

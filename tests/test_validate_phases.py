@@ -11,6 +11,18 @@ sys.path.insert(0, str(REPO / "scripts"))
 import validate_phases as vp  # noqa: E402
 
 
+def write_source(
+    sd: Path, stem: str, *, thin: bool, access: str = "open"
+) -> Path:
+    """A source file with (fat) or without (thin) the 2 verbatim quotes a leg needs."""
+    quotes = "> quote one\n\n> quote two\n" if not thin else "no quotes here\n"
+    p = sd / f"{stem}.md"
+    p.write_text(
+        f"---\nurl: http://x\naccess: {access}\n---\n\n{quotes}", encoding="utf-8"
+    )
+    return p
+
+
 def make_run(root: Path, *, mode: str, phases: set[str]) -> Path:
     """Build a synthetic run dir containing artifacts for the given phase ids."""
     d = root / "run"
@@ -24,7 +36,7 @@ def make_run(root: Path, *, mode: str, phases: set[str]) -> Path:
     if "4" in phases:
         sd = d / "sources"
         sd.mkdir()
-        (sd / "01_x.md").write_text("---\nurl: http://x\n---\n", encoding="utf-8")
+        write_source(sd, "01_x", thin=False)
     if "state" in phases:
         (d / "state.md").write_text(
             "---\nround: 2\n---\n"
@@ -588,3 +600,124 @@ def test_shallow_run_does_not_require_wiki_pairs(tmp_path):
     d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET)
     r = run_validate(d, "shallow")
     assert not any("wiki_pairs.json" in e for e in r.errors)
+
+
+# --- source quality: a thin source is not a triangulation leg ------------------
+
+
+def _sources_dir(d: Path) -> Path:
+    sd = d / "sources"
+    for p in sd.glob("*.md"):
+        p.unlink()
+    return sd
+
+
+def _ledger(d: Path, sources_cell: str, status: str = "triangulated") -> None:
+    (d / "claims.csv").write_text(
+        "claim_id,claim,sources,roots,paths,status,confidence,dissent,as_of\n"
+        f"c1,a claim,{sources_cell},own;study-x,a|q|en;b|q2|en,{status},high,-,-\n",
+        encoding="utf-8",
+    )
+
+
+def test_triangulated_on_thin_sources_only_blocks_medium(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    sd = _sources_dir(d)
+    write_source(sd, "01_a", thin=True)
+    write_source(sd, "04_b", thin=True)
+    _ledger(d, "s01;s04")
+    r = run_validate(d, "medium")
+    assert any(
+        "c1 is triangulated on thin sources only" in e and "s01" in e and "s04" in e
+        for e in r.errors
+    )
+
+
+def test_same_case_only_warns_on_shallow(tmp_path):
+    d = make_run(tmp_path, mode="shallow", phases=SHALLOW_SET)
+    sd = _sources_dir(d)
+    write_source(sd, "01_a", thin=True)
+    write_source(sd, "04_b", thin=True)
+    _ledger(d, "s01;s04")
+    r = run_validate(d, "shallow")
+    assert any("triangulated on thin sources only" in w for w in r.warnings)
+    assert not any("thin sources only" in e for e in r.errors)
+
+
+def test_one_thin_among_three_only_warns(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    sd = _sources_dir(d)
+    write_source(sd, "01_a", thin=True)
+    write_source(sd, "02_b", thin=False)
+    write_source(sd, "03_c", thin=False)
+    _ledger(d, "s01|s02|s03")
+    r = run_validate(d, "medium")
+    assert any("triangulated partly on thin sources" in w and "s01" in w for w in r.warnings)
+    assert not any("thin sources" in e for e in r.errors)
+
+
+def test_no_thin_sources_is_silent(tmp_path):
+    """Negative control: same claim, same ids, every source carries its quotes."""
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    sd = _sources_dir(d)
+    for stem in ("01_a", "02_b", "03_c"):
+        write_source(sd, stem, thin=False)
+    _ledger(d, "s01;s02;s03")
+    r = run_validate(d, "medium")
+    assert not any("thin" in m for m in r.errors + r.warnings)
+
+
+def test_access_partial_makes_a_quoted_source_thin(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    sd = _sources_dir(d)
+    write_source(sd, "01_a", thin=False, access="PARTIAL")
+    write_source(sd, "02_b", thin=False, access="paywalled (abstract only)")
+    _ledger(d, "s01;s02")
+    r = run_validate(d, "medium")
+    assert any("triangulated on thin sources only" in e for e in r.errors)
+
+
+def test_bare_numeric_source_ids_are_understood(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    sd = _sources_dir(d)
+    write_source(sd, "01_a", thin=True)
+    write_source(sd, "04_b", thin=True)
+    _ledger(d, "[01] [04]")
+    r = run_validate(d, "medium")
+    assert any("triangulated on thin sources only" in e for e in r.errors)
+
+
+def test_non_triangulated_claim_on_thin_sources_is_not_flagged(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    sd = _sources_dir(d)
+    write_source(sd, "01_a", thin=True)
+    write_source(sd, "02_b", thin=False)
+    write_source(sd, "03_c", thin=False)
+    write_source(sd, "04_d", thin=False)
+    _ledger(d, "s01", status="single-type")
+    r = run_validate(d, "medium")
+    assert not any("triangulated" in m for m in r.errors + r.warnings)
+
+
+def test_thin_share_over_quarter_warns(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    sd = _sources_dir(d)
+    write_source(sd, "01_a", thin=True)
+    write_source(sd, "02_b", thin=True)
+    write_source(sd, "03_c", thin=False)
+    write_source(sd, "04_d", thin=False)
+    _ledger(d, "s03;s04")
+    r = run_validate(d, "medium")
+    assert any("2 of 4 sources are thin (50%)" in w for w in r.warnings)
+
+
+def test_thin_share_under_threshold_is_silent(tmp_path):
+    """Control for the summary: 1 of 5 (20%) is below the 25% threshold."""
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    sd = _sources_dir(d)
+    write_source(sd, "01_a", thin=True)
+    for stem in ("02_b", "03_c", "04_d", "05_e"):
+        write_source(sd, stem, thin=False)
+    _ledger(d, "s02;s03")
+    r = run_validate(d, "medium")
+    assert not any("sources are thin" in w for w in r.warnings)

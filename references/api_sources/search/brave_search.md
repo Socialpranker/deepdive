@@ -47,15 +47,19 @@ JSON с organic results, news, videos, infobox.
 
 1. https://api.search.brave.com → sign up
 2. Получи API key
-3. В env: `export BRAVE_API_KEY="BSA..."`
+3. В env: `export BRAVE_SEARCH_API_KEY="BSA..."`
 
 ## Query patterns
+
+Прямой вызов из скилла: `python3 scripts/search_query.py --engine brave --query "..." [--n 10] [--json]`
+(читает `BRAVE_SEARCH_API_KEY` из env, exit 2 если ключа нет). Ниже — сырой HTTP-контракт,
+который скрипт реализует.
 
 ### Web search
 
 ```
 GET https://api.search.brave.com/res/v1/web/search?q={query}&count=20
-Headers: X-Subscription-Token: {BRAVE_API_KEY}
+Headers: X-Subscription-Token: {BRAVE_SEARCH_API_KEY}
 ```
 
 ### News search
