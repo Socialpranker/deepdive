@@ -10,9 +10,14 @@ SKILL_MD = ROOT / "SKILL.md"
 SWARM_MD = ROOT / "references" / "swarm_postprocess.md"
 
 # SERPAPI has no free tier and is the only search key the skill still does not call.
-# BRAVE/TAVILY/EXA became the second search engine (scripts/search_query.py).
+# BRAVE/TAVILY/EXA/SERPBASE became the second search engine (scripts/search_query.py).
 DEAD_SEARCH_KEYS = ("SERPAPI_KEY",)
-LIVE_SEARCH_KEYS = ("BRAVE_SEARCH_API_KEY", "TAVILY_API_KEY", "EXA_API_KEY")
+LIVE_SEARCH_KEYS = (
+    "BRAVE_SEARCH_API_KEY",
+    "TAVILY_API_KEY",
+    "EXA_API_KEY",
+    "SERPBASE_API_KEY",
+)
 
 
 def test_dispatch_documents_qclass_field():
