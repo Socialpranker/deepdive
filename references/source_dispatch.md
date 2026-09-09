@@ -40,7 +40,7 @@
 | «job market / hiring X» | `data-statistical-gov` (BLS, Eurostat labor) | `competitive-signals` (LinkedIn — HTML, Glassdoor) | `industry-reports` (HR firms — Korn Ferry, Mercer) |
 | «philosophical / qualitative / framework» | `academic` + `web-general` (long-form essays — substack, blogs, books online) | `forum-discussion` (LessWrong, Marginal Revolution, philosopher's stone) | own community archives |
 
-**Второй поисковый движок как отдельная ось.** Если в env есть `BRAVE_SEARCH_API_KEY` / `TAVILY_API_KEY` / `EXA_API_KEY` (см. `capability_discovery.md`) — независимо от строки матрицы добавь ось `search-engine-2` через `scripts/search_query.py --engine <engine> --query "..."`, помимо `web-general`/WebSearch харнесса. Это не замена Primary/Secondary из матрицы, а дополнительная независимая траектория поиска; пересечение с WebSearch пишется в `plan.md` §15 как `overlap_rate`.
+**Второй поисковый движок как отдельная ось.** Если в env есть `BRAVE_SEARCH_API_KEY` / `TAVILY_API_KEY` / `EXA_API_KEY` / `SERPBASE_API_KEY` (см. `capability_discovery.md`) — независимо от строки матрицы добавь ось `search-engine-2` через `scripts/search_query.py --engine <engine> --query "..."`, помимо `web-general`/WebSearch харнесса. Это не замена Primary/Secondary из матрицы, а дополнительная независимая траектория поиска; пересечение с WebSearch пишется в `plan.md` §15 как `overlap_rate`.
 
 **Если подвопрос не матчится** ни одну строку — действуй по умолчанию: `web-general` + `academic` + `news-current` минимум. И **сразу же запиши в plan.md секцию 12, что dispatch был ad-hoc** — это сигнал для Phase 6 (adversarial) что покрытие могло быть слабым.
 

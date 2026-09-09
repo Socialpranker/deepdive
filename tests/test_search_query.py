@@ -95,6 +95,38 @@ def test_exa_request_shape(monkeypatch):
     assert hits[0]["title"] == "T3"
 
 
+def test_serpbase_request_shape(monkeypatch):
+    captured = {}
+
+    def fake_request(method, timeout=None, **kwargs):
+        captured["method"] = method
+        captured.update(kwargs)
+        return FakeResponse(
+            {
+                "organic": [
+                    {
+                        "title": "T4",
+                        "link": "https://example.com/page",
+                        "snippet": "S4",
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr(sq.requests, "request", fake_request)
+    hits = sq.run_query("serpbase", "google organic", 10, {"SERPBASE_API_KEY": "sb-key"})
+
+    assert captured["method"] == "GET"
+    assert captured["url"] == "https://api.serpbase.dev/google/search"
+    assert captured["headers"]["X-API-Key"] == "sb-key"
+    assert captured["params"]["q"] == "google organic"
+    assert captured["params"]["num"] == 10
+    assert hits[0]["title"] == "T4"
+    assert hits[0]["url"] == "https://example.com/page"
+    assert hits[0]["snippet"] == "S4"
+    assert hits[0]["engine"] == "serpbase"
+
+
 def test_http_error_exits_1(monkeypatch):
     def fake_request(method, timeout=None, **kwargs):
         return FakeResponse({}, status=500)

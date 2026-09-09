@@ -7,17 +7,20 @@ environment explicitly so it is testable by injection (never reads os.environ he
 
 from __future__ import annotations
 
-# 17 known API-key env vars from references/capability_discovery.md.
-# BRAVE_SEARCH_API_KEY / TAVILY_API_KEY / EXA_API_KEY are included: each is a
-# second, independent search engine (own index / own ranking), not a rebrand of
-# harness WebSearch — a second trajectory makes overlap_rate between engines
-# measurable (see references/capability_discovery.md, references/source_dispatch.md).
+# 18 known API-key env vars from references/capability_discovery.md.
+# BRAVE_SEARCH_API_KEY / TAVILY_API_KEY / EXA_API_KEY / SERPBASE_API_KEY are
+# included: each is a second, independent search engine (own index / own
+# ranking; SerpBase is real Google organic results over a REST API), not a
+# rebrand of harness WebSearch — a second trajectory makes overlap_rate between
+# engines measurable (see references/capability_discovery.md,
+# references/source_dispatch.md).
 # SERPAPI_KEY stays excluded: no free tier, so auditing it would advertise
 # coverage most users can't actually use.
 KNOWN_KEYS: tuple[str, ...] = (
     "BRAVE_SEARCH_API_KEY",
     "TAVILY_API_KEY",
     "EXA_API_KEY",
+    "SERPBASE_API_KEY",
     "FRED_API_KEY",
     "GITHUB_TOKEN",
     "NEWSAPI_KEY",

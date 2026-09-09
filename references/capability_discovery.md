@@ -15,7 +15,7 @@
 
 Capability Discovery закрывает этот gap. **Прозрачность для пользователя:** что используется, что пропускается, что бы стоило настроить.
 
-**Второй поисковый движок.** Один движок = одна траектория поиска — конформизм, который правило триангуляции запрещает для источников и должно запрещать для самого канала поиска. Если в env есть `BRAVE_SEARCH_API_KEY`, `TAVILY_API_KEY` или `EXA_API_KEY` — на medium/deep Phase 4 обязана выделить одну поисковую ось под него через `scripts/search_query.py --engine {brave,tavily,exa} --query "..."`, параллельно обычному WebSearch харнесса. Пересечение результатов между движками фиксируется как `overlap_rate` в `plan.md` §15 (низкий overlap — сигнал, что второй движок реально расширяет покрытие, а не дублирует первый).
+**Второй поисковый движок.** Один движок = одна траектория поиска — конформизм, который правило триангуляции запрещает для источников и должно запрещать для самого канала поиска. Если в env есть `BRAVE_SEARCH_API_KEY`, `TAVILY_API_KEY`, `EXA_API_KEY` или `SERPBASE_API_KEY` — на medium/deep Phase 4 обязана выделить одну поисковую ось под него через `scripts/search_query.py --engine {brave,tavily,exa,serpbase} --query "..."`, параллельно обычному WebSearch харнесса. Пересечение результатов между движками фиксируется как `overlap_rate` в `plan.md` §15 (низкий overlap — сигнал, что второй движок реально расширяет покрытие, а не дублирует первый).
 
 ## Workflow фазы
 
@@ -39,6 +39,7 @@ if env $GITHUB_TOKEN exists → mark GitHub as 'authenticated'
 | `BRAVE_SEARCH_API_KEY` | Brave Search | второй поисковый движок, обязателен для одной оси Phase 4 если ключ есть |
 | `TAVILY_API_KEY` | Tavily | второй поисковый движок, обязателен для одной оси Phase 4 если ключ есть |
 | `EXA_API_KEY` | Exa.ai | второй поисковый движок, обязателен для одной оси Phase 4 если ключ есть |
+| `SERPBASE_API_KEY` | SerpBase (Google SERP API) | второй поисковый движок — реальный Google organic через REST, обязателен для одной оси Phase 4 если ключ есть |
 | `SERPAPI_KEY` | SerpAPI | **не используется** — платный, без free tier |
 | `NEWSAPI_KEY` | NewsAPI | для news |
 | `ALPHA_VANTAGE_KEY` | Alpha Vantage | для stock prices |
