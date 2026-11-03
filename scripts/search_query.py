@@ -8,8 +8,11 @@ Usage:
     python3 scripts/search_query.py --engine brave --query "..." [--n 10] [--json]
     python3 scripts/search_query.py --engine tavily --query "..."
     python3 scripts/search_query.py --engine exa --query "..."
+    python3 scripts/search_query.py --engine keenable --query "..."
 
 Reads the API key from env: BRAVE_SEARCH_API_KEY, TAVILY_API_KEY, EXA_API_KEY.
+Keenable needs no key (public endpoint); KEENABLE_API_KEY is optional and
+switches to the keyed endpoint.
 Exit codes: 0 ok, 1 request/HTTP error, 2 missing API key, 3 bad arguments.
 """
 
@@ -26,7 +29,13 @@ ENV_VARS = {
     "brave": "BRAVE_SEARCH_API_KEY",
     "tavily": "TAVILY_API_KEY",
     "exa": "EXA_API_KEY",
+    "keenable": "KEENABLE_API_KEY",
 }
+
+# Engines that work without an API key (the key, if set, is still used).
+KEYLESS_ENGINES = {"keenable"}
+
+KEENABLE_SNIPPET_MAX_CHARS = 1000
 
 TIMEOUT = 20
 
@@ -82,14 +91,29 @@ def _request_exa(query: str, n: int, api_key: str) -> dict:
     }
 
 
+def _request_keenable(query: str, n: int, api_key: str | None) -> dict:
+    headers = {"Content-Type": "application/json", "X-Keenable-Title": "deepdive"}
+    url = "https://api.keenable.ai/v1/search/public"
+    if api_key:
+        headers["X-API-Key"] = api_key
+        url = "https://api.keenable.ai/v1/search"
+    return {
+        "method": "POST",
+        "url": url,
+        "headers": headers,
+        "json": {"query": query, "max_results": n},
+    }
+
+
 BUILDERS = {
     "brave": _request_brave,
     "tavily": _request_tavily,
     "exa": _request_exa,
+    "keenable": _request_keenable,
 }
 
 
-def build_request(engine: str, query: str, n: int, api_key: str) -> dict:
+def build_request(engine: str, query: str, n: int, api_key: str | None) -> dict:
     return BUILDERS[engine](query, n, api_key)
 
 
@@ -129,10 +153,25 @@ def _normalize_exa(payload: dict) -> list[dict]:
     ]
 
 
+def _normalize_keenable(payload: dict) -> list[dict]:
+    results = payload.get("results", []) or []
+    return [
+        {
+            "title": r.get("title", ""),
+            "url": r["url"],
+            "snippet": r.get("description")
+            or (r.get("snippet") or "")[:KEENABLE_SNIPPET_MAX_CHARS],
+        }
+        for r in results
+        if r.get("url")
+    ]
+
+
 NORMALIZERS = {
     "brave": _normalize_brave,
     "tavily": _normalize_tavily,
     "exa": _normalize_exa,
+    "keenable": _normalize_keenable,
 }
 
 
@@ -157,7 +196,7 @@ def normalize(engine: str, payload: dict) -> list[dict]:
 def run_query(engine: str, query: str, n: int, env: dict) -> list[dict]:
     """Raises SystemExit(2) if the key is missing, SystemExit(1) on transport/HTTP error."""
     api_key = _get_key(engine, env)
-    if not api_key:
+    if not api_key and engine not in KEYLESS_ENGINES:
         print(f"error: missing API key — set {ENV_VARS[engine]}", file=sys.stderr)
         raise SystemExit(2)
 
