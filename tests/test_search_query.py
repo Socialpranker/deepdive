@@ -131,3 +131,47 @@ def test_main_missing_key_prints_env_var_name(capsys, monkeypatch):
     assert rc == 2
     captured = capsys.readouterr()
     assert "EXA_API_KEY" in captured.err
+
+
+def test_keenable_works_without_key(monkeypatch):
+    captured = {}
+
+    def fake_request(method, timeout=None, **kwargs):
+        captured["method"] = method
+        captured.update(kwargs)
+        return FakeResponse(
+            {
+                "results": [
+                    {"title": "T", "url": "https://x", "description": "D", "snippet": "S"},
+                    {"title": "no url", "description": "dropped"},
+                    {"title": "U", "url": "https://y", "snippet": "z" * 2000},
+                ]
+            }
+        )
+
+    monkeypatch.setattr(sq.requests, "request", fake_request)
+    hits = sq.run_query("keenable", "hello", 5, {})
+
+    assert captured["method"] == "POST"
+    assert captured["url"] == "https://api.keenable.ai/v1/search/public"
+    assert captured["headers"]["X-Keenable-Title"] == "deepdive"
+    assert "X-API-Key" not in captured["headers"]
+    assert captured["json"] == {"query": "hello", "max_results": 5}
+    assert [h["url"] for h in hits] == ["https://x", "https://y"]
+    assert hits[0]["snippet"] == "D"
+    assert len(hits[1]["snippet"]) == sq.KEENABLE_SNIPPET_MAX_CHARS
+    assert hits[0]["engine"] == "keenable"
+
+
+def test_keenable_uses_keyed_endpoint_with_key(monkeypatch):
+    captured = {}
+
+    def fake_request(method, timeout=None, **kwargs):
+        captured.update(kwargs)
+        return FakeResponse({"results": []})
+
+    monkeypatch.setattr(sq.requests, "request", fake_request)
+    sq.run_query("keenable", "hello", 5, {"KEENABLE_API_KEY": "kn"})
+
+    assert captured["url"] == "https://api.keenable.ai/v1/search"
+    assert captured["headers"]["X-API-Key"] == "kn"
