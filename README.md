@@ -146,7 +146,7 @@ The skill runs **<!--gen:count:phases-->13<!--/gen--> phases** in order:
 | **5** | **Claims-ledger + triangulation** | haiku / low |
 | **5.5** | **Evidence filter** | sonnet / low |
 | **5.7** | **Wiki reconcile** | sonnet / low |
-| **6** | **Synthesis + multi-angle red team** | opus / high |
+| **6** | **Synthesis + multi-angle red team** | sonnet → opus on deep / high |
 | **6.5** | **Verify** | haiku / low |
 | **7** | **Refresh targets** | sonnet / medium |
 | **8** | **Decision walkthrough** | opus / high |

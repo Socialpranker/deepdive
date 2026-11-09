@@ -31,6 +31,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from quiet import CAP_ERRORS, CAP_WARNINGS, capped  # noqa: E402
+
 # A number worth tracking: at least 2 significant digits, optional decimals,
 # optional thousands separators, optional %/x/unit suffix handled by the caller.
 NUMBER_RE = re.compile(r"(?<![\w.])(\d{1,3}(?:[ ,]\d{3})+|\d+(?:\.\d+)?)(?![\w])")
@@ -200,7 +203,9 @@ def check_ledger(d: Path, r: Report) -> dict:
     """Quantitative claims must carry as_of and may not be `high` without it."""
     ledger = d / "claims.csv"
     if not ledger.is_file():
-        return {"numeric_claims": 0}
+        # «Проверять нечего» и «проверено, чисто» — разные ответы.
+        r.warn("claims.csv not found — numeric provenance NOT checked")
+        return {"numeric_claims": None}
     rows = list(csv.DictReader(ledger.read_text(encoding="utf-8").splitlines()))
     numeric = 0
     for row in rows:
@@ -229,6 +234,7 @@ def main() -> int:
     ap.add_argument("--research-dir", required=True, type=Path)
     ap.add_argument("--strict", action="store_true", help="Exit 1 if any error")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--verbose", action="store_true", help="print every warning, not the first few")
     args = ap.parse_args()
 
     d = args.research_dir
@@ -253,10 +259,10 @@ def main() -> int:
         print(json.dumps(result, indent=2, ensure_ascii=False))
     else:
         print(f"Number provenance: {d}   ({len(sources)} sources)")
-        for m in r.errors:
-            print(f"  ERROR   {m}")
-        for m in r.warnings:
-            print(f"  warn    {m}")
+        for line in capped((f"  ERROR   {m}" for m in r.errors), CAP_ERRORS, args.verbose):
+            print(line)
+        for line in capped((f"  warn    {m}" for m in r.warnings), CAP_WARNINGS, args.verbose):
+            print(line)
         if not r.errors and not r.warnings:
             print(
                 "  OK — every number is traceable and no value circulates across roots"

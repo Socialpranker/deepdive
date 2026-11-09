@@ -1,5 +1,18 @@
 # Search channels — каталог <!--gen:count:channels-->29<!--/gen--> каналов поиска
 
+## Содержание
+
+- Как использовать
+- Каталог <!--gen:count:channels-->29<!--/gen--> каналов
+- Channel selection — по жанрам
+- Channel selection — по типам данных в вопросе
+- Paywall fallback protocol (универсальный)
+- Bot-block ≠ paywall
+- Открытые двери закрытых сайтов
+- Forbidden patterns (не использовать)
+- Когда канал «не работает»
+- Future channels (TODO когда появятся возможности)
+
 Каналы — это **именованные search strategies** под разные типы источников. Каждый канал имеет известные query patterns, ожидаемый формат результатов, и known limitations.
 
 ## Как использовать
@@ -62,8 +75,7 @@
 3. `"<paper title>" filetype:pdf` — institutional copy
 4. `site:edu "<paper title>"` — university hosting
 5. Unpaywall search
-6. Last resort (user-elected, with legal acknowledgement): Sci-Hub mirror — пометить `access: gray-area-source` в frontmatter источника
-7. Если ничего — fetch abstract, отметить `access: paywalled-abstract-only`
+6. Если ничего — fetch abstract, отметить `access: paywalled-abstract-only`
 
 **Когда:** validation научных claims, deep explainer, любой scientific topic.
 
@@ -572,10 +584,7 @@ access: api-free-no-key   # | api-free-with-key | api-paid | api-fallback-html
 4. Try alternative source с тем же контентом (summary, news article, blog)
 5. Try ResearchGate / Academia.edu (для academic)
 6. Try Google Cache
-7. Last resort — Sci-Hub / LibGen mirrors (user-elected, legal grey area)
-   - Если используешь — пометить `access: gray-area-source` в frontmatter
-   - Disclaimer note про legal status в `notes` поле
-8. Если ничего не работает:
+7. Если ничего не работает:
    - `access: paywalled-abstract-only` (если abstract есть)
    - `access: closed` (если совсем недоступно)
    - Записать в `gaps` источника в JSON суб-агента
@@ -585,7 +594,7 @@ access: api-free-no-key   # | api-free-with-key | api-paid | api-fallback-html
 
 Два разных отказа, и путают их постоянно. Протокол выше — про **paywall**: контент есть, но за деньги или логином. Отдельный случай — когда контент публичный и бесплатный, а закрыт именно AI-агент: `robots.txt` с `Disallow` для `GPTBot`/`ClaudeBot`/`CCBot`. WebFetch такие правила соблюдает и отвечает «unable to fetch from …», из-за чего живой открытый источник выглядит мёртвым.
 
-Замер 21.08.2026 на 7 URL: WebFetch не взял 6 из 7 (nytimes, theverge, wired, stackoverflow, reuters, reddit — прошёл только arxiv). Из этих шести `scripts/fetch_source.py` вернул контент на первом тире для трёх (nytimes 13 КБ, theverge 36 КБ, wired 42 КБ) — все три отдают страницу обычному клиенту и режут только AI-токены. Остальные три — не бот-блок, а auth-волл: reuters 401, reddit 403 «log in or use your developer token», stackoverflow 403 Cloudflare.
+Замер на 7 URL (цифры и дата — `NOTES_dated.md`): WebFetch брал не все; `scripts/fetch_source.py` вернул контент на первом тире для сайтов, которые отдают страницу обычному клиенту и режут только AI-токены (nytimes, theverge, wired). Остальные — не бот-блок, а auth-волл (reuters 401, reddit 403, stackoverflow 403 Cloudflare).
 
 Отсюда правило: **сначала классифицируй отказ, потом выбирай протокол.**
 
@@ -598,9 +607,9 @@ access: api-free-no-key   # | api-free-with-key | api-paid | api-fallback-html
 
 ## Открытые двери закрытых сайтов
 
-`references/fallback_routes.yaml` — курируемая карта «домен → официальный API / фид / архив», которую `fetch_source.py` печатает сам при вердиктах `antibot` и `auth-wall`. Карта ручная не по лени: у `api_sources/` нет поля с веб-доменом (аудит 24.08.2026 — `Endpoint base:`/`Auth:`/`Docs:` есть у всех 47 файлов, домена нет ни у одного), и связь бывает двух видов — `self` (API на том же домене) и `proxy` (сторонний агрегатор отдаёт чужой контент). Машинно это не выводится.
+`references/fallback_routes.yaml` — курируемая карта «домен → официальный API / фид / архив», которую `fetch_source.py` печатает сам при вердиктах `antibot` и `auth-wall`. Карта ручная не по лени: у `api_sources/` нет поля с веб-доменом (аудит, цифры — `NOTES_dated.md`: `Endpoint base:`/`Auth:`/`Docs:` есть у всех файлов, домена нет ни у одного), и связь бывает двух видов — `self` (API на том же домене) и `proxy` (сторонний агрегатор отдаёт чужой контент). Машинно это не выводится.
 
-**Главная находка замера 24.08.2026: фид переживает блокировку HTML.** Пайплайн фида отдельный и анти-бот-слоем обычно не прикрыт.
+**Главная находка замера (дата — `NOTES_dated.md`): фид переживает блокировку HTML.** Пайплайн фида отдельный и анти-бот-слоем обычно не прикрыт.
 
 | Сайт | HTML | Фид / API |
 |---|---|---|

@@ -1,6 +1,10 @@
 # Шаблон plan.md
 
-Дополнение к `workflow.md` Фаза 3. Читать **при входе в Фазу 3**, не заранее — до
+## Содержание
+
+Секции шаблона (внутри блока кода): §0 User context · §1 Time-box · §2 Главный вопрос · §3 Decision Spec · §4 Acceptance criteria · §5 Discovered existing · §6 Глоссарий · §7 Жанр · §8 Блоки с rationale · §9 Гипотезы · §10 Risk register · §11 Подтемы ↔ Блоки (+ least-to-most) · §12 Information sourcing strategy · §13 Opposition queries · §14 Stop-criteria · §15 Notes · §16 Update changelog
+
+Дополнение к `phases/p3_plan.md`. Читать **при входе в Фазу 3**, не заранее — до
 этого момента прогону нужна только структура (5 секций HEADER → SCOPE → STRUCTURE →
 EXECUTION → TRACKING), а не буквальный текст шаблона.
 

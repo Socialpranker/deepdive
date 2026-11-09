@@ -26,7 +26,9 @@ except ImportError:  # run as a script
 TIERS = ("strong", "mid", "cheap")
 SEARCH_TRIGGERS = ("empty_result", "citation_lead", "unexpected_finding", "contradiction")
 
-MAX_TOKENS = 4096
+# Opus 5.5 / Sonnet 5.5 always think (thinking can't be disabled) and the
+# thinking tokens count against max_tokens — 4096 truncated structured output.
+MAX_TOKENS = 16000
 
 # --- Stage 2: structured-output schema for the web_search signals call ---
 # Constraints (Anthropic structured outputs): every object needs
@@ -256,12 +258,19 @@ def _collect_call1(resp) -> tuple[str, list[dict]]:
     return "".join(texts), sources
 
 
+def _raise_on_refusal(msg) -> None:
+    """A refusal is HTTP 200 with stop_reason "refusal" and no usable text."""
+    if getattr(msg, "stop_reason", None) == "refusal":
+        category = getattr(getattr(msg, "stop_details", None), "category", None)
+        raise RuntimeError(f"Claude refusal (category={category})")
+
+
 class ClaudeProvider:
     """Adapter for Claude via the anthropic SDK. fanout = N parallel complete()
     calls (ThreadPoolExecutor); complete() maps tiers to Opus/Sonnet/Haiku."""
 
     name = "claude"
-    TIER_MODEL = {"strong": "claude-opus-4-8", "mid": "claude-sonnet-4-6", "cheap": "claude-haiku-4-5"}
+    TIER_MODEL = {"strong": "claude-opus-5-5", "mid": "claude-sonnet-5-5", "cheap": "claude-haiku-5-5"}
 
     def __init__(self, client=None, *, model_override: str | None = None, max_concurrency: int = 5):
         if client is None:
@@ -289,6 +298,7 @@ class ClaudeProvider:
             system=system or anthropic.NOT_GIVEN,
             messages=[{"role": "user", "content": prompt}],
         )
+        _raise_on_refusal(msg)
         return "".join(b.text for b in msg.content if b.type == "text")
 
     def fanout(self, tasks: list[str], *, model_tier: str = "cheap") -> list[str]:
@@ -376,6 +386,7 @@ class ClaudeProvider:
             output_config={"format": {"type": "json_schema", "schema": schema}},
             messages=[{"role": "user", "content": prompt}],
         )
+        _raise_on_refusal(resp)
         text = "".join(b.text for b in resp.content if b.type == "text")
         return json.loads(text)
 

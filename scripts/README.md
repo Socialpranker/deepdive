@@ -34,7 +34,13 @@ python3 scripts/search_query.py --engine {brave,tavily,exa} --query "..." [--n 1
 ```bash
 python scripts/build_sources_csv.py --research-dir research/<slug>
 python scripts/build_sources_csv.py --research-dir research/<slug> --check   # exit 1 если stale (CI)
+python scripts/build_sources_csv.py --lint sources/05_x.md sources/06_y.md      # exit 1 на значение вне enum
 ```
+
+Enum-поля (`type`, `caveat`, `origin_kind`, `access`, `fetch_tier`, `used`) приводятся к
+канону по регистру и кавычкам. Вне enum: при сборке — WARN (архивные прогоны собираются,
+`finish.py` не краснеет), в `--lint` — ошибка; `--lint` гоняет fetcher после записи.
+`total` считается как credibility + recency + bias.
 
 Прогонять как шаг 0 finish-up (см. `SKILL.md`), перед `validate_phases.py`.
 

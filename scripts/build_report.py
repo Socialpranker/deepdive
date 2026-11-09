@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Собрать отчёт прогона в HTML, PDF и DOCX из одного семантического источника.
+"""Собрать прогон в две версии: техническую и человеческую.
 
-Вход  — `<run>/<YYYY-MM-DD>_<genre>.md` плюс `numbers.csv`, `figures.csv`, `sources.csv`.
-Выход — те же три формата рядом. Руками ни один из них не поддерживается: три
-расходящихся файла это три разных отчёта, а не один в трёх видах.
+Техническая — `<run>/<YYYY-MM-DD>_<genre>.md` плюс `numbers.csv`, `figures.csv`,
+`sources.csv` -> `<YYYY-MM-DD>_<genre>.html` для агента и специалиста.
+Человеческая — `readout.md` -> страница и полный PDF/DOCX, см. `build_readout.py`.
+Руками ни один выход не поддерживается: расходящиеся файлы это разные отчёты,
+а не один в нескольких видах.
 
 Что делает сборка сверх конвертации:
 
@@ -36,6 +38,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import build_readout
 import mermaid_figures
 import report_charts
 
@@ -44,12 +47,9 @@ CSS = SKILL / "assets" / "report.css"
 
 REPORT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}_[a-z]+\.md$")
 
-CHROME_CANDIDATES = [
-    Path.home()
-    / "Library/Caches/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-    Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
-    Path("/Applications/Chromium.app/Contents/MacOS/Chromium"),
-]
+# Only the standalone headless shell: launching the full Chrome.app on macOS
+# steals focus and intercepts Dock clicks while the PDF prints.
+PUPPETEER_SHELLS = Path.home() / ".cache/puppeteer/chrome-headless-shell"
 
 
 class BuildError(Exception):
@@ -63,11 +63,17 @@ def find_report(run: Path) -> Path:
     return hits[-1]
 
 
+def _shell_version(binary: Path) -> tuple[int, ...]:
+    # <platform>-<version>/<platform-dir>/chrome-headless-shell, e.g. mac_arm-155.0.8059.84
+    tail = binary.parents[1].name.rpartition("-")[2]
+    return tuple(int(x) for x in tail.split(".") if x.isdigit())
+
+
 def find_chrome() -> Path | None:
-    for c in CHROME_CANDIDATES:
-        if c.exists():
-            return c
-    found = shutil.which("chromium") or shutil.which("google-chrome")
+    shells = [p for p in PUPPETEER_SHELLS.glob("*/*/chrome-headless-shell") if p.is_file()]
+    if shells:
+        return max(shells, key=_shell_version)
+    found = shutil.which("chrome-headless-shell") or shutil.which("chromium") or shutil.which("google-chrome")
     return Path(found) if found else None
 
 
@@ -406,28 +412,61 @@ def build(run: Path, formats: set[str], strict: bool = True) -> dict:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="Собрать отчёт прогона в HTML/PDF/DOCX")
+    ap = argparse.ArgumentParser(
+        description="Собрать прогон: техническую версию (HTML) и человеческую (HTML-страница + полный PDF/DOCX)"
+    )
     ap.add_argument("run", type=Path, help="папка прогона")
     ap.add_argument(
-        "--formats", default="html,pdf,docx", help="через запятую: html,pdf,docx"
+        "--formats",
+        default="html,pdf,docx",
+        help="форматы человеческой версии через запятую: html,pdf,docx",
     )
     ap.add_argument(
         "--no-strict", action="store_true", help="не падать на битых ссылках и фигурах"
     )
     args = ap.parse_args(argv)
+    strict = not args.no_strict
     try:
-        res = build(args.run, set(args.formats.split(",")), strict=not args.no_strict)
-    except (BuildError, report_charts.FigureError, mermaid_figures.MermaidError) as exc:
+        # Техническая версия — для агента и специалиста, ей хватает HTML со
+        # сносками на полях. PDF и DOCX теперь несут человеческую версию.
+        res = build(args.run, {"html"}, strict=strict)
+        human = None
+        if (args.run / build_readout.READOUT).exists():
+            human = build_readout.build(args.run, set(args.formats.split(",")), strict=strict)
+    # Запущенный скриптом, этот модуль — __main__, а build_readout импортирует
+    # build_report заново: его BuildError — другой класс, и без второго имени
+    # отказ сборки вылетал трейсбеком вместо строки «ОШИБКА».
+    except (
+        BuildError,
+        build_readout.br.BuildError,
+        report_charts.FigureError,
+        mermaid_figures.MermaidError,
+    ) as exc:
         print(f"ОШИБКА: {exc}", file=sys.stderr)
         return 2
     print(
-        f"  фигур: {res['figures']} · схем: {res['diagrams']}"
-        f" · сносок на поля: {res['sidenotes']}"
+        f"  техническая: фигур {res['figures']} · схем {res['diagrams']}"
+        f" · сносок на поля {res['sidenotes']}"
     )
     for p in res["files"]:
         print(f"  {p.name}  {p.stat().st_size} B")
     for p in res["problems"]:
         print(f"  ⚠ {p}", file=sys.stderr)
+    if human is None:
+        print(
+            f"  ⚠ нет {build_readout.READOUT} — человеческая версия не собрана",
+            file=sys.stderr,
+        )
+        build_readout.write_map(args.run, [])
+        return 0
+    print(f"  человеческая ({human['genre']}): карточек {human['findings']}")
+    for p in human["files"]:
+        print(f"  {p.name}  {p.stat().st_size} B")
+    for p in human["problems"] + human["warnings"]:
+        print(f"  ⚠ {p}", file=sys.stderr)
+    m = build_readout.write_map(args.run, human["files"])
+    if m:
+        print(f"  карта прогона: {m.name}")
     return 0
 
 

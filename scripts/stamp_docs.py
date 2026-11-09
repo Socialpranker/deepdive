@@ -10,6 +10,7 @@ Usage:
 
 The human runs --write and commits; CI runs --check.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -51,10 +52,16 @@ def render_values(repo: Path) -> dict[str, str]:
         raise ValueError("no phases — refusing to stamp")
 
     list_ru = " → ".join(p["name_ru"] for p in phases)
-    table_rows = "\n" + "\n".join(
-        f"| **{p['id']}** | **{p['name_en']}** | {p['model']} / {p['effort']} |"
-        for p in phases
-    ) + "\n"
+    table_rows = (
+        "\n"
+        + "\n".join(
+            f"| **{p['id']}** | **{p['name_en']}** | {p['model']}"
+            f"{' → ' + p['model_deep'] + ' on deep' if p.get('model_deep') else ''}"
+            f" / {p['effort']} |"
+            for p in phases
+        )
+        + "\n"
+    )
 
     return {
         "count:blocks": str(c["blocks"]),
@@ -86,8 +93,9 @@ def stamp_text(text: str, values: dict[str, str], *, path: str) -> str:
         if inner and inner.start() < close_at:
             raise ValueError(
                 f"{path}: nested marker 'gen:{inner.group(1)}' inside 'gen:{key}' "
-                f"(markers cannot overlap)")
-        out.append(text[pos:m.end()])
+                f"(markers cannot overlap)"
+            )
+        out.append(text[pos : m.end()])
         out.append(values[key])
         out.append(CLOSE)
         pos = close_at + len(CLOSE)
@@ -115,8 +123,12 @@ def run(repo: Path, targets: list[Path], *, write: bool) -> int:
                 drift = 1
                 print(f"DRIFT: {p}")
                 diff = difflib.unified_diff(
-                    original.splitlines(), stamped.splitlines(),
-                    fromfile=f"{p} (committed)", tofile=f"{p} (generated)", lineterm="")
+                    original.splitlines(),
+                    stamped.splitlines(),
+                    fromfile=f"{p} (committed)",
+                    tofile=f"{p} (generated)",
+                    lineterm="",
+                )
                 print("\n".join(diff))
     # Spec: a generator key that appears in NO doc is a likely-forgotten marker → warn (not fail).
     unused = sorted(set(values) - seen_keys)

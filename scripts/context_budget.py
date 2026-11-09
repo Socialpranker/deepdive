@@ -78,9 +78,19 @@ BUDGET_ALWAYS_FLOOR = 57000  # "base refs" every medium/deep run loads
 # plan_gate.md joined the floor in the same pass: Phase 3.7 is skipped on shallow only,
 # so every medium/deep run reads it. SKILL.md already listed it as base while this list
 # did not — the floor was understated by ~3.3k tok.
+# 2026-10-19: workflow.md split into references/phases/ (index stays in the floor);
+# Phase 6 synthesis moved to the deepdive-synthesizer subagent, so blocks/*.md and
+# synthesis_outline.md left the main-thread profiles for the "synthesizer" one.
 ALWAYS_LOAD = [
     "SKILL.md",
     "references/workflow.md",
+    "references/phases/p1_reframing.md",
+    "references/phases/p2_genre.md",
+    "references/phases/p3_plan.md",
+    "references/phases/p4_search.md",
+    "references/phases/p5_claims.md",
+    "references/phases/p8_walkthrough.md",
+    "references/phases/rules.md",
     "references/question_reframing.md",
     "references/plan_gate.md",
     "references/genres.md",
@@ -102,10 +112,8 @@ PROFILES = {
     ],
     "medium": ALWAYS_LOAD
     + [
-        "references/blocks/frame.md",
-        "references/blocks/explain.md",
-        "references/blocks/compare.md",
-        "references/blocks/close.md",
+        "references/phases/p6_9_export.md",
+        "references/phases/p7_refresh.md",
         "references/subagents_v2.md",
         "references/adversarial_pass.md",
         "references/source_scoring.md",
@@ -123,17 +131,23 @@ PROFILES = {
         "references/awesome_lists_registry.md",
         "references/stat_sources/INDEX.md",
         "references/api_sources/INDEX.md",
-        # deep pulls several block categories + a few stat/api leaf files
+        "references/phases/p6_9_export.md",
+        "references/phases/p7_refresh.md",
+        # deep pulls a few stat/api leaf files
+        "references/stat_sources/core/gov_macro.md",
+        "references/stat_sources/core/companies_public.md",
+    ],
+    # deepdive-synthesizer's own window (Phase 6, medium/deep), not the main thread's;
+    # a deep run pulls more block categories than this typical medium set.
+    "synthesizer": [
+        "references/phases/p6_synthesis.md",
+        "references/phases/rules.md",
+        "references/synthesis_outline.md",
+        "references/blocks/INDEX.md",
         "references/blocks/frame.md",
         "references/blocks/explain.md",
         "references/blocks/compare.md",
-        "references/blocks/map.md",
-        "references/blocks/analyze.md",
-        "references/blocks/numbers.md",
-        "references/blocks/validate.md",
         "references/blocks/close.md",
-        "references/stat_sources/core/gov_macro.md",
-        "references/stat_sources/core/companies_public.md",
     ],
 }
 

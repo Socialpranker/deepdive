@@ -42,7 +42,7 @@ USER_AGENT = "deepdive-citecheck/1.0 (+https://github.com/Socialpranker/deepdive
 TIMEOUT_SECONDS = 12
 DELAY_BETWEEN_REQUESTS = 0.4
 # access values that make a non-200 expected rather than a failure
-EXPECTED_NON_OPEN = {"paywalled", "paywalled-abstract-only", "closed", "archive-restored", "gray-area-source"}
+EXPECTED_NON_OPEN = {"paywalled", "paywalled-abstract-only", "closed", "archive-restored"}
 
 
 def make_session() -> requests.Session:
@@ -127,6 +127,9 @@ def load_sources(research_dir: Path) -> tuple[list[Source], str]:
 
 def check_url(session: requests.Session, src: Source) -> CiteResult:
     parsed = urlparse(src.url)
+    if parsed.scheme == "file":
+        # own measurement (evidence/ lab run): nothing to fetch, not a dead link
+        return CiteResult(src.sid, src.url, src.access, "LOCAL_FILE", True, False, None, False)
     if not parsed.scheme or not parsed.netloc:
         return CiteResult(src.sid, src.url, src.access, "INVALID_URL", False, True, None, src.access == "OPEN")
 

@@ -6,18 +6,21 @@ wiki receipt) whose omission was where phases got silently skipped.
 
 Runs, in order, never stopping early so one report shows everything:
   1. build_sources_csv      sources/NN.md  -> sources.csv
-  2. check_citations        liveness       -> .verify/citations.json   (skip: --offline)
-  3. wiki_ingest            run -> cross-run wiki, receipt .verify/wiki_ingest.json
-  4. check_number_provenance --strict
-  5. check_number_arithmetic --strict
-  6. validate_phases --strict   the gate — last, so it sees everything above
+  2. score_claims --strict  ledger status/confidence == what sources.csv supports
+  3. check_citations        liveness       -> .verify/citations.json   (skip: --offline)
+  4. wiki_ingest            run -> cross-run wiki, receipt .verify/wiki_ingest.json
+  5. check_number_provenance --strict
+  6. check_number_arithmetic --strict
+  7. check_numbers          report numbers vs the cited source's quotes — warning only
+  8. validate_phases --strict   the gate — last, so it sees everything above
 
-Exit 1 if any step failed. Usage:
+Exit 1 if any non-advisory step failed. Usage:
     python scripts/finish.py --research-dir <root>/<slug> [--mode medium] [--offline]
 """
 from __future__ import annotations
 
 import argparse
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -34,6 +37,10 @@ class Step:
     script: Path
     extra: Callable[[Path, str | None, Path | None], list[str]]
     network: bool = False
+    # A failure is printed as `warn` and does not turn finish red. check_numbers
+    # flags 30-60% of numbers on pg-cdc runs (mostly numbers kept in a fetcher's
+    # summary, not in quotes), too often for a blocker until that is measured down.
+    advisory: bool = False
 
 
 @dataclass
@@ -42,6 +49,7 @@ class StepResult:
     rc: int
     output: str
     skipped: bool = False
+    advisory: bool = False
     argv: list[str] = field(default_factory=list)
 
 
@@ -51,6 +59,7 @@ def _mode(m: str | None) -> list[str]:
 
 STEPS: list[Step] = [
     Step("sources_csv", REPO / "scripts/build_sources_csv.py", lambda d, m, w: []),
+    Step("claim_scores", REPO / "scripts/score_claims.py", lambda d, m, w: ["--strict"]),
     Step(
         "citations",
         REPO / "eval/check_citations.py",
@@ -64,6 +73,7 @@ STEPS: list[Step] = [
     ),
     Step("number_provenance", REPO / "scripts/check_number_provenance.py", lambda d, m, w: ["--strict"]),
     Step("number_arithmetic", REPO / "scripts/check_number_arithmetic.py", lambda d, m, w: ["--strict"]),
+    Step("number_integrity", REPO / "eval/check_numbers.py", lambda d, m, w: ["--fail-on-missing"], advisory=True),
     Step("phase_gate", REPO / "scripts/validate_phases.py", lambda d, m, w: ["--strict", *_mode(m)]),
 ]
 
@@ -89,21 +99,24 @@ def run_finish(
         if step.network and offline:
             results.append(StepResult(step.name, 0, "skipped (--offline)", skipped=True))
             continue
-        argv = [PY, str(step.script), "--research-dir", str(d), *step.extra(d, mode, wiki_root)]
+        # check_citations needs `requests`, which a bare system python lacks: let uv supply it.
+        launcher = ["uv", "run", "--with", "requests"] if step.network and shutil.which("uv") else [PY]
+        argv = [*launcher, str(step.script), "--research-dir", str(d), *step.extra(d, mode, wiki_root)]
         res = runner(step.name, argv)
         res.argv = res.argv or argv
+        res.advisory = step.advisory
         results.append(res)
     return results
 
 
 def exit_code(results: list[StepResult]) -> int:
-    return 1 if any(r.rc != 0 and not r.skipped for r in results) else 0
+    return 1 if any(r.rc != 0 and not r.skipped and not r.advisory for r in results) else 0
 
 
 def render(results: list[StepResult], verbose: bool) -> str:
     lines = []
     for r in results:
-        status = "skip" if r.skipped else ("ok" if r.rc == 0 else "FAIL")
+        status = "skip" if r.skipped else "ok" if r.rc == 0 else "warn" if r.advisory else "FAIL"
         lines.append(f"  {status:<5} {r.name}")
         if verbose or (r.rc != 0 and not r.skipped):
             out = r.output.strip().splitlines()

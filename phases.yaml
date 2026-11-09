@@ -46,7 +46,7 @@ phases:
   # bounded deviation round). The per-round search fan-out is sonnet/medium;
   # the between-rounds evaluation runs at the strong tier. This is ONE phase
   # whose internal behavior is a loop — no new phase id is introduced, so the
-  # phase count is unchanged. See references/workflow.md "Phase 4" for the loop.
+  # phase count is unchanged. See references/phases/p4_search.md for the loop.
   - id: "4"
     name_ru: "Поиск"
     name_en: "Search"
@@ -55,9 +55,9 @@ phases:
     depth_gate: shallow
     loop: "true"
   # Phase 5 includes a gap-wave LOOP after the first claims.csv pass: rows
-  # with status != triangulated get one targeted haiku/low sub-agent each,
+  # with status != triangulated get one targeted deepdive-fetcher (haiku/medium) each,
   # max 2 rounds, else marked data-insufficient. Same convention as Phase 4 —
-  # no new phase id for the loop, see references/workflow.md "Фаза 5".
+  # no new phase id for the loop, see references/phases/p5_claims.md.
   - id: "5"
     name_ru: "Claims-ledger + триангуляция"
     name_en: "Claims-ledger + triangulation"
@@ -94,7 +94,8 @@ phases:
   - id: "6"
     name_ru: "Синтез + multi-angle red team"
     name_en: "Synthesis + multi-angle red team"
-    model: opus
+    model: sonnet
+    model_deep: opus
     effort: high
     depth_gate: shallow
   - id: "6.5"

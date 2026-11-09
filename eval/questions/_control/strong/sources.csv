@@ -1,0 +1,5 @@
+id,title,url,type,used
+s01,Dream-RSI paper (arXiv),https://arxiv.org/abs/2609.14858,Academic,Y
+s02,Dream-RSI project page,https://dream-rsi.com,Vendor,Y
+s03,AlphaEvolve announcement,https://deepmind.google/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/,Industry-blog,Y
+s04,arXiv listing (cs.CL),https://arxiv.org/list/cs.CL/recent,Index,N
