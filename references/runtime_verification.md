@@ -1,5 +1,17 @@
 # Runtime citation verification — Phase 6.5
 
+## Содержание
+
+- Where it slots in
+- Procedure (the skill runs this itself)
+- Layer 2 — Faithfulness (does the source actually support the claim?)
+- Layer 3 — Qualifier preservation (does the REPORT still say what the claim said?)
+- Layer 4 — Construct provenance (does the NAME in the report exist outside it?)
+- Block F10 — Verification header
+- I/O contract — who writes, who reads (no circular reference)
+- Why act, not just measure
+- SKILL.md insert
+
 > Drop-in addition to the workflow. Moves citation integrity from an *eval-only*
 > afterthought into the live pipeline, so **every** medium/deep run self-verifies
 > its sources before the report is declared done. This is the skill's one defensible
@@ -97,8 +109,13 @@ re-scan `sources/NN.md` deciding which quote belongs to which claim (that would 
    > but is narrower/weaker or backs only some; UNSUPPORTED if it does not back the claim.
    > Output: {verdict, unsupported_parts: [...], reason: "<one line>"}.
 
-2. Model: `haiku`/low (runs on every pair); escalate disputed/UNSUPPORTED pairs to
-   `sonnet`/medium on deep. NOTE: this is an LLM judge with its own error rate — judge
+2. Model: a different and stronger model than the writer of the report — writer
+   `sonnet` → judge `opus`; writer `opus` → judge `opus` with a fresh context and no
+   access to the draft's reasoning. Haiku is not a faithfulness judge: D1 (2026-10-28)
+   got 15/16 SUPPORTED from it while the external judge found 3/8 theses unsupported.
+   **Unit = a report sentence, not a ledger row:** every sentence of the dated report
+   and `readout.md` carrying `[sNN]` is a claim, paired with that source's quotes; the
+   ledger row passing says nothing about how the sentence restated it. NOTE: this is an LLM judge with its own error rate — judge
    against the verbatim quote (not the summary), default to PARTIAL when unsure, and
    treat one UNSUPPORTED verdict as a flag to re-check, not as ground truth.
 3. Act, don't just score:
@@ -118,6 +135,11 @@ re-scan `sources/NN.md` deciding which quote belongs to which claim (that would 
      ]
    }
    ```
+   **Contract, enforced by `validate_phases.py`:** a non-empty `results` list; every
+   item carries `claim_id`, `model` and a `verdict` from the enum (upper case). Same for
+   `qualifiers.json`. Any other shape — `claims[]`, lowercase verdicts, no `model` — is a
+   red gate: the audit found faithfulness 0.26–1.0 across runs that could not be compared
+   because each run invented its own form.
    `faithfulness_integrity = SUPPORTED / total` — a SECOND integrity axis, separate from
    liveness. Also render a human-readable `.verify/faithfulness.md` for the header link.
    **This artifact is the single source of truth for faithfulness** — `rubric.md` axis 3
@@ -196,8 +218,9 @@ expensive one and duplicate red team.
    sentence makes the layer noise and it will be switched off. Judge the removal of a
    LIMIT, not the loss of words.
 
-4. Model: `haiku`/low — comparing two short texts. Escalate `BROADENED` and
-   `SCOPE-DROPPED` to `sonnet`/medium on deep.
+4. Executor: `explore-haiku` (haiku/medium from its frontmatter; on low Haiku 5.5
+   skips checks) — comparing two short texts. On deep, escalate `BROADENED` and
+   `SCOPE-DROPPED` to `general-purpose` with `model: "sonnet"`, `effort: "medium"`.
 
 5. **Act, don't just score** (same discipline as Layers 1-2):
    - `BROADENED` → restore the qualifier in the report. Do NOT weaken the ledger row to
@@ -254,7 +277,7 @@ This is the single most frequent generation failure measured on research agents:
 total, the largest of the three groups). It is not a hallucinated citation — the
 citations may all resolve. It is a plausible construct presented as established.
 
-**Procedure** (`haiku`/low; medium/deep required, shallow optional):
+**Procedure** (`explore-haiku`, haiku/medium from its frontmatter; medium/deep required, shallow optional):
 
 1. **Collect candidates from the final report + `memo.md`.** A candidate is any
    *named* abstraction: capitalized multi-word names (`Research-Synthesis
@@ -302,9 +325,8 @@ against a corpus, by a model that did not write it.
 
 **Шаблон блока живёт в `references/blocks/frame.md` § F10.** Здесь — только семантика:
 что каждая цифра означает и откуда берётся. Дублировать шаблон обратно не надо; он
-жил тут с 2026-07-07 как «add to frame.md» и до 2026-08-24 туда так и не переехал,
-из-за чего блок числился в `INDEX.md`, но не существовал (счётчик показывал 105 при
-заявленных 106).
+жил тут как «add to frame.md» и долго туда не переезжал (история — `NOTES_dated.md`),
+из-за чего блок числился в `INDEX.md`, но не существовал.
 
 Rendered at the very top of the final report. **Carries ALL FOUR axes** (liveness ×
 faithfulness × qualifiers × constructs) — the chain is source → claim → report, and a
@@ -341,7 +363,7 @@ nothing produced them — a circular reference to a missing artifact. The contra
 
 | Artifact | Producer | Consumers |
 |---|---|---|
-| `.verify/citations.json` | Phase 6.5 Layer 1 (`check_citations.py`) | F10 header, `rubric.md` axis "citation" |
+| `.verify/citations.json` | Phase 6.5 Layer 1 (`eval/check_citations.py`) | F10 header, `rubric.md` axis "citation" |
 | `.verify/faithfulness.json` | Phase 6.5 Layer 2 (this file, step 4) | F10 header (2nd axis), `rubric.md` axis 3 "Factual accuracy" |
 | `.verify/qualifiers.json` | Phase 6.5 Layer 3 (this file, step 6) | F10 header (3rd axis) |
 | `.verify/constructs.json` | Phase 6.5 Layer 4 (this file, step 4) | F10 header (4th axis), phase-gate. Absent ⇒ axis never ran, NOT "nothing fabricated" |
@@ -389,7 +411,7 @@ in the same run is something no closed product offers.
 Add to the "Workflow — 11 фаз" list, after Phase 6:
 
 ```
-6.5. **Verify** [`haiku`/low] — две оси: (1) **liveness** — `check_citations.py` (URL жив?),
+6.5. **Verify** [`sub: explore-haiku`, effort medium] — две оси: (1) **liveness** — `eval/check_citations.py` (URL жив?),
      (2) **faithfulness** — entailment claim ⊨ цитата (пары берутся из `evidence/CN.md` Фазы 5.5;
      источник реально подтверждает тезис?). Вердикты → `.verify/faithfulness.json` (I/O-контракт),
      verification-header F10 несёт ОБЕ оси. Флаги: re-search / demote claim / смягчить overclaim.

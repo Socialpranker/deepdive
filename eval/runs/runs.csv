@@ -4,6 +4,8 @@ rag-chunking-strategies-2026-A,rag-chunking-strategies-2026,default,,,,
 wasm-component-model-A,wasm-component-model,default,,,,
 vector-db-landscape-2026-A,vector-db-landscape-2026,default,,,,
 llms-plateau-claim-A,llms-plateau-claim,default,,,,
-sqlite-vs-duckdb-analytics-A,sqlite-vs-duckdb-analytics,default,,,,
+sqlite-vs-duckdb-analytics-A,sqlite-vs-duckdb-analytics,default,executor tokens not isolated (main thread) + 78k judge; USD unavailable on Max plan (no extra usage billing),,2026-09-20,"repeat run #1, shallow, default routing; independent judge (self-judge kept in _selfjudge.json: 4/3/4 vs independent 3/3/5)"
 open-source-ai-licensing-A,open-source-ai-licensing,default,,,,
 edge-inference-cost-model-A,edge-inference-cost-model,default,,,,
+sqlite-vs-duckdb-analytics-B,sqlite-vs-duckdb-analytics,default,~111k executor tokens + 83k judge; USD unavailable on Max plan (no extra usage billing),,2026-09-20,"repeat run #2 of the same question, shallow, default routing; independent judge"
+sqlite-vs-duckdb-analytics-C,sqlite-vs-duckdb-analytics,default,~130k executor tokens + 87k judge; USD unavailable on Max plan (no extra usage billing),,2026-09-20,"repeat run #3 of the same question, shallow, default routing; independent judge"

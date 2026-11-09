@@ -148,9 +148,73 @@ tr.gap td { color: var(--muted); font-style: italic; }
 /* ── Печать ──────────────────────────────────────────────────────── */
 
 @media print {
-  body { padding: 0; font-size: 10.5pt; }
+  /* Chrome красит фон только внутри полей @page — тонированный лист выходит
+     в белой рамке. На бумаге тон даёт сама бумага. */
+  body { padding: 0; font-size: 10.5pt; background: #fff; }
+  details.specialist > * { display: block; }
   .sidenote { font-size: 7.5pt; }
   h2 { break-after: avoid; }
   figure, table, .callout { break-inside: avoid; }
   a { color: inherit; text-decoration: none; }
 }
+
+/* ── Человеческая версия: карточки находок ───────────────────────── */
+
+.title-block .subtitle { font-style: normal; }
+.card {
+  max-width: var(--measure);
+  border-top: 1px solid var(--rule);
+  padding: 1.1rem 0 0.4rem; margin: 0 0 0.6rem;
+  break-inside: avoid;
+}
+.card h3 { margin: 0.35rem 0 0.45rem; font-size: 13pt; line-height: 1.35; }
+.card-meta { display: flex; gap: 1rem; align-items: baseline; }
+.card-n { font-family: var(--sans); font-size: 7.5pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.conf.contested::before { background: var(--warn); border-color: var(--warn); }
+.conf.contested { color: var(--warn); }
+
+sup.refs { font-family: var(--sans); font-size: 7.5pt; line-height: 0; white-space: nowrap; }
+sup.refs a { color: var(--accent); text-decoration: none; font-weight: 600; }
+
+/* ── Доказательная база ──────────────────────────────────────────── */
+
+.lead-note { color: var(--muted); font-size: 10pt; }
+.ev {
+  max-width: var(--measure);
+  display: grid; grid-template-columns: 2.2rem 1fr; column-gap: 0.4rem;
+  padding: 0.55rem 0; border-bottom: 1px solid var(--rule);
+  break-inside: avoid;
+}
+.ev > p { grid-column: 2; margin: 0; }
+.ev-n { grid-row: 1 / span 3; font-family: var(--sans); font-size: 8.5pt; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 0.2rem; }
+.ev-head { font-size: 11pt; }
+.ev-detail { font-size: 10pt; color: var(--ink); margin-top: 0.15rem !important; }
+.ev-meta, .ev-to { font-family: var(--sans); font-size: 8pt; color: var(--muted); }
+.ev-meta a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.ev-to { margin-left: 0.4rem; white-space: nowrap; }
+table.numbers { break-inside: auto; }
+table.numbers tr { break-inside: avoid; }
+table.numbers td.num b { font-size: 11pt; white-space: nowrap; }
+
+/* ── Указатель источников и блок для специалиста ─────────────────── */
+
+.index { font-size: 9.5pt; max-width: var(--measure); display: grid; grid-template-columns: 2.2rem 1fr; gap: 0.5rem 0.4rem; }
+.index dt { font-family: var(--sans); font-size: 8.5pt; font-weight: 600; color: var(--accent); padding-top: 0.15rem; }
+.index dd { margin: 0; color: var(--muted); font-family: var(--sans); font-size: 8.5pt; line-height: 1.45; }
+.index dd b { font-family: var(--serif); font-size: 10pt; font-weight: 400; color: var(--ink); }
+.index a { color: var(--accent); }
+
+details.specialist { max-width: var(--measure); margin: 3rem 0 0; border-top: 1px solid var(--ink); padding-top: 0.8rem; }
+details.specialist summary { font-family: var(--sans); font-size: 9pt; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
+
+@media (max-width: 640px) {
+  body { padding: 0 16px 3rem; font-size: 11pt; }
+  h1 { font-size: 22pt; }
+  .sidenote { float: none; width: auto; margin: 0.3rem 0 0.9rem; display: block; }
+  table { display: block; overflow-x: auto; }
+}
+
+/* Игрок на карте landscape — компактнее находки: их десятки */
+.card.player { padding: 0.7rem 0 0.2rem; }
+.card h4 { margin: 0.25rem 0 0.3rem; font-size: 11.5pt; font-weight: 600; }
+.card.player p { font-size: 10pt; margin-bottom: 0.4rem; }

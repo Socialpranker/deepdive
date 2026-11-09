@@ -34,7 +34,7 @@ from pathlib import Path
 
 GENRES = {"qa", "explainer", "decision", "landscape", "validation", "custom"}
 ACCESS_VOCAB = {
-    "OPEN", "PAYWALLED", "PAYWALLED-ABSTRACT-ONLY", "CLOSED",
+    "OPEN", "PARTIAL", "PAYWALLED", "PAYWALLED-ABSTRACT-ONLY", "CLOSED",
     "ARCHIVE-RESTORED", "GRAY-AREA-SOURCE",
 }
 # Source `type` vocab from rubric.md axis 2 (diversity). Lowercased for comparison.

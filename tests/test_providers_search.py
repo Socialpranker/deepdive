@@ -107,8 +107,8 @@ def test_claude_search_model_is_mid_not_cheap():
     # Haiku (cheap) is not in the web_search_20260209 support list; search() must
     # resolve to mid (sonnet) regardless of the tier the orchestrator passes.
     p = ClaudeProvider(client=object())
-    assert p._search_model("cheap") == "claude-sonnet-4-6"
-    assert p._search_model("strong") == "claude-sonnet-4-6"
+    assert p._search_model("cheap") == "claude-sonnet-5-5"
+    assert p._search_model("strong") == "claude-sonnet-5-5"
 
 
 def test_claude_search_model_override_wins():
@@ -217,12 +217,12 @@ def test_claude_search_makes_two_calls_with_right_shapes():
     call1, call2 = client.calls
 
     # call 1: web_search tool, NO output_config; model is sonnet (mid)
-    assert call1["model"] == "claude-sonnet-4-6"
+    assert call1["model"] == "claude-sonnet-5-5"
     assert call1["tools"][0]["type"] == "web_search_20260209"
     assert "output_config" not in call1
 
     # call 2: structured output, NO tools
-    assert call2["model"] == "claude-sonnet-4-6"
+    assert call2["model"] == "claude-sonnet-5-5"
     assert call2["output_config"]["format"]["schema"] == SIGNALS_SCHEMA
     assert "tools" not in call2
 

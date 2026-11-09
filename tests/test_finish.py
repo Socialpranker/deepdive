@@ -69,7 +69,12 @@ def test_end_to_end_on_synthetic_run(tmp_path):
     number checks pass, gate is green."""
     d = make_run(tmp_path, mode="medium", phases=FULL_SET - {"wiki"})
     (d / "sources" / "01_x.md").write_text(
-        "---\nurl: https://example.org/x\ntitle: X\ntype: web\n---\n> quote\n",
+        "---\nurl: https://example.org/x\ntitle: X\ntype: web\n---\n> quote\n\n> quote two\n",
+        encoding="utf-8",
+    )
+    ledger = d / "claims.csv"
+    ledger.write_text(
+        ledger.read_text(encoding="utf-8").replace("triangulated,high", "weak,low"),
         encoding="utf-8",
     )
     results = finish.run_finish(
@@ -79,3 +84,22 @@ def test_end_to_end_on_synthetic_run(tmp_path):
     assert failed == []
     assert (d / "sources.csv").is_file()
     assert (d / ".verify" / "wiki_ingest.json").is_file()
+
+
+def test_overclaimed_ledger_turns_finish_red(tmp_path):
+    """make_run's ledger types `triangulated,high` on one source — the audit's pattern."""
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET - {"wiki"})
+    results = finish.run_finish(
+        d, mode="medium", offline=True, wiki_root=tmp_path / "wiki", runner=finish.subprocess_runner
+    )
+    step = next(r for r in results if r.name == "claim_scores")
+    assert step.rc == 1 and "status triangulated -> weak" in step.output
+    assert finish.exit_code(results) == 1
+
+
+def test_number_integrity_failure_warns_but_keeps_finish_green(tmp_path):
+    d = make_run(tmp_path, mode="medium", phases=FULL_SET)
+    run = _fake_runner(fail={"number_integrity"})
+    results = finish.run_finish(d, mode="medium", offline=True, wiki_root=None, runner=run)
+    assert finish.exit_code(results) == 0
+    assert "warn  number_integrity" in finish.render(results, verbose=False)
