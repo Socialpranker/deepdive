@@ -934,7 +934,10 @@ def write_remediation(d: Path, report: str, *, snapshot=True, log="HIGH-1 Skepti
 
 def remediation_msgs(d: Path) -> tuple[list[str], list[str]]:
     r = run_validate(d, "medium")
-    pick = lambda xs: [x for x in xs if "HIGH-" in x or "remediat" in x or "red team" in x]
+
+    def pick(xs: list[str]) -> list[str]:
+        return [x for x in xs if "HIGH-" in x or "remediat" in x or "red team" in x]
+
     return pick(r.errors), pick(r.warnings)
 
 
