@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Query a real search-engine API directly (Brave / Tavily / Exa), bypassing the
-harness's own WebSearch. Purpose: a second, independent search trajectory — see
-references/capability_discovery.md and references/source_dispatch.md for when
-Phase 4 must use this instead of (or alongside) WebSearch.
+"""Query a real search-engine API directly (Brave / Tavily / Exa / SerpBase),
+bypassing the harness's own WebSearch. Purpose: a second, independent search
+trajectory — see references/capability_discovery.md and references/source_dispatch.md
+for when Phase 4 must use this instead of (or alongside) WebSearch.
 
 Usage:
     python3 scripts/search_query.py --engine brave --query "..." [--n 10] [--json]
     python3 scripts/search_query.py --engine tavily --query "..."
     python3 scripts/search_query.py --engine exa --query "..."
+    python3 scripts/search_query.py --engine serpbase --query "..." [--n 10] [--json]
 
-Reads the API key from env: BRAVE_SEARCH_API_KEY, TAVILY_API_KEY, EXA_API_KEY.
+Reads the API key from env: BRAVE_SEARCH_API_KEY, TAVILY_API_KEY, EXA_API_KEY,
+SERPBASE_API_KEY.
 Exit codes: 0 ok, 1 request/HTTP error, 2 missing API key, 3 bad arguments.
 """
 
@@ -26,6 +28,7 @@ ENV_VARS = {
     "brave": "BRAVE_SEARCH_API_KEY",
     "tavily": "TAVILY_API_KEY",
     "exa": "EXA_API_KEY",
+    "serpbase": "SERPBASE_API_KEY",
 }
 
 TIMEOUT = 20
@@ -82,10 +85,23 @@ def _request_exa(query: str, n: int, api_key: str) -> dict:
     }
 
 
+def _request_serpbase(query: str, n: int, api_key: str) -> dict:
+    return {
+        "method": "GET",
+        "url": "https://api.serpbase.dev/google/search",
+        "headers": {
+            "Accept": "application/json",
+            "X-API-Key": api_key,
+        },
+        "params": {"q": query, "num": n},
+    }
+
+
 BUILDERS = {
     "brave": _request_brave,
     "tavily": _request_tavily,
     "exa": _request_exa,
+    "serpbase": _request_serpbase,
 }
 
 
@@ -129,10 +145,23 @@ def _normalize_exa(payload: dict) -> list[dict]:
     ]
 
 
+def _normalize_serpbase(payload: dict) -> list[dict]:
+    results = payload.get("organic", []) or []
+    return [
+        {
+            "title": r.get("title", ""),
+            "url": r.get("link", ""),
+            "snippet": r.get("snippet", ""),
+        }
+        for r in results
+    ]
+
+
 NORMALIZERS = {
     "brave": _normalize_brave,
     "tavily": _normalize_tavily,
     "exa": _normalize_exa,
+    "serpbase": _normalize_serpbase,
 }
 
 

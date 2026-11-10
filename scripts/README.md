@@ -16,10 +16,10 @@ never stopping early; exit 1 if any step failed. `--offline` skips the liveness 
 `references/source_dispatch.md`):
 
 ```bash
-python3 scripts/search_query.py --engine {brave,tavily,exa} --query "..." [--n 10] [--json]
+python3 scripts/search_query.py --engine {brave,tavily,exa,serpbase} --query "..." [--n 10] [--json]
 ```
 
-Ключ читается из env: `BRAVE_SEARCH_API_KEY`, `TAVILY_API_KEY`, `EXA_API_KEY`. Без
+Ключ читается из env: `BRAVE_SEARCH_API_KEY`, `TAVILY_API_KEY`, `EXA_API_KEY`, `SERPBASE_API_KEY`. Без
 ключа — exit 2 с именем переменной. HTTP-ошибка — exit 1. Один ретрай при обрыве
 транспорта, timeout 20s. Без `--json` печатает `NN  title — url` построчно;
 `--json` — нормализованный список `{rank, title, url, snippet, engine, fetched_at}`.
