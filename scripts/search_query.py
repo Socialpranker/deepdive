@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Query a real search-engine API directly (Brave / Tavily / Exa), bypassing the
-harness's own WebSearch. Purpose: a second, independent search trajectory — see
-references/capability_discovery.md and references/source_dispatch.md for when
-Phase 4 must use this instead of (or alongside) WebSearch.
+"""Query a real search-engine API directly (Brave / Tavily / Exa / Firecrawl),
+bypassing the harness's own WebSearch. Purpose: a second, independent search
+trajectory — see references/capability_discovery.md and references/source_dispatch.md
+for when Phase 4 must use this instead of (or alongside) WebSearch.
 
 Usage:
     python3 scripts/search_query.py --engine brave --query "..." [--n 10] [--json]
     python3 scripts/search_query.py --engine tavily --query "..."
     python3 scripts/search_query.py --engine exa --query "..."
+    python3 scripts/search_query.py --engine firecrawl --query "..."
 
-Reads the API key from env: BRAVE_SEARCH_API_KEY, TAVILY_API_KEY, EXA_API_KEY.
+Reads the API key from env: BRAVE_SEARCH_API_KEY, TAVILY_API_KEY, EXA_API_KEY,
+FIRECRAWL_API_KEY.
 Exit codes: 0 ok, 1 request/HTTP error, 2 missing API key, 3 bad arguments.
 """
 
@@ -26,7 +28,10 @@ ENV_VARS = {
     "brave": "BRAVE_SEARCH_API_KEY",
     "tavily": "TAVILY_API_KEY",
     "exa": "EXA_API_KEY",
+    "firecrawl": "FIRECRAWL_API_KEY",
 }
+
+FIRECRAWL_SNIPPET_MAX_CHARS = 1000
 
 TIMEOUT = 20
 
@@ -82,10 +87,27 @@ def _request_exa(query: str, n: int, api_key: str) -> dict:
     }
 
 
+def _request_firecrawl(query: str, n: int, api_key: str) -> dict:
+    return {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v2/search",
+        "headers": {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        "json": {
+            "query": query,
+            "limit": n,
+            "origin": "deepdive",
+        },
+    }
+
+
 BUILDERS = {
     "brave": _request_brave,
     "tavily": _request_tavily,
     "exa": _request_exa,
+    "firecrawl": _request_firecrawl,
 }
 
 
@@ -129,10 +151,23 @@ def _normalize_exa(payload: dict) -> list[dict]:
     ]
 
 
+def _normalize_firecrawl(payload: dict) -> list[dict]:
+    results = (payload.get("data") or {}).get("web", []) or []
+    return [
+        {
+            "title": r.get("title", ""),
+            "url": r.get("url", ""),
+            "snippet": (r.get("description") or "")[:FIRECRAWL_SNIPPET_MAX_CHARS],
+        }
+        for r in results
+    ]
+
+
 NORMALIZERS = {
     "brave": _normalize_brave,
     "tavily": _normalize_tavily,
     "exa": _normalize_exa,
+    "firecrawl": _normalize_firecrawl,
 }
 
 
