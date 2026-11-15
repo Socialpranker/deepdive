@@ -252,6 +252,27 @@ def test_index_drops_unknown_author_and_flags_partial_access():
     assert "пункты" in html and "b.example" in html
 
 
+
+def test_index_links_only_http_urls():
+    rows = [
+        {"id": "s01", "url": "javascript:alert(1)", "title": "x", "used": "Y"},
+        {"id": "s02", "url": "data:text/html,<b>", "title": "y", "used": "Y"},
+        {"id": "s03", "url": "https://ok.example/p", "title": "z", "used": "Y"},
+    ]
+    html = rd.source_index(rows, {})
+    assert "javascript:" not in html and "data:" not in html
+    assert 'href="https://ok.example/p"' in html
+
+
+def test_untrusted_source_fields_are_escaped():
+    evil = "<img src=x onerror=alert(1)>"
+    rows = [{"id": "s01", "type": evil, "date": "2026" + evil, "used": "Y"}]
+    method = rd.method_section(Path("."), rows, [])
+    numbers = [{"value": evil, "unit": "", "label": "x", "sources": "", "kind": "source"}]
+    evidence, _, _ = rd.evidence_base([], numbers, {}, [])
+    for html in (method, evidence):
+        assert "<img" not in html
+
 # --- сборка целиком -----------------------------------------------------------
 
 
