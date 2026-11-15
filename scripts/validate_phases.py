@@ -20,6 +20,7 @@ are complementary: run both.
 
 Checks (errors fail --strict; warnings never do):
   - every phase mandatory for the mode emitted its artifact(s)
+  - medium/deep: read-set size and sphere quotas, candidates.csv breadth
   - mode is known explicitly (--mode) or read from the report/plan frontmatter
   - the phase->artifact table still covers every file-emitting phase in phases.yaml
     (a self-check: adding such a phase without updating this table warns loudly)
@@ -42,6 +43,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import phases_manifest  # noqa: E402
+from quiet import CAP_ERRORS, CAP_WARNINGS, capped  # noqa: E402
 
 MODES = ("shallow", "medium", "deep")
 # depth_gate = the MINIMUM mode at which a phase is mandatory. A phase applies to a
@@ -60,7 +62,9 @@ PHASE_ARTIFACTS: dict[str, dict[str, list[str]]] = {
     "3": {"all_of": ["plan.md"]},
     # state.md is the round workspace, rewritten (not appended) each round — the
     # orchestrator plans the next round from it instead of from the transcript.
-    "4": {"any_of": ["sources", "sources.csv"], "medium_of": ["state.md"]},
+    # candidates.csv is the wide, unread pool (title+snippet) that the read set is
+    # picked from by sphere quotas — without it breadth is whatever search returned.
+    "4": {"any_of": ["sources", "sources.csv"], "medium_of": ["state.md", "candidates.csv"]},
     "5": {"all_of": ["claims.csv"]},
     # 5.5 filters the INPUT to synthesis on two axes: relevance (evidence/) and
     # authority (.verify/authority.json). The authority verdicts are fail-closed —
@@ -75,10 +79,12 @@ PHASE_ARTIFACTS: dict[str, dict[str, list[str]]] = {
     # outline.md (section -> block -> claim_id) and numbers.csv (every figure the
     # report stands on) are the machine-checkable half of synthesis; both are
     # bookkeeping a shallow run is not asked to keep.
+    # readout.md is the human version (page + full PDF): written after verify,
+    # passed through humanizer-ru. Without it the run hands a reader the ledger.
     "6": {
         "report": [],
         "all_of": ["memo.md"],
-        "medium_of": ["outline.md", "numbers.csv"],
+        "medium_of": ["outline.md", "numbers.csv", "readout.md"],
     },
     # Layer 1 (liveness) / Layer 2 (faithfulness) / Layer 3 (qualifier preservation) /
     # Layer 4 (construct provenance). All four are required from medium up — 6.5's own
@@ -165,15 +171,61 @@ def check_phase(
 
 
 SOURCE_FILE_RE = re.compile(r"^(\d+)_.+\.md$")
-# Columns the triangulation / dissent / provenance rules read. From medium up their
-# absence is an error: the ledger looks complete while the rules that make
-# `triangulated` mean anything never fire. Shallow (no triangulation gate) only warns.
-LEDGER_COLUMNS = ("roots", "paths", "dissent", "as_of")
+# Schema contract (references/source_scoring.md). Audit of 70 real runs found 26
+# header variants of numbers.csv alone: every reader guessed columns by substring and
+# the rules reading a missed column silently never fired. The header is now fixed at
+# write time: core columns in this exact order, then only the listed optional tail.
+CLAIMS_CORE = (
+    "claim_id",
+    "claim",
+    "hypothesis",
+    "sources",
+    "source_types",
+    "roots",
+    "paths",
+    "status",
+    "confidence",
+    "primary_source",
+    "source_caveat",
+    "dissent",
+    "as_of",
+)
+CLAIMS_OPTIONAL = ("claim_class", "evidence_kind", "plain", "detail")
+NUMBERS_CORE = (
+    "num_id",
+    "value",
+    "unit",
+    "kind",
+    "formula",
+    "inputs",
+    "group",
+    "claim_id",
+    "sources",
+    "as_of",
+)
+NUMBERS_OPTIONAL = ("label",)
+# LLM-judge verdict files: one shape, so faithfulness is comparable across runs
+# (audit: 0.26–1.0 across runs was not comparable — each run invented its own form).
+VERDICT_FILES = {
+    ".verify/faithfulness.json": {"SUPPORTED", "PARTIAL", "UNSUPPORTED"},
+    ".verify/qualifiers.json": {
+        "PRESERVED",
+        "BROADENED",
+        "SCOPE-DROPPED",
+        "UNTRACEABLE",
+    },
+}
+VERDICT_KEYS = ("claim_id", "verdict", "model")
 # Artifacts that only a medium/deep run produces — used to infer the mode when the
 # run never wrote a `mode:` frontmatter (2 of 12 real runs had one).
 MEDIUM_MARKERS = (
-    "state.md", "outline.md", "numbers.csv", "evidence", "refresh_targets.md",
-    ".verify/authority.json", ".verify/wiki_pairs.json",
+    "state.md",
+    "outline.md",
+    "numbers.csv",
+    "evidence",
+    "refresh_targets.md",
+    ".verify/authority.json",
+    ".verify/wiki_pairs.json",
 )
 # SKILL.md depth table: shallow is 5–7 sources, medium starts at 12.
 MEDIUM_SOURCE_COUNT = 10
@@ -233,28 +285,73 @@ def resolve_mode(d: Path, explicit: str | None, r: Report) -> str:
     return mode
 
 
-def check_ledger_columns(d: Path, mode: str, r: Report) -> None:
-    """A missing ledger column is not a formatting nit: the rule that reads it
-    silently never fires — the 'green check, no behavior' failure mode."""
-    ledger = d / "claims.csv"
-    if not ledger.is_file():
-        return
-    lines = ledger.read_text(encoding="utf-8").splitlines()
-    if not lines:
-        r.err("claims.csv is empty")
-        return
-    cols = {c.strip() for c in lines[0].split(",")}
-    missing = [c for c in LEDGER_COLUMNS if c not in cols]
-    if missing:
-        msg = (
-            f"claims.csv is missing column(s) {', '.join(missing)} — the rules reading "
-            f"them (triangulation by root/path, dissent protection, number provenance) "
-            f"cannot fire; see references/source_scoring.md"
+def header_violation(
+    header: list[str], core: tuple[str, ...], optional: tuple[str, ...]
+) -> str | None:
+    """-> why `header` is not canonical, or None."""
+    head = [c.strip() for c in header]
+    if tuple(head[: len(core)]) != core:
+        missing = [c for c in core if c not in head]
+        if missing:
+            return f"missing column(s) {', '.join(missing)}"
+        return f"core columns out of order (expected {','.join(core)})"
+    unknown = [c for c in head[len(core) :] if c not in optional]
+    if unknown:
+        return (
+            f"unknown column(s) {', '.join(unknown)} after the core "
+            f"(allowed: {', '.join(optional)})"
         )
-        if GATE_RANK[mode] >= GATE_RANK["medium"]:
-            r.err(msg)
-        else:
-            r.warn(msg)
+    return None
+
+
+def check_schema_contract(d: Path, r: Report) -> None:
+    """A non-canonical ledger is not a formatting nit: the rule that reads a column
+    it cannot find silently never fires — the 'green check, no behavior' failure."""
+    for name, core, optional in (
+        ("claims.csv", CLAIMS_CORE, CLAIMS_OPTIONAL),
+        ("numbers.csv", NUMBERS_CORE, NUMBERS_OPTIONAL),
+    ):
+        path = d / name
+        if not path.is_file():
+            continue
+        header = next(csv.reader(path.read_text(encoding="utf-8").splitlines()), None)
+        if not header:
+            r.err(f"{name} is empty")
+            continue
+        why = header_violation(header, core, optional)
+        if why:
+            r.err(
+                f"{name}: {why} — the header is fixed by references/source_scoring.md; "
+                f"rename/reorder the columns, do not invent new ones"
+            )
+    for rel, verdicts in VERDICT_FILES.items():
+        path = d / rel
+        if not path.is_file():
+            continue  # presence is the phase-gate's business (6.5)
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            r.err(f"{rel} is not valid JSON ({exc.msg})")
+            continue
+        results = data.get("results") if isinstance(data, dict) else None
+        if not isinstance(results, list) or not results:
+            r.err(f"{rel}: no non-empty `results` list — the layer left no verdicts")
+            continue
+        bad = []
+        for i, item in enumerate(results):
+            if not isinstance(item, dict):
+                bad.append(f"#{i} not an object")
+                continue
+            empty = [k for k in VERDICT_KEYS if not str(item.get(k) or "").strip()]
+            if empty:
+                bad.append(f"#{i} lacks {'/'.join(empty)}")
+            elif str(item["verdict"]).strip() not in verdicts:
+                bad.append(f"#{i} verdict '{item['verdict']}'")
+        if bad:
+            r.err(
+                f"{rel}: {len(bad)} result(s) off-contract ({'; '.join(bad[:5])}) — "
+                f"each needs {', '.join(VERDICT_KEYS)} with verdict in {sorted(verdicts)}"
+            )
 
 
 # --- source quality ------------------------------------------------------------
@@ -295,7 +392,7 @@ def source_is_thin(text: str) -> bool:
     front, body = _split_frontmatter(text)
     m = ACCESS_RE.search(front)
     if m:
-        access = m.group(1).strip().strip('"\'').lower()
+        access = m.group(1).strip().strip("\"'").lower()
         if access.startswith(THIN_ACCESS_PREFIXES):
             return True
     quotes = sum(1 for line in body.splitlines() if line.lstrip().startswith(">"))
@@ -319,6 +416,219 @@ def collect_thin_sources(d: Path) -> tuple[dict[str, str], set[str]]:
         if source_is_thin(p.read_text(encoding="utf-8")):
             thin[key] = f"s{num}"
     return thin, seen
+
+
+# Breadth of the read set (references/phases/p4_search.md «Квоты»). Benchmark
+# 2026-10-28: 6 of 6 runs had 16–19 sources, 0 Academic, 3–4 types — the search
+# stopped at whatever the first queries returned.
+MIN_READ = {"medium": 25, "deep": 35}
+MIN_CANDIDATES = {"medium": 60, "deep": 100}
+TYPE_QUOTAS = {
+    "academic": ({"academic"}, 2),
+    "primary": ({"primary"}, 3),
+    "media": ({"industry-media", "general-media"}, 2),
+    "expert": ({"expert-blog"}, 2),
+    "practice": ({"forum"}, 2),
+}
+MIN_CONTRADICTING = 3
+CANDIDATE_COLUMNS = ("url", "title", "snippet", "channel", "sphere", "stance", "vendor",
+                     "round", "target", "selected")
+ACADEMIC_CHANNELS = {"openalex", "semantic_scholar", "arxiv", "crossref"}
+MIN_TARGETED_ROUND = 5
+WAIVER_RE = re.compile(r"^quota_waiver:\s*(\w+)\s*[—-]\s*(\S.*)$", re.MULTILINE)
+# Depth and pool size are what the skill is for; N2 (2026-10-28) waived them in
+# plan.md before searching, citing the run budget.
+NON_WAIVABLE = {"count", "candidates", "round2"}
+BUDGET_REASON_RE = re.compile(r"бюджет|budget|\$\s?\d|деньг|дорог", re.IGNORECASE)
+FIELD_RE = re.compile(r"^(type|caveat):\s*(.+?)\s*$", re.MULTILINE)
+
+
+VERDICT_TABLE_RE = re.compile(r"^\|[^\n]*гипотез[^\n]*\|[^\n]*вердикт", re.IGNORECASE | re.MULTILINE)
+
+
+def check_verdict_table(d: Path, r: Report) -> None:
+    """Benchmark 2026-10-28: explicit hypothesis verdicts in 2 of 6 reports."""
+    dated = sorted(p for p in d.glob("*.md") if REPORT_RE.match(p.name))
+    if dated and not VERDICT_TABLE_RE.search(dated[-1].read_text(encoding="utf-8")):
+        r.err(f"{dated[-1].name}: no `| Гипотеза | Вердикт | Опора |` table — every "
+              f"plan hypothesis needs an explicit verdict (phases/p6_synthesis.md)")
+
+
+# An unconditional pick: "по умолчанию", or an imperative with no "если" in the sentence.
+DEFAULT_RE = re.compile(r"(?<![«\w])(по умолчанию|берите|выбирайте|начинать стоит|начните с|рекомендуем)(?![»\w])",
+                        re.IGNORECASE)
+SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|\n")
+
+
+def _default_sentences(text: str) -> list[str]:
+    """Unconditional picks in «Ответ» / «Рекомендация» with no [sNN] behind them."""
+    sections = re.split(r"^## ", text, flags=re.MULTILINE)
+    scope = [sec for sec in sections if sec.lower().startswith("ответ")]
+    scope += re.findall(r"^\**Рекомендаци[яи][^\n]*", text, re.MULTILINE)
+    hits = []
+    for chunk in scope:
+        for sent in SENTENCE_SPLIT_RE.split(chunk):
+            if DEFAULT_RE.search(sent) and not re.search(r"\bне\b[^.]*по умолчанию", sent, re.IGNORECASE) \
+                    and not re.search(r"\bесли\b", sent, re.IGNORECASE) \
+                    and not re.search(r"\[s\d{2,3}\]", sent):
+                hits.append(sent.strip())
+    return hits
+
+
+def check_unmeasured_default(d: Path, r: Report) -> None:
+    """Benchmark 2026-10-28: 7 of 8 runs said 'Fivetran по умолчанию' with no price found."""
+    dated = sorted(p for p in d.glob("*.md") if REPORT_RE.match(p.name))
+    targets = [p for p in [d / "readout.md", *dated[-1:]] if p.is_file()]
+    for p in targets:
+        for sent in _default_sentences(p.read_text(encoding="utf-8")):
+            r.err(f"{p.name}: default recommendation without a measured source — «{sent[:90]}». "
+                  f"Give conditional branches + the cheapest way to measure (phases/p6_synthesis.md, Антибиас)")
+
+
+PRE_REMEDIATION = "findings/draft_pre_remediation.md"
+HIGH_ID_RE = re.compile(r"^\W*(?:HIGH|H)-(\d+)\b", re.MULTILINE)
+REVIEW_HEADING_RE = re.compile(r"adversarial review|ремедиац|red team", re.IGNORECASE)
+# N4/N6 (2026-10-28): fixes were appended after the body, TL;DR kept the refuted claims.
+APPENDIX_RE = re.compile(r"приоритет над текстом|заменяется на|поправки ниже|см\. ремедиац", re.IGNORECASE)
+# "- HIGH-1 → §Ответ (TL;DR), §Ветки: что изменено" — a target ends at ":", "§", "|" or ", §".
+FIX_TARGET_RE = re.compile(r"§\s*([^§|:\n]+?)\s*(?=,\s*§|[§|:\n]|$)")
+
+
+def _sections(text: str) -> dict[str, str]:
+    parts = re.split(r"^(#{2,3} .+)$", text, flags=re.MULTILINE)
+    return {h.lstrip("# ").strip().casefold(): body for h, body in zip(parts[1::2], parts[2::2])}
+
+
+def _same(a: str | None, b: str | None) -> bool:
+    return a is not None and b is not None and a.split() == b.split()
+
+
+def _find_section(sections: dict[str, str], target: str) -> str | None:
+    t = target.strip(" *`").casefold()
+    return next((h for h in sections if h == t or h.startswith(t)), None)
+
+
+def check_remediation_in_body(d: Path, mode: str, r: Report) -> None:
+    """Each HIGH from the red-team log is fixed in the body section it names, not in an appendix."""
+    logs = sorted((d / "findings").glob("redteam_*.md")) if (d / "findings").is_dir() else []
+    dated = sorted(p for p in d.glob("*.md") if REPORT_RE.match(p.name))
+    if GATE_RANK[mode] < GATE_RANK["medium"] or not dated:
+        return
+    if not logs:
+        # N6 (2026-10-28) kept no log, so nothing below could check its remediation.
+        r.err("findings/redteam_<date>.md missing — red team triage log (adversarial_pass.md)")
+        return
+    highs = sorted(set(HIGH_ID_RE.findall(logs[-1].read_text(encoding="utf-8"))), key=int)
+    if not highs:
+        return
+    report = dated[-1]
+    text = report.read_text(encoding="utf-8")
+    for m in APPENDIX_RE.finditer(text):
+        r.err(f"{report.name}: «{m.group(0)}» — remediation overrides the body from an appendix; "
+              f"edit the section itself (phases/p6_synthesis.md, шаг 6)")
+    snap = d / PRE_REMEDIATION
+    if not snap.is_file():
+        r.err(f"{PRE_REMEDIATION} missing — copy the draft there before `remediate`, "
+              f"otherwise body fixes cannot be told from an appended postscript")
+        return
+    now, before = _sections(text), _sections(snap.read_text(encoding="utf-8"))
+    review = next((body for h, body in now.items() if REVIEW_HEADING_RE.search(h)), "")
+    changed_any = False
+    for hid in highs:
+        line = next((ln for ln in review.splitlines() if re.search(rf"\b(?:HIGH|H)-{hid}\b", ln)), None)
+        if line is None:
+            r.err(f"HIGH-{hid} from {logs[-1].name} not listed in `## Adversarial review` "
+                  f"with `→ §<section>` or `→ Open Questions`")
+            continue
+        if "open questions" in line.casefold():
+            continue
+        targets = FIX_TARGET_RE.findall(line)
+        if not targets:
+            r.err(f"HIGH-{hid}: no `§<section>` it was fixed in — «{line.strip()[:90]}»")
+        for t in targets:
+            h = _find_section(now, t)
+            if h is None:
+                r.err(f"HIGH-{hid}: section «§{t}» not found in {report.name}")
+            elif _same(now[h], before.get(h)):
+                r.err(f"HIGH-{hid}: «§{t}» unchanged vs {PRE_REMEDIATION} — the fix is not in the body")
+            else:
+                changed_any = True
+    head = next((h for h in now if h.startswith(("ответ", "tl;dr"))), None)
+    if changed_any and head and _same(now[head], before.get(head)):
+        r.warn(f"{report.name}: body fixed after red team but «{head}» unchanged — "
+               f"check it no longer states the refuted claims")
+
+
+def check_source_breadth(d: Path, mode: str, r: Report) -> None:
+    if GATE_RANK[mode] < GATE_RANK["medium"]:
+        return
+    plan = d / "plan.md"
+    waived: set[str] = set()
+    for key, reason in WAIVER_RE.findall(plan.read_text(encoding="utf-8")) if plan.is_file() else []:
+        if key in NON_WAIVABLE:
+            r.err(f"quota_waiver: {key} — not waivable: depth and candidate pool are the point of medium/deep")
+        elif BUDGET_REASON_RE.search(reason):
+            r.err(f"quota_waiver: {key} — budget is not a reason; waive only what the search "
+                  f"did not find (cite candidates.csv)")
+        else:
+            waived.add(key)
+
+    def gate(key: str, msg: str) -> None:
+        hint = "" if key in waived or key in NON_WAIVABLE else f" — or add `quota_waiver: {key} — <why>` to plan.md"
+        (r.warn if key in waived else r.err)(msg + hint)
+
+    files = sorted((d / "sources").glob("*.md")) if (d / "sources").is_dir() else []
+    if len(files) < MIN_READ[mode]:
+        gate("count", f"{len(files)} sources read, {mode} needs ≥{MIN_READ[mode]}")
+    types: list[str] = []
+    vendor = contradicting = 0
+    for p in files:
+        front, _ = _split_frontmatter(p.read_text(encoding="utf-8"))
+        fields = dict(FIELD_RE.findall(front))
+        types.append(fields.get("type", "").strip("\"'").lower())
+        vendor += fields.get("caveat", "").strip("\"'").lower() == "vendor"
+        contradicting += bool(re.search(r"^\s+H\d+:\s*contradicts\b", front, re.MULTILINE))
+    for key, (kinds, need) in TYPE_QUOTAS.items():
+        have = sum(t in kinds for t in types)
+        if have < need:
+            gate(key, f"{have} {key} sources (type {'/'.join(sorted(kinds))}), quota ≥{need}")
+    if contradicting < MIN_CONTRADICTING:
+        gate("against", f"{contradicting} sources contradict a hypothesis "
+                        f"(hypothesis_evidence: contradicts), quota ≥{MIN_CONTRADICTING}")
+    if files and vendor * 2 > len(files):
+        gate("vendor", f"{vendor} of {len(files)} sources are vendor material — "
+                       f"at most half; the rest must be vendor-independent")
+
+    no_card = [p.name for p in files if "\n## Разбор" not in p.read_text(encoding="utf-8")]
+    if no_card:
+        r.warn(f"{len(no_card)} of {len(files)} sources have no `## Разбор` card "
+               f"(claim type, method, scope, modality) — e.g. {', '.join(no_card[:3])}")
+
+    check_verdict_table(d, r)
+    check_unmeasured_default(d, r)
+
+    cand = d / "candidates.csv"
+    if not cand.is_file():
+        return  # absence is reported by the phase-4 artifact check
+    with cand.open(encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        missing = [c for c in CANDIDATE_COLUMNS if c not in (reader.fieldnames or [])]
+        rows = list(reader)
+    if missing:
+        r.err(f"candidates.csv: missing columns {', '.join(missing)}")
+        return
+    if len(rows) < MIN_CANDIDATES[mode]:
+        gate("candidates", f"candidates.csv has {len(rows)} rows, {mode} needs ≥{MIN_CANDIDATES[mode]}")
+    if not any(row["channel"].strip().lower() in ACADEMIC_CHANNELS for row in rows):
+        gate("academic", "no candidate came from an academic API "
+                         f"({', '.join(sorted(ACADEMIC_CHANNELS))})")
+    targeted = [row for row in rows if row["round"].strip() == "2" and row["target"].strip()]
+    if len(targeted) < MIN_TARGETED_ROUND:
+        gate("round2", f"{len(targeted)} round-2 candidates with a `target` — the second "
+                       f"round must aim at the decision variable, ≥{MIN_TARGETED_ROUND}")
+    selected = sum(row["selected"].strip().upper() == "Y" for row in rows)
+    if files and selected and selected != len(files):
+        r.warn(f"candidates.csv marks {selected} selected, sources/ has {len(files)}")
 
 
 def check_source_quality(d: Path, mode: str, r: Report) -> None:
@@ -574,8 +884,10 @@ def check_wiki_ingest(d: Path, r: Report) -> None:
 def validate(d: Path, mode: str, phases: list[dict], r: Report) -> None:
     self_check(phases, r)
     check_source_perimeter(d, r)
-    check_ledger_columns(d, mode, r)
+    check_schema_contract(d, r)
     check_source_quality(d, mode, r)
+    check_source_breadth(d, mode, r)
+    check_remediation_in_body(d, mode, r)
     check_state_window(d, r)
     check_outline_coverage(d, mode, r)
     check_constructs(d, r)
@@ -603,6 +915,7 @@ def main() -> int:
     )
     ap.add_argument("--strict", action="store_true", help="Exit 1 if any error")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--verbose", action="store_true", help="print every warning, not the first few")
     args = ap.parse_args()
 
     d = args.research_dir
@@ -632,10 +945,10 @@ def main() -> int:
         )
     else:
         print(f"Validating phases: {d}   (mode: {mode})")
-        for m in r.errors:
-            print(f"  ERROR   {m}")
-        for m in r.warnings:
-            print(f"  warn    {m}")
+        for line in capped((f"  ERROR   {m}" for m in r.errors), CAP_ERRORS, args.verbose):
+            print(line)
+        for line in capped((f"  warn    {m}" for m in r.warnings), CAP_WARNINGS, args.verbose):
+            print(line)
         if not r.errors and not r.warnings:
             print("  OK — all mandatory phases produced their artifacts")
         elif not r.errors:

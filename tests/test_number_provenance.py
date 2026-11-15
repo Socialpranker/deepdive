@@ -72,10 +72,22 @@ def run(d: Path) -> cnp.Report:
 def test_clean_source_produces_no_findings(tmp_path):
     # Control: a fully-traceable number must not be flagged, or every later
     # assertion would pass for the wrong reason.
-    d = make_run(tmp_path, {"01_filing.md": CLEAN_SOURCE})
+    # Ledger included: без него «чисто» означало бы лишь «проверять было нечего».
+    d = make_run(
+        tmp_path,
+        {"01_filing.md": CLEAN_SOURCE},
+        ledger="claim_id,claim,as_of,confidence\nC1,Revenue reached 4.72 billion,2025-Q3,high\n",
+    )
     r = run(d)
     assert r.errors == []
     assert r.warnings == []
+
+
+def test_missing_ledger_is_reported_not_silently_clean(tmp_path):
+    d = make_run(tmp_path, {"01_filing.md": CLEAN_SOURCE})
+    r = run(d)
+    assert any("claims.csv not found" in w for w in r.warnings)
+    assert cnp.check_ledger(d, cnp.Report())["numeric_claims"] is None
 
 
 def test_untraceable_number_is_quarantined(tmp_path):

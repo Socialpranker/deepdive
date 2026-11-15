@@ -65,7 +65,7 @@
 ## Forbidden sources
 
 НЕ добавлять в каталог:
-- Pirate sites (Sci-Hub, LibGen, Z-Library) — used only as user-elected fallback, не recommended
+- Pirate sites (Sci-Hub, LibGen, Z-Library) — не использовать, в том числе как fallback
 - Sources с stolen data / leaked credentials
 - Sources requiring obfuscation / impersonation
 

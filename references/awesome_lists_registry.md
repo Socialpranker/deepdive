@@ -1,5 +1,17 @@
 # Awesome Lists Registry — upstream discovery
 
+## Содержание
+
+- Зачем это нужно
+- Tier 1 — Universal APIs/Datasets
+- Tier 2 — Specialized
+- Tier 3 — Niche / Domain-specific
+- Tier 4 — Niche aggregators
+- Discovery workflow для агента
+- Limitations awesome-lists
+- Future contributions
+- Notes на специфический case — Claude ecosystem
+
 Каталог upstream awesome-lists на GitHub, к которым агент обращается когда в моём каталоге нет purpose-fit источника для конкретной подтемы.
 
 ## Зачем это нужно

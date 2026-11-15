@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="deepdive logo">
+<rect width="256" height="256" rx="56" fill="#14161B"/>
+<g fill="none" stroke="#F2EFE8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+<polyline points="64,72 128,114 192,72"/>
+<polyline points="82,112 128,142 174,112"/>
+<polyline points="100,152 128,170 156,152"/>
+<circle cx="128" cy="198" r="9" fill="#4FD1C5" stroke="#4FD1C5"/>
+</g>
+</svg>

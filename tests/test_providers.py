@@ -60,9 +60,9 @@ def test_claude_complete_maps_tier_to_model():
     client.messages.create.return_value = _claude_response("x")
     p = ClaudeProvider(client=client)
     p.complete("hi", model_tier="strong")
-    assert client.messages.create.call_args.kwargs["model"] == "claude-opus-4-8"
+    assert client.messages.create.call_args.kwargs["model"] == "claude-opus-5-5"
     p.complete("hi", model_tier="cheap")
-    assert client.messages.create.call_args.kwargs["model"] == "claude-haiku-4-5"
+    assert client.messages.create.call_args.kwargs["model"] == "claude-haiku-5-5"
 
 
 def test_claude_complete_invalid_tier_raises():
@@ -115,12 +115,25 @@ def test_claude_fanout_runs_each_task_in_order():
     assert out == ["A", "B", "C"]
 
 
+def test_claude_complete_raises_on_refusal():
+    # A refusal is HTTP 200 with stop_reason "refusal"; returning "" would let an
+    # empty answer flow downstream as if the model had nothing to say.
+    client = MagicMock()
+    resp = _claude_response("")
+    resp.stop_reason = "refusal"
+    resp.stop_details.category = "cyber"
+    client.messages.create.return_value = resp
+    p = ClaudeProvider(client=client)
+    with pytest.raises(RuntimeError, match="refusal.*cyber"):
+        p.complete("hi")
+
+
 def test_claude_fanout_uses_cheap_tier_by_default():
     client = MagicMock()
     client.messages.create.return_value = _claude_response("x")
     p = ClaudeProvider(client=client)
     p.fanout(["a"])
-    assert client.messages.create.call_args.kwargs["model"] == "claude-haiku-4-5"
+    assert client.messages.create.call_args.kwargs["model"] == "claude-haiku-5-5"
 
 
 def _openai_response(text):

@@ -247,7 +247,7 @@
 
 ```markdown
 > **Citation integrity: 21/23 live · faithfulness 20/22 supported · qualifiers 22/22 preserved · constructs 7/7 sourced · 0 red flags · 2 paywalled**
-> Verified <YYYY-MM-DD>: liveness via check_citations.py (every OPEN source resolved live);
+> Verified <YYYY-MM-DD>: liveness via eval/check_citations.py (every OPEN source resolved live);
 > faithfulness via Layer 2 judge over evidence/ (2 PARTIAL softened); qualifiers via Layer 3
 > over F1/memo.md/Z12 (no scope drift); constructs via Layer 4 (1 marked as ours).
 > [liveness detail](.verify/citations.md) · [faithfulness detail](.verify/faithfulness.md) · [qualifier detail](.verify/qualifiers.md) · [construct detail](.verify/constructs.md)

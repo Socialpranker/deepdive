@@ -1,0 +1,41 @@
+{
+ "_doc": "Trigger-eval описания deepdive; прогон — ~/.claude/scripts/skill_trigger_eval.py (платно, без явной просьбы не запускать). Лежит в evals/, не в eval/ (там бенчмарк качества отчётов). Near-miss негативы: общие слова с соседом (исследуй/разбери/изучи/как устроен), но место соседа.",
+ "competitors": [
+  "zodchiy",
+  "grill-me",
+  "humanizer-ru",
+  "eli5",
+  "systematic-debugging",
+  {
+   "name": "claude-api",
+   "description": "Reference for the Claude API / Anthropic SDK — model ids, pricing, params, streaming, tool use, MCP, agents, caching, token counting, model migration. TRIGGER whenever the prompt names Claude/Anthropic in any form, the user asks about an LLM (pricing/model choice/limits/caching), or the task is LLM-shaped with provider unstated."
+  },
+  {
+   "name": "deep-research",
+   "description": "Use this skill when the user's prompt requires researching a topic across multiple sources, comparing options or alternatives, analyzing trends or history, understanding markets or industries, or reviewing literature or studies and synthesizing that research into a comprehensive, narrative report."
+  }
+ ],
+ "cases": [
+  {"id": "t01", "split": "train", "should_trigger": true, "prompt": "Сделай ресёрч: стоит ли нам переходить с Postgres на ClickHouse для аналитики, нужны цифры и источники"},
+  {"id": "t02", "split": "train", "should_trigger": true, "prompt": "Копни глубоко, как устроен рынок ИИ-ассистентов для юристов в ЕС"},
+  {"id": "t03", "split": "train", "should_trigger": true, "prompt": "Хочу понять, переходить ли нам с Postgres на ClickHouse. Нужны цифры, решение через неделю"},
+  {"id": "t04", "split": "train", "should_trigger": true, "prompt": "Обоснуй данными, что рынок vertical farming растёт, нужны источники под цифры"},
+  {"id": "t05", "split": "train", "should_trigger": true, "prompt": "Ресёрчни подходы к chunking в RAG и сравни их по качеству, с источниками"},
+  {"id": "t06", "split": "test", "should_trigger": true, "prompt": "Deep dive into how Temporal handles durable execution, I need a source with quotes behind every claim"},
+  {"id": "t07", "split": "test", "should_trigger": true, "prompt": "Обнови ресёрч про рынок edge-инференса, прошло три месяца"},
+  {"id": "t08", "split": "test", "should_trigger": true, "prompt": "Проверь гипотезу, что открытые LLM догонят закрытые к 2027, по внешним данным, а не по ощущениям"},
+  {"id": "t09", "split": "test", "should_trigger": true, "prompt": "Сравни три векторные БД под наш кейс и дай рекомендацию, с источником на каждую цифру"},
+  {"id": "n01", "split": "train", "should_trigger": false, "prompt": "Разбери архитектуру этого репо и скажи, где техдолг"},
+  {"id": "n02", "split": "train", "should_trigger": false, "prompt": "Какая сейчас цена Claude Opus за миллион токенов?"},
+  {"id": "n03", "split": "train", "should_trigger": false, "prompt": "Исследуй, почему падает test_orders на CI, локально зелёный"},
+  {"id": "n04", "split": "train", "should_trigger": false, "prompt": "Погоняй меня по плану миграции на новую БД, найди слабые места"},
+  {"id": "n05", "split": "train", "should_trigger": false, "prompt": "Почисти от слопа этот абзац из отчёта, убери канцелярит"},
+  {"id": "n06", "split": "train", "should_trigger": false, "prompt": "Сколько человек живёт в Эстонии?"},
+  {"id": "n07", "split": "test", "should_trigger": false, "prompt": "Изучи чужой репо pallets/flask и объясни, как он устроен внутри"},
+  {"id": "n08", "split": "test", "should_trigger": false, "prompt": "Объясни как пятилетнему, как работает DNS"},
+  {"id": "n09", "split": "test", "should_trigger": false, "prompt": "What is the current Anthropic API rate limit for Opus on tier 2?"},
+  {"id": "n10", "split": "test", "should_trigger": false, "prompt": "Мы вроде уже исследовали лимиты платёжного провайдера, найди в проекте, что там написано"},
+  {"id": "n11", "split": "test", "should_trigger": false, "prompt": "Придумай пять названий для приложения про привычки"},
+  {"id": "n12", "split": "test", "should_trigger": false, "prompt": "Исследуй, как устроен модуль авторизации в нашем проекте"}
+ ]
+}

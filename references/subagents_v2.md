@@ -1,6 +1,19 @@
 # Subagents v2 — параллельный поиск через Agent tool
 
+## Содержание
+
+- Архитектура
+- Какой subagent_type
+- Какую модель выбрать (model routing)
+- Параллелизм
+- Промпт суб-агенту — шаблон
+- После возврата суб-агентов — что делает главный поток
+- Антипаттерны
+- Когда НЕ запускать суб-агентов
+
 Применяется в режимах **medium** (2–3 суб-агента) и **deep** (4–5).
+
+`<SKILL_DIR>` = абсолютный путь к скиллу, обычно `$HOME/.claude/skills/deepdive` (главная раскрывает `$HOME` и подставляет при вызове). Пути к файлам скилла в брифах агентов пишутся как `<SKILL_DIR>/…`.
 
 ## Архитектура
 
@@ -15,7 +28,7 @@
   - заполняет claims.csv из индекс-строк + заявленных claim'ов
   - триангулирует по claims.csv, синтезирует
 
-Суб-агент (subagent_type=general-purpose, свой диапазон NN):
+Суб-агент (subagent_type=deepdive-fetcher, свой диапазон NN):
   - читает свой промпт (включая закреплённый диапазон номеров)
   - делает WebSearch + WebFetch
   - оценивает каждый источник по шкале сам (не отдельный scoring pass — H7)
@@ -29,39 +42,37 @@
 
 ## Какой subagent_type
 
-- **`general-purpose`** — дефолт для fetch+save (Phase 4.1). Нужен `Write`, чтобы агент сам сохранял `sources/NN.md` в своём диапазоне номеров, а не передавал полные тексты обратно в главный поток. Каждому агенту — явный диапазон: агент №1 → `s01-s09`, №2 → `s10-s19`, и т.д. (см. промпт-шаблон ниже, поле `SOURCE ID RANGE`).
-- **`Explore`** — только для чистой discovery-разведки БЕЗ сохранения файлов (например, Phase 3.5 capability discovery или предварительная разведка «сколько вообще есть материала» до того как решили дробить на подтемы). Как только агенту нужно писать `sources/NN.md` — это `general-purpose`, не `Explore`.
+- **`deepdive-fetcher`** — дефолт для fetch+save (Phase 4.1; Haiku, tools WebSearch/WebFetch/Read/Write/Bash/Glob/Grep, maxTurns 40). Нужен `Write`, чтобы агент сам сохранял `sources/NN.md` в своём диапазоне номеров, а не передавал полные тексты обратно в главный поток. Каждому агенту — явный диапазон: агент №1 → `s01-s09`, №2 → `s10-s19`, и т.д. (см. промпт-шаблон ниже, поле `SOURCE ID RANGE`).
+- **`explore-haiku`** (read-only, Haiku) — только для чистой discovery-разведки БЕЗ сохранения файлов (например, Phase 3.5 capability discovery или предварительная разведка «сколько вообще есть материала» до того как решили дробить на подтемы). `Explore`/`explore-haiku` не пишет файлы; как только агенту нужно писать `sources/NN.md` — это `deepdive-fetcher`.
+- **`deepdive-scout`** (Haiku) и **`deepdive-redteam`** (Opus, high, read-only) — специализированные агенты deepdive; red team запускать только как `subagent_type: deepdive-redteam`.
 - **`Plan`** — НЕ для поиска. В deepdive не использовать.
 
 ## Какую модель выбрать (model routing)
 
-**Обязательно читай `model_routing.md`** перед launch sub-agents — там matrix фаза × подзадача → модель.
+Перед запуском суб-агентов читай `model_routing.md`: там матрица фаза × подзадача → исполнитель, а эта выдержка без неё неполна.
 
 Краткая выдержка для Phase 4.1 (launch sub-agents):
 
-| Тип подзадачи sub-agent'а | Модель | Effort |
+| Тип подзадачи sub-agent'а | Исполнитель | Модель / Effort |
 |---|---|---|
-| Web search + metadata (web-general/news/forum) | `haiku` | low |
-| Read long source + extract quotes | `sonnet` | low |
-| Academic / preprint-servers | `sonnet` | low |
-| API-direct (curl + jq) | `haiku` | low |
-| Code analysis (clone + grep) | `sonnet` | medium |
-| Heavy reasoning subtask | `opus` | medium |
+| Web search + metadata (web-general/news/forum) | `deepdive-fetcher` | haiku / medium (frontmatter) |
+| Read long source + extract quotes | `deepdive-fetcher` | haiku / medium (окно 1M) |
+| Academic / preprint-servers | `deepdive-fetcher` | haiku / medium |
+| API-direct (curl + jq) | `deepdive-fetcher` | haiku / medium |
+| Code analysis (clone + grep) | `deepdive-fetcher` собирает факты и пути, выводы — `main` | haiku / medium |
+| Heavy reasoning subtask | `main` | — |
 
-**Default если не уверен** → `sonnet` / `low`. Это safe middle ground.
+**Default если не уверен** → `deepdive-fetcher`.
 
-**Параметр `model`** передаётся прямо в `Agent` tool:
+Модель и effort `deepdive-fetcher` записаны в его frontmatter; вызов их не передаёт, чтобы настройка жила в одном месте. Эскалация после отказа или провала Haiku — `general-purpose` с явными `model: "sonnet"`, `effort: "high"`, см. `model_routing.md` «Как передать модель».
 
 ```
 Agent({
-  subagent_type: "general-purpose",   // fetch+save нужен Write, см. выше
-  model: "haiku",    // ← важно: явный выбор
+  subagent_type: "deepdive-fetcher",   // fetch+save нужен Write, см. выше
   description: "...",
   prompt: "..."
 })
 ```
-
-Если `model:` не передан — sub-agent наследует модель родителя (обычно Sonnet) — для дешёвых задач это переплата.
 
 ## Параллелизм
 
@@ -71,6 +82,7 @@ Agent({
 - Реальный параллелизм, не очередь.
 - Уведомления при завершении каждого — не нужно polling.
 - Можно начинать сборку результатов по мере поступления.
+- Оговорка: фоновые субагенты получают урезанный набор инструментов — перед запуском fetch в фоне проверить, что нужные Write/WebFetch доступны; если не проверено — запускать на переднем плане.
 
 Если 2 суб-агента — можно без background (быстрее на круг).
 
@@ -124,7 +136,7 @@ SOURCING STRATEGY (already dispatched via source_dispatch.md — DO NOT re-pick)
   Query template: `<...>`
 - Fallback channel: <channel-name> — only if primary/secondary fail
 
-See channels.md for query patterns, paywall fallback protocols, limitations.
+See <SKILL_DIR>/references/channels.md for query patterns, paywall fallback protocols, limitations.
 
 DISCOVERY ALREADY EXECUTED (from plan.md section 12):
 - <awesome-list or repo found at dispatch step — start there, don't rediscover>
@@ -154,7 +166,7 @@ TASK:
    - If WebFetch comes back THIN — under ~500 chars of main text, no quotable
      passage, or a block/consent/paywall page — run the ladder RIGHT THEN, as a
      standard step, not as an exception:
-     `uv run scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
+     `uv run <SKILL_DIR>/scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
      Record `fetch_tier:` from the metadata in the source frontmatter.
    - 2-4 key direct quotes (verbatim, with location/page if possible)
    - Author, publication date, source type. `type` is a STRICT enum — copy ONE
@@ -170,10 +182,12 @@ TASK:
    - Recency: 5=<1yr, 4=1-3yr, 3=3-5yr, 2=5-10yr, 1=>10yr (unless historical topic)
    - Bias: 5=neutral/scientific, 4=industry-neutral, 3=mainstream with known slant,
      2=lobbyist, 1=propaganda
-4. CRITICAL: include at least 1-2 sources representing OPPOSITION or CRITICISM
-   of the dominant view in this subtopic. If you cannot find any — say so explicitly.
+4. Include at least 1-2 sources representing opposition or criticism of the
+   dominant view in this subtopic: the stop criteria require an analysed opposition
+   search, and red team has nothing to test without it. If you cannot find any,
+   say so explicitly.
 5. WRITE the full source file yourself: `sources/<id>_<short-slug>.md` using the
-   template in `source_scoring.md`, with complete frontmatter (channel, access,
+   template in `<SKILL_DIR>/references/source_scoring.md`, with complete frontmatter (channel, access,
    scores, subquestion_ids) and verbatim quotes. Never write a source with fewer
    than 2 verbatim quotes: run the ladder first. If the ladder ends in auth-wall /
    anti-bot, write it with `access: closed` and only what the snippet gave — such a
@@ -217,9 +231,14 @@ TASK:
    `claims.csv` (claim text, hypothesis id if any, which source ids back it, source
    types, whether at least one is Primary — the "primary_source" flag).
 
-OUTPUT FORMAT — return ONLY compact index rows to the main thread, NOT full source
-text (full text already lives in the files you wrote in step 5). Strict JSON, no
-commentary outside JSON:
+OUTPUT FORMAT — write the JSON below to `<run>/agent_reports/<subtopic-id>.json`
+(strict JSON, compact index rows, NOT full source text — that already lives in the
+files from step 5). Your final chat reply is ≤15 lines: the JSON file path, counts
+(sources kept / claim_candidates / systems), top-3 gaps, opposition found yes/no.
+Do NOT paste the JSON into the reply — measured: replies with the JSON inline ran
+19–24k chars each (~10k tokens of the main thread), replies with a line limit 3–5k.
+
+JSON file content:
 
 {
   "subtopic": "<this subtopic>",
@@ -288,10 +307,11 @@ claim. Leave `[]` only if you actually looked for opposing sources under this cl
 
 CONSTRAINTS:
 - Maximum 10 sources. Quality over quantity.
+- Do not spawn subagents. Stop rule: 5 queries in a row without a new source → return the list of gaps and stop.
 - Quotes must be VERBATIM. Do not paraphrase.
 - If a source is paywalled / inaccessible — note it in `gaps` and try alternative.
 - Do not use bash/curl to bypass WebFetch. The one sanctioned ladder is
-  `uv run scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
+  `uv run <SKILL_DIR>/scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
   — it is the STANDARD second step, not an exception. Run it whenever WebFetch
   answers "unable to fetch from ..." OR returns a thin result (<500 chars of main
   text, no quotable passage, block/consent/paywall page): usually a robots.txt
@@ -302,7 +322,7 @@ CONSTRAINTS:
   only on such sources.
 - Exit 4 (auth wall / anti-bot) is terminal for the HTML, not for the source. The
   script prints the open doors of that same site — official API, feed, archive
-  snapshot — from `references/fallback_routes.yaml`. Work that list top-down before
+  snapshot — from `<SKILL_DIR>/references/fallback_routes.yaml`. Work that list top-down before
   giving up. Feeds very often survive when the HTML is blocked (stackoverflow HTML
   403, its Atom feed 200). Do not retry the HTML harder.
 - A feed gives title, date, summary and URL — NOT the full article. Quote from a
@@ -347,7 +367,7 @@ CONSTRAINTS:
    - Если WebFetch вернул ТОНКО — меньше ~500 знаков основного текста, ни одной
      цитируемой фразы, страница блокировки/консента/paywall — сразу запускать
      лестницу, это штатный шаг, а не исключение:
-     `uv run scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
+     `uv run <SKILL_DIR>/scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
      `fetch_tier:` из метаданных перенести во frontmatter источника.
    - 2-4 прямые цитаты (дословно, с указанием раздела/страницы если есть)
    - Автор, дата публикации, тип источника
@@ -362,7 +382,7 @@ CONSTRAINTS:
 4. КРИТИЧНО: включить ≥1-2 источника с противоположной позицией / критикой
    доминирующего взгляда. Если не нашёл — сказать прямо.
 5. ЗАПИСАТЬ полные файлы `sources/<id>_<slug>.md` самому (шаблон в
-   `source_scoring.md`), используя только номера из своего диапазона.
+   `<SKILL_DIR>/references/source_scoring.md`), используя только номера из своего диапазона.
    Обязательно заполнить: `root:` (первоисточник материала), `discovery_path:`
    (`<канал>|<точный запрос>|<язык>` — как ты дошёл до источника), `caveat:`.
    Для источников с ЧИСЛАМИ — ещё `origin_kind:` / `origin_url:` / `data_as_of:`
@@ -373,17 +393,22 @@ CONSTRAINTS:
    `claims.csv` (текст тезиса, гипотеза, какие sources подтверждают, их типы,
    есть ли среди них primary source).
 
-ФОРМАТ ВЫВОДА — вернуть в главный поток ТОЛЬКО компактные index-строки, НЕ полные
-тексты источников (полный текст уже в файле из шага 5). Строгий JSON:
+ФОРМАТ ВЫВОДА — JSON записать в `<run>/agent_reports/<id-подтемы>.json` (строгий
+JSON, компактные index-строки, НЕ полные тексты источников — они уже в файле из
+шага 5). Финальный ответ в чат ≤15 строк: путь к JSON, счётчики (источников /
+claim_candidates / систем), три главных gaps, оппозиция найдена да/нет. JSON в чат
+НЕ вставлять: с JSON в ответе было по 19–24 тыс. символов, с лимитом строк — 3–5 тыс.
+Содержимое файла:
 
 [см. EN шаблон выше — структура `source_index` + `claim_candidates` та же]
 
 ОГРАНИЧЕНИЯ:
 - Максимум 10 источников. Качество важнее количества.
+- Субагентов не спавнить. Стоп-правило: 5 запросов подряд без нового источника → вернуть список gaps и остановиться.
 - Цитаты ДОСЛОВНЫЕ. Не пересказ.
 - Если источник за paywall — в `gaps`, искать альтернативу.
 - НЕ использовать произвольный bash/curl в обход WebFetch. Единственная санкционированная лестница:
-  `uv run scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
+  `uv run <SKILL_DIR>/scripts/fetch_source.py <URL> -o <run>/.fetch/NN.md --meta <run>/.fetch/NN.json`
   — это ШТАТНЫЙ второй шаг, не исключение. Запускать и когда WebFetch ответил
   «unable to fetch from …», и когда вернул тонкий результат (<500 знаков основного
   текста, нет цитируемой фразы, страница блокировки/консента/paywall): обычно это
@@ -393,7 +418,7 @@ CONSTRAINTS:
   auth-волл/анти-бот — писать с `access: closed` и только тем, что дал сниппет, и
   плечом триангуляции он быть не может (validate_phases.py даёт error).
 - Код 4 (auth-волл / анти-бот) — терминально для HTML, не для источника. Скрипт сам
-  печатает открытые двери того же сайта (API, фид, архив) из `fallback_routes.yaml` —
+  печатает открытые двери того же сайта (API, фид, архив) из `<SKILL_DIR>/references/fallback_routes.yaml` —
   идти по списку сверху вниз. Фид часто жив, когда HTML мёртв: у stackoverflow HTML
   403, а его Atom-фид 200. HTML сильнее не долбить.
 - Фид даёт заголовок, дату, аннотацию и URL — НЕ полный текст. Цитату из аннотации
@@ -409,7 +434,7 @@ CONSTRAINTS:
 
 ## После возврата суб-агентов — что делает главный поток
 
-1. **Парсинг JSON.** Если суб-агент вернул мусор — попроси переслать в JSON, не интерпретируй сам. Ожидай `source_index` (компактные строки) + `claim_candidates` — НЕ полные тексты источников (их агент уже записал сам, см. выше).
+1. **Парсинг JSON.** Читай `agent_reports/<id>.json` python-скриптом (`json.load`), в контекст — только счётчики, не сам файл. Нет файла или мусор — попроси агента перезаписать файл, не интерпретируй сам. Ожидай `source_index` (компактные строки) + `claim_candidates` — НЕ полные тексты источников (их агент уже записал сам, см. выше).
 
 2. **Дедупликация по URL — и замер `overlap_rate` (не выбрасывай дубль молча).** Если два суб-агента нашли один и тот же URL — это ОДИН источник: оставить файл с лучшим scoring, вторую запись пометить дублем в `sources.csv`. Но сам факт совпадения — **самая ценная диагностика раунда, и она пропадает, если дубль просто удалить**.
 
@@ -442,11 +467,11 @@ CONSTRAINTS:
    - Сколько типов источников? (нужно ≥4)
    - Найдена ли оппозиция? (нужна минимум одна)
    - Все ли гипотезы получили evidence? (нужно ≥3 источника на гипотезу)
-   - Сколько строк `claims.csv` НЕ triangulated? → это вход в gap-волну (Phase 4.5, см. `workflow.md`).
+   - Сколько строк `claims.csv` НЕ triangulated? → это вход в gap-волну (см. `phases/p5_claims.md` «Gap-волна»).
 
-7. **Пересборка окна раунда — `state.md`** (medium/deep; правило в `workflow.md`,
+7. **Пересборка окна раунда — `state.md`** (medium/deep; правило в `phases/p4_search.md`,
    «Round workspace»). Всё выше главный поток проделал в контексте, где уже лежат
-   JSON всех агентов этого раунда — а решение о следующем раунде принимается в том же
+   итоги всех агентов этого раунда — а решение о следующем раунде принимается в том же
    окне, ещё и поверх предыдущих. Поэтому перед следующим раундом окно
    **пересобирается**: `state.md` ПЕРЕЗАПИСЫВАЕТСЯ (не дописывается) из итогов, а
    планирование идёт по нему.
@@ -491,9 +516,10 @@ CONSTRAINTS:
 - ❌ Дать слишком общий промпт «ищи про X» — вернётся жидкая выжимка. Подтема должна быть УЗКОЙ.
 - ❌ Запустить суб-агентов последовательно (Agent call → ждать → следующий). Только параллельно в одном сообщении.
 - ❌ Принимать выжимку суб-агента как финал без проверки. Дедуплицируй URLs и проверь scoring.
-- ❌ Использовать `Explore` когда агенту нужно писать `sources/NN.md` — Explore read-only, не сохранит файл. Для fetch+save всегда `general-purpose`.
+- ❌ Использовать `Explore`/`explore-haiku` когда агенту нужно писать `sources/NN.md` — они read-only, не сохранят файл. Для fetch+save всегда `deepdive-fetcher`.
 - ❌ Не назначить агенту диапазон номеров ПЕРЕД launch — без этого параллельная запись рискует коллизией id.
 - ❌ Просить суб-агента вернуть полные тексты/цитаты источников в JSON-ответе — раздувает контекст главного потока. Полный текст живёт в файле, в главный поток идёт только index-строка.
+- ❌ Оставить в промпте агента формат «строгий JSON в ответе» без лимита размера ответа: 4 агента без лимита вернули 19–24 тыс. символов каждый (~41k токенов главного потока). JSON — в файл, в чат ≤15 строк.
 - ❌ Пропустить требование «найди оппозицию» — суб-агенты по умолчанию ищут confirmation, не contradiction.
 - ❌ **Разводить агентов ТОЛЬКО по подтемам.** Одинаковый шаблон + одна модель + один язык = одна поисковая траектория, и триангуляция получает коррелированные голоса. Разводи ещё и по оси поиска: агент A — англоязычная академия и препринты, B — RU-сегмент, локальные регуляторы и отраслевые ассоциации, C — практики (форумы, issue-трекеры, обсуждения), D — первичные реестры и отчётность. Тогда пересечение находок — сигнал настоящей независимости, а не артефакт одинакового промпта.
 - ❌ **Передавать во второй раунд находки соседей.** Соблазн понятен, но наблюдаемость чужих действий сама по себе канал координации: в эксперименте Anthropic агенты продолжили сговор после удаления всех каналов связи, синхронизируясь через публичную доску. Дать агентам видеть находки друг друга — построить такую доску своими руками и добить остатки независимости. Делись только ДЫРАМИ: «подвопросы Q3, Q7 не закрыты; по Q5 не найдено ни одной оппозиции».

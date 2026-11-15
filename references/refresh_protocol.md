@@ -1,5 +1,17 @@
 # Refresh Protocol — как делать дельта-ресёрч
 
+## Содержание
+
+- Принципы
+- Когда запускать update
+- Pre-flight check
+- 4 категории дельты (что искать)
+- Verified-no-change (что НЕ изменилось)
+- Output: структура delta-файла
+- Что **НЕ** делать
+- Model routing для update
+- Что должно быть в `refresh_targets.md` (отдельный файл рядом с plan.md)
+
 **Когда используется:** пользователь вызывает `update <slug>` или «обнови ресёрч про X». Скилл **не повторяет весь ресёрч** — он находит **только что изменилось** с последнего раза и пишет diff-файл.
 
 **Зачем:** полный re-research дорогой, медленный и теряет историю. Дельта-подход:
@@ -281,9 +293,9 @@ severity: <HIGH | MEDIUM | LOW>  # max severity among findings
 |---|---|---|
 | Pre-flight (чтение plan.md + refresh_targets.md + last report) | `sonnet` | low |
 | Generate refresh_targets.md (если отсутствует) | `sonnet` | medium |
-| 1. New entrants search (sub-agents) | `haiku` | low (web/news/Crunchbase) |
-| 2. Entity diff (fetch + compare) | `haiku` | low (fingerprinting механический) |
-| 3. Numbers refresh (api-direct) | `haiku` | low (FRED/WB/etc) |
+| 1. New entrants search (sub-agents) | `deepdive-fetcher` (haiku) | medium из frontmatter (web/news/Crunchbase; на low Haiku 5.5 пропускает поиски) |
+| 2. Entity diff (fetch + compare) | `deepdive-fetcher` (haiku) | medium из frontmatter (fingerprinting механический) |
+| 3. Numbers refresh (api-direct) | `deepdive-fetcher` (haiku) | medium из frontmatter (FRED/WB/etc) |
 | 4. Adversarial trigger search | `sonnet` | low (academic) |
 | Synthesis delta file | `sonnet` | medium |
 | **If adversarial trigger HIGH → re-run Phase 6 partial** | `opus` | high (только эта часть) |
