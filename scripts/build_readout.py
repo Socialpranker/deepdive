@@ -393,7 +393,7 @@ def evidence_base(
                 how = f"наш расчёт: {html.escape(row.get('formula', ''))}"
             else:
                 how = "из источника"
-            value = f"{report_charts.ru(row.get('value', ''))} {html.escape(row.get('unit', ''))}".strip()
+            value = f"{html.escape(report_charts.ru(row.get('value', '')))} {html.escape(row.get('unit', ''))}".strip()
             out.append(
                 f'<tr id="e{n}"><td class="num"><b>{value}</b></td><td>{html.escape(what)} '
                 f"{to_findings(row.get('claim_id', ''))}</td><td>{how}</td>"
@@ -502,8 +502,11 @@ def source_index(rows: list[dict], used_by: dict[str, list[int]]) -> str:
                 )
             )
         url = r.get("url") or ""
-        host = urlparse(url).netloc.removeprefix("www.")
-        link = f' · <a href="{html.escape(url)}">{html.escape(host)}</a>' if url else ""
+        parsed = urlparse(url)
+        host = parsed.netloc.removeprefix("www.")
+        # URLs come from fetched pages; any other scheme (javascript:, data:) would run on click.
+        linkable = parsed.scheme in {"http", "https"} and host
+        link = f' · <a href="{html.escape(url)}">{html.escape(host)}</a>' if linkable else ""
         num = int(sid[1:]) if re.fullmatch(r"s\d+", sid) else html.escape(sid)
         out.append(
             f'<dt id="{html.escape(sid)}">{num}</dt><dd><b>{title}</b><br>{" · ".join(bits)}{link}</dd>'
@@ -547,7 +550,11 @@ def method_section(run: Path, sources: list[dict], claims: list[dict]) -> str:
     types = Counter(
         SOURCE_TYPES.get(r.get("type", ""), r.get("type") or "?") for r in used
     )
-    dates = sorted(r["date"] for r in used if re.match(r"\d{4}", r.get("date") or ""))
+    dates = sorted(
+        r["date"]
+        for r in used
+        if re.fullmatch(r"\d{4}(-\d{2}(-\d{2})?)?", (r.get("date") or "").strip())
+    )
     partial = sum(1 for r in used if r.get("access") and r["access"] != "OPEN")
     out = ['<section id="method"><h2>Как проводили исследование</h2><ul>']
     out.append(
@@ -556,7 +563,7 @@ def method_section(run: Path, sources: list[dict], claims: list[dict]) -> str:
     if types:
         out.append(
             "<li>По типу: "
-            + ", ".join(f"{k} — {v}" for k, v in types.most_common())
+            + ", ".join(f"{html.escape(k)} — {v}" for k, v in types.most_common())
             + ".</li>"
         )
     if dates:
