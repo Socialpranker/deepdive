@@ -165,3 +165,58 @@ def test_main_missing_key_prints_env_var_name(capsys, monkeypatch):
     assert rc == 2
     captured = capsys.readouterr()
     assert "EXA_API_KEY" in captured.err
+
+
+def test_engine_routes_cover_every_qclass_with_every_engine():
+    from runner.qclass import QCLASSES
+
+    assert set(sq.ENGINE_ROUTES) == set(QCLASSES)
+    for qclass, route in sq.ENGINE_ROUTES.items():
+        assert sorted(route) == sorted(sq.ENV_VARS), qclass
+
+
+def test_resolve_engine_follows_qclass_route():
+    env = {k: "x" for k in sq.ENV_VARS.values()}
+    assert sq.resolve_engine("scientific-claim", env) == "exa"
+    assert sq.resolve_engine("recent-change", env) == "tavily"
+
+
+def test_resolve_engine_skips_engines_without_key():
+    env = {"BRAVE_SEARCH_API_KEY": "b", "FIRECRAWL_API_KEY": "f"}
+    assert sq.resolve_engine("scientific-claim", env) == "brave"
+    assert sq.resolve_engine("pricing", {"FIRECRAWL_API_KEY": "f"}) == "firecrawl"
+
+
+def test_resolve_engine_unknown_qclass_uses_default_route():
+    env = {"EXA_API_KEY": "e", "TAVILY_API_KEY": "t"}
+    assert sq.resolve_engine("nonsense", env) == sq.ENGINE_ROUTES["qualitative"][0]
+    assert sq.resolve_engine(None, env) == sq.ENGINE_ROUTES["qualitative"][0]
+
+
+def test_resolve_engine_no_keys_exits_2_naming_all_vars(capsys):
+    with pytest.raises(SystemExit) as exc:
+        sq.resolve_engine("pricing", {})
+    assert exc.value.code == 2
+    err = capsys.readouterr().err
+    for var in sq.ENV_VARS.values():
+        assert var in err
+
+
+def test_main_auto_queries_routed_engine(capsys, monkeypatch):
+    captured = {}
+
+    def fake_request(method, timeout=None, **kwargs):
+        captured.update(kwargs)
+        return FakeResponse({"results": [{"title": "T", "url": "https://u", "text": "s"}]})
+
+    monkeypatch.setattr(sq.requests, "request", fake_request)
+    monkeypatch.setenv("EXA_API_KEY", "e")
+    monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "b")
+    for var in ("TAVILY_API_KEY", "FIRECRAWL_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+
+    rc = sq.main(["--engine", "auto", "--qclass", "how-it-works", "--query", "q"])
+
+    assert rc == 0
+    assert captured["url"].startswith("https://api.exa.ai")
+    assert "engine: exa (qclass how-it-works)" in capsys.readouterr().err
