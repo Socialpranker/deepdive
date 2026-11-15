@@ -95,6 +95,40 @@ def test_exa_request_shape(monkeypatch):
     assert hits[0]["title"] == "T3"
 
 
+def test_firecrawl_request_shape(monkeypatch):
+    captured = {}
+
+    def fake_request(method, timeout=None, **kwargs):
+        captured["method"] = method
+        captured.update(kwargs)
+        return FakeResponse(
+            {
+                "success": True,
+                "data": {
+                    "web": [
+                        {"title": "T4", "url": "https://w", "description": "D"},
+                        {"title": "T5", "url": "https://v", "description": "x" * 5000},
+                    ]
+                },
+            }
+        )
+
+    monkeypatch.setattr(sq.requests, "request", fake_request)
+    hits = sq.run_query("firecrawl", "research", 4, {"FIRECRAWL_API_KEY": "fc-key"})
+
+    assert captured["method"] == "POST"
+    assert captured["url"] == "https://api.firecrawl.dev/v2/search"
+    assert captured["headers"]["Authorization"] == "Bearer fc-key"
+    assert captured["json"]["query"] == "research"
+    assert captured["json"]["limit"] == 4
+    assert captured["json"]["origin"] == "deepdive"
+    assert hits[0]["title"] == "T4"
+    assert hits[0]["url"] == "https://w"
+    assert hits[0]["snippet"] == "D"
+    assert hits[0]["engine"] == "firecrawl"
+    assert len(hits[1]["snippet"]) == sq.FIRECRAWL_SNIPPET_MAX_CHARS
+
+
 def test_http_error_exits_1(monkeypatch):
     def fake_request(method, timeout=None, **kwargs):
         return FakeResponse({}, status=500)

@@ -21,7 +21,7 @@ def test_audit_env_empty_env_all_absent():
 def test_audit_env_covers_all_known_keys():
     audit = audit_env({})
     assert {a["key"] for a in audit} == set(KNOWN_KEYS)
-    assert len(KNOWN_KEYS) == 17
+    assert len(KNOWN_KEYS) == 18
 
 
 def test_audit_env_empty_string_is_absent():
