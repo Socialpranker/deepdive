@@ -16,8 +16,13 @@ never stopping early; exit 1 if any step failed. `--offline` skips the liveness 
 `references/source_dispatch.md`):
 
 ```bash
-python3 scripts/search_query.py --engine {brave,tavily,exa,firecrawl} --query "..." [--n 10] [--json]
+python3 scripts/search_query.py --engine {auto,brave,tavily,exa,firecrawl} [--qclass <qclass>] --query "..." [--n 10] [--json]
 ```
+
+`--engine auto` берёт первый движок с ключом из порядка для `--qclass` (таблица
+`ENGINE_ROUTES`, описание в `references/source_dispatch.md`) и печатает выбор в stderr.
+Неизвестный или пропущенный `--qclass` даёт порядок класса `qualitative`. Нет ни одного
+ключа — exit 2 со списком всех переменных.
 
 Ключ читается из env: `BRAVE_SEARCH_API_KEY`, `TAVILY_API_KEY`, `EXA_API_KEY`, `FIRECRAWL_API_KEY`. Без
 ключа — exit 2 с именем переменной. HTTP-ошибка — exit 1. Один ретрай при обрыве

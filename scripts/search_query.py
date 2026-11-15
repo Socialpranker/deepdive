@@ -5,10 +5,15 @@ trajectory — see references/capability_discovery.md and references/source_disp
 for when Phase 4 must use this instead of (or alongside) WebSearch.
 
 Usage:
+    python3 scripts/search_query.py --engine auto --qclass scientific-claim --query "..."
     python3 scripts/search_query.py --engine brave --query "..." [--n 10] [--json]
     python3 scripts/search_query.py --engine tavily --query "..."
     python3 scripts/search_query.py --engine exa --query "..."
     python3 scripts/search_query.py --engine firecrawl --query "..."
+
+`--engine auto` picks the first engine in ENGINE_ROUTES[qclass] whose key is set
+and prints the choice to stderr; unknown or missing --qclass falls back to the
+default class (runner.qclass.normalize_qclass).
 
 Reads the API key from env: BRAVE_SEARCH_API_KEY, TAVILY_API_KEY, EXA_API_KEY,
 FIRECRAWL_API_KEY.
@@ -21,8 +26,13 @@ import argparse
 import json
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
 import requests
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from runner.qclass import normalize_qclass  # noqa: E402
 
 ENV_VARS = {
     "brave": "BRAVE_SEARCH_API_KEY",
@@ -30,6 +40,52 @@ ENV_VARS = {
     "exa": "EXA_API_KEY",
     "firecrawl": "FIRECRAWL_API_KEY",
 }
+
+# Engine order per sub-question class for --engine auto. Every route lists all
+# engines, so any single key still yields a second trajectory.
+# - exa first where the answer lives in papers and long-form text: its semantic
+#   index is the furthest from a keyword engine.
+# - brave moves up only where freshness matters; otherwise it sits low because it
+#   is a classic keyword index, the kind of trajectory harness WebSearch already
+#   gives, and the axis exists to diverge from it.
+# - firecrawl is last: the normalizer keeps only its description, so the
+#   full-page content that distinguishes it is not used here.
+# The order is a starting hypothesis; overlap_rate in plan.md §15 is what should
+# move it.
+_SEMANTIC = ("exa", "tavily", "brave", "firecrawl")
+_FRESH = ("tavily", "brave", "exa", "firecrawl")
+_FACTUAL = ("tavily", "exa", "brave", "firecrawl")
+
+ENGINE_ROUTES: dict[str, tuple[str, ...]] = {
+    "scientific-claim": _SEMANTIC,
+    "how-it-works": _SEMANTIC,
+    "benchmark": _SEMANTIC,
+    "health": _SEMANTIC,
+    "climate": _SEMANTIC,
+    "qualitative": _SEMANTIC,
+    "players": _SEMANTIC,
+    "recent-change": _FRESH,
+    "sentiment": _FRESH,
+    "crypto": _FRESH,
+    "market-size": _FACTUAL,
+    "time-series": _FACTUAL,
+    "country-stat": _FACTUAL,
+    "regulation": _FACTUAL,
+    "adoption": _FACTUAL,
+    "pricing": _FACTUAL,
+    "jobs": _FACTUAL,
+}
+
+
+def resolve_engine(qclass: str | None, env: dict) -> str:
+    """First engine of the qclass route with a key set; SystemExit(2) if none."""
+    route = ENGINE_ROUTES[normalize_qclass(qclass or "")]
+    for engine in route:
+        if _get_key(engine, env):
+            return engine
+    names = ", ".join(ENV_VARS[e] for e in route)
+    print(f"error: no search API key set — set one of {names}", file=sys.stderr)
+    raise SystemExit(2)
 
 FIRECRAWL_SNIPPET_MAX_CHARS = 1000
 
@@ -217,14 +273,21 @@ def main(argv: list[str] | None = None) -> int:
     import os
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--engine", required=True, choices=sorted(ENV_VARS))
+    parser.add_argument("--engine", required=True, choices=["auto", *sorted(ENV_VARS)])
+    parser.add_argument("--qclass", help="sub-question class, used by --engine auto")
     parser.add_argument("--query", required=True)
     parser.add_argument("--n", type=int, default=10)
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
+    env = dict(os.environ)
     try:
-        hits = run_query(args.engine, args.query, args.n, dict(os.environ))
+        engine = args.engine
+        if engine == "auto":
+            engine = resolve_engine(args.qclass, env)
+            qclass = normalize_qclass(args.qclass or "")
+            print(f"engine: {engine} (qclass {qclass})", file=sys.stderr)
+        hits = run_query(engine, args.query, args.n, env)
     except SystemExit as exc:
         return exc.code
 
