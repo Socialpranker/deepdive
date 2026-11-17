@@ -230,8 +230,12 @@ def sources_appendix(rows: list[dict]) -> str:
                 ],
             )
         )
-        url = html.escape(r.get("url") or "")
-        link = f'<div class="meta"><a href="{url}">{url}</a></div>' if url else ""
+        raw_url = r.get("url") or ""
+        url = html.escape(raw_url)
+        if build_readout.is_web_url(raw_url):
+            link = f'<div class="meta"><a href="{url}">{url}</a></div>'
+        else:
+            link = f'<div class="meta">{url}</div>' if url else ""
         out.append(f'<dt id="{sid}">[{sid}]</dt>')
         out.append(f'<dd>{title}<div class="meta">{meta}</div>{link}</dd>')
     out += ["</dl>", "</section>"]
