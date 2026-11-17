@@ -4,6 +4,7 @@
 
 - [ ] New stat source
 - [ ] New search channel
+- [ ] New search engine (`scripts/search_query.py`, needs an issue first)
 - [ ] New report block
 - [ ] New industry category
 - [ ] Improvement to existing
@@ -29,6 +30,7 @@ Brief description of what this PR adds or changes.
 - [ ] Local test: loaded the modified skill in Claude Code and verified it still works
 - [ ] No breaking changes to existing channels/blocks
 - [ ] Anti-patterns documented (for new blocks)
+- [ ] If this PR adds a vendor's service and I work for or with that vendor, I said so in the summary
 
 ## Related issue
 
