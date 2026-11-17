@@ -308,6 +308,17 @@ def test_sources_appendix_lists_every_row():
     assert "Источник A" in out and "Primary" in out
 
 
+def test_sources_appendix_links_only_http_urls():
+    rows = [
+        {"id": "s01", "url": "javascript:alert(1)", "title": "x"},
+        {"id": "s02", "url": "https://ok.example/p", "title": "y"},
+    ]
+    out = br.sources_appendix(rows)
+    assert 'href="javascript:' not in out
+    assert "javascript:alert(1)" in out  # адрес виден текстом, но не кликается
+    assert 'href="https://ok.example/p"' in out
+
+
 def test_empty_sources_produce_no_appendix():
     assert br.sources_appendix([]) == ""
 

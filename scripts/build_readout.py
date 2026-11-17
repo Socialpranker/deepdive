@@ -472,6 +472,12 @@ def credibility_word(value: str) -> str:
     return "высокая" if v >= 4 else "средняя" if v == 3 else "низкая"
 
 
+def is_web_url(url: str) -> bool:
+    """Source URLs come from fetched pages; any other scheme (javascript:, data:) would run on click."""
+    parsed = urlparse(url)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
 def source_index(rows: list[dict], used_by: dict[str, list[int]]) -> str:
     live = [r for r in rows if (r.get("used") or "Y") != "N"]
     if not live:
@@ -502,11 +508,8 @@ def source_index(rows: list[dict], used_by: dict[str, list[int]]) -> str:
                 )
             )
         url = r.get("url") or ""
-        parsed = urlparse(url)
-        host = parsed.netloc.removeprefix("www.")
-        # URLs come from fetched pages; any other scheme (javascript:, data:) would run on click.
-        linkable = parsed.scheme in {"http", "https"} and host
-        link = f' · <a href="{html.escape(url)}">{html.escape(host)}</a>' if linkable else ""
+        host = urlparse(url).netloc.removeprefix("www.")
+        link = f' · <a href="{html.escape(url)}">{html.escape(host)}</a>' if is_web_url(url) else ""
         num = int(sid[1:]) if re.fullmatch(r"s\d+", sid) else html.escape(sid)
         out.append(
             f'<dt id="{html.escape(sid)}">{num}</dt><dd><b>{title}</b><br>{" · ".join(bits)}{link}</dd>'
