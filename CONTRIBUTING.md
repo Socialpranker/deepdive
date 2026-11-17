@@ -122,12 +122,33 @@ Add a Codex/Gemini/local-LLM adapter.
 6. **PR** with the template auto-loaded
 7. We'll review usually within a few days
 
+## Adding a search engine
+
+`scripts/search_query.py` gives the skill a second search engine next to the harness's own WebSearch. It supports Brave, Tavily, Exa and Firecrawl today. Every engine we add is one more API to maintain, and it helps only the users who hold its key. So the bar here is higher than for a stat source.
+
+Open an issue before the PR. In it, show what the engine finds that the current four miss: two or three real queries with results side by side are enough. Name the `qclass` values where you expect it to win (the list is in `runner/qclass.py`).
+
+The engine needs a free tier that does not run out. A monthly quota without a card counts. A one-time trial pack, such as 100 searches, does not, for the same reason `SERPAPI_KEY` stays out of the env audit.
+
+The engine also needs a key that the user sets. We don't accept engines that call a public endpoint when no key is present, because a user's queries should only go to services that user chose.
+
+The PR must wire the engine in fully, since an engine the skill never calls is dead code:
+
+1. A builder and a normalizer in `scripts/search_query.py`. If the API can return page text in the snippet field, cap it the way the Firecrawl normalizer does.
+2. The key in `KNOWN_KEYS` (`runner/capabilities.py`) and in `LIVE_SEARCH_KEYS` (`tests/test_docs_swarm.py`). That test fails if the wiring is incomplete.
+3. The key in the second-engine paragraph and the env table of `references/capability_discovery.md`.
+4. A place in every route of `ENGINE_ROUTES`; a test fails if any route misses an engine. A new engine goes last unless the issue shows it beats the current first engine for that `qclass`.
+5. A test in the style of `tests/test_search_query.py` that checks the request shape and the normalized output.
+
+If you work for or with the company behind the engine, say so in the PR description. Vendor PRs are welcome. We only want to know who is proposing what.
+
 ## What we won't accept
 
 - **Sources without metadata** — every entry needs the full template filled
 - **Sources behind hard paywalls without free preview/fallback** — unless they're the only option for that niche
 - **Channels without paywall fallback** — degradation paths are required
 - **Methodology changes without discussion** — open an issue first for big architectural changes
+- **Search engines without an issue first, without a lasting free tier, or that work without a user key** — see [Adding a search engine](#adding-a-search-engine)
 - **Adversarial / harmful research strategies** — this is a research skill, not a stalking skill
 
 ## Style guide
