@@ -55,7 +55,7 @@
 
 **Второй поисковый движок как отдельная ось.** Если в env есть `BRAVE_SEARCH_API_KEY` / `TAVILY_API_KEY` / `EXA_API_KEY` / `FIRECRAWL_API_KEY` (см. `capability_discovery.md`) — независимо от строки матрицы добавь ось `search-engine-2` через `scripts/search_query.py --engine auto --qclass <qclass подвопроса> --query "..."`, помимо `web-general`/WebSearch харнесса. Это не замена Primary/Secondary из матрицы, а дополнительная независимая траектория поиска; пересечение с WebSearch пишется в `plan.md` §15 как `overlap_rate`.
 
-**Какой движок берёт `--engine auto`:** первый с ключом из порядка для `qclass` (`ENGINE_ROUTES` в `search_query.py`). Научные и концептуальные классы начинают с exa, свежие (`recent-change`, `sentiment`, `crypto`) с tavily → brave, фактические с tavily → exa. Выбор печатается в stderr, запиши его в §12. Порядок пока гипотеза: стабильно высокий `overlap_rate` на классе значит, что первый движок надо опустить.
+**Какой движок берёт `--engine auto`:** первый с ключом из порядка для `qclass` (`ENGINE_ROUTES` в `search_query.py`). Научные и концептуальные классы начинают с exa, свежие (`recent-change`, `sentiment`, `crypto`) с tavily → brave, фактические с tavily → exa. Выбор печатается в stderr, запиши его в §12. Источникам с этой оси ставь в `discovery_path` канал `search-engine-2/<движок>` (печатается там же): по нему роевая постобработка считает отдачу каждого движка, и когда по классу появится статистика, `auto` выбирает движок по приорам, а не по таблице.
 
 **Если подвопрос не матчится** ни одну строку — действуй по умолчанию: `web-general` + `academic` + `news-current` минимум. И **сразу же запиши в plan.md секцию 12, что dispatch был ad-hoc** — это сигнал для Phase 6 (adversarial) что покрытие могло быть слабым.
 
