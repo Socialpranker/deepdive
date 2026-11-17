@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,6 +34,16 @@ import requests
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from runner.qclass import normalize_qclass  # noqa: E402
+from runner.state import Prior, load_priors, prior_key  # noqa: E402
+
+# Channel name for the swarm priors: sources found through this script carry it as
+# the first field of discovery_path, so collect_observations.py scores each engine
+# per qclass with no extra code.
+CHANNEL_PREFIX = "search-engine-2/"
+
+
+def engine_channel(engine: str) -> str:
+    return CHANNEL_PREFIX + engine
 
 ENV_VARS = {
     "brave": "BRAVE_SEARCH_API_KEY",
@@ -50,8 +61,8 @@ ENV_VARS = {
 #   gives, and the axis exists to diverge from it.
 # - firecrawl is last: the normalizer keeps only its description, so the
 #   full-page content that distinguishes it is not used here.
-# The order is a starting hypothesis; overlap_rate in plan.md §15 is what should
-# move it.
+# The order is a starting hypothesis, used until the swarm priors have data for
+# the qclass (see resolve_engine).
 _SEMANTIC = ("exa", "tavily", "brave", "firecrawl")
 _FRESH = ("tavily", "brave", "exa", "firecrawl")
 _FACTUAL = ("tavily", "exa", "brave", "firecrawl")
@@ -77,15 +88,36 @@ ENGINE_ROUTES: dict[str, tuple[str, ...]] = {
 }
 
 
-def resolve_engine(qclass: str | None, env: dict) -> str:
-    """First engine of the qclass route with a key set; SystemExit(2) if none."""
-    route = ENGINE_ROUTES[normalize_qclass(qclass or "")]
-    for engine in route:
-        if _get_key(engine, env):
-            return engine
-    names = ", ".join(ENV_VARS[e] for e in route)
-    print(f"error: no search API key set — set one of {names}", file=sys.stderr)
-    raise SystemExit(2)
+def resolve_engine(
+    qclass: str | None,
+    env: dict,
+    priors: dict[str, Prior] | None = None,
+    rng: random.Random | None = None,
+) -> tuple[str, str]:
+    """Pick an engine among those with a key set; returns (engine, how it was picked).
+
+    No observation for this qclass yet: the static route decides. Once any keyed
+    engine has one, Thompson-sample over all keyed engines (as runner/adaptive.py
+    does for channels): an engine never tried draws from Beta(1, 1), so it still
+    gets explored instead of the first measured engine winning forever.
+    SystemExit(2) if no key is set.
+    """
+    qc = normalize_qclass(qclass or "")
+    route = ENGINE_ROUTES[qc]
+    keyed = [e for e in route if _get_key(e, env)]
+    if not keyed:
+        names = ", ".join(ENV_VARS[e] for e in route)
+        print(f"error: no search API key set — set one of {names}", file=sys.stderr)
+        raise SystemExit(2)
+    cells = {e: (priors or {}).get(prior_key(engine_channel(e), qc)) for e in keyed}
+    if len(keyed) == 1 or not any(cells.values()):
+        return keyed[0], "route"
+    rng = rng or random.Random()
+    draws = [
+        (rng.betavariate(c.alpha, c.beta) if c else rng.betavariate(1.0, 1.0), e)
+        for e, c in cells.items()
+    ]
+    return max(draws)[1], "priors"
 
 FIRECRAWL_SNIPPET_MAX_CHARS = 1000
 
@@ -239,6 +271,7 @@ def normalize(engine: str, payload: dict) -> list[dict]:
                 "url": h["url"],
                 "snippet": h["snippet"],
                 "engine": engine,
+                "channel": engine_channel(engine),
                 "fetched_at": fetched_at,
             }
         )
@@ -284,9 +317,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         engine = args.engine
         if engine == "auto":
-            engine = resolve_engine(args.qclass, env)
+            engine, how = resolve_engine(args.qclass, env, load_priors())
             qclass = normalize_qclass(args.qclass or "")
-            print(f"engine: {engine} (qclass {qclass})", file=sys.stderr)
+            print(
+                f"engine: {engine} (qclass {qclass}, by {how}); "
+                f"discovery_path channel: {engine_channel(engine)}",
+                file=sys.stderr,
+            )
         hits = run_query(engine, args.query, args.n, env)
     except SystemExit as exc:
         return exc.code

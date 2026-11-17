@@ -13,6 +13,8 @@ python3 scripts/collect_observations.py --research-dir <root>/<slug> --run-id <s
 
 Общим списком на весь прогон — нельзя: `--requested` парсится в словарь по ключу-каналу, и один канал с разным `qclass` в одной строке молча затрёт первую пару. Раздельные вызовы аппендят независимо.
 
+Если подвопрос искался и через второй движок, добавь его канал в тот же вызов: `--requested academic=scientific-claim,search-engine-2/exa=scientific-claim`. Имя канала берётся из stderr `search_query.py` и совпадает с первым полем `discovery_path` найденных так источников. Без этой пары движок не получит наблюдения, и `--engine auto` так и будет выбирать по статичной таблице.
+
 **2. Приоры:** `python3 scripts/update_priors.py`. Доли секунды, звать после каждого прогона: без этого наблюдения не попадут в `priors.json` и следующий прогон не увидит статистику.
 
 **3. Ad-hoc источники** — найденные через Discovery patterns (`source_dispatch.md`), а не из каталога (`api_sources/`, `stat_sources/`, `registry/`), и ставшие `root` или непогашенным `dissent` хотя бы одного claim. `url` и первый сегмент `discovery_path` (это канал) — из `sources/NN.md`, `qclass` — из §12. Мёртвый на момент прогона — тот же вызов с `--dead`.
